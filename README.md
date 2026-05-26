@@ -33,6 +33,7 @@ docker-compose up
 
 ## Documentation
 
+- [Guide Git & GitHub](docs/GUIDE_GIT.md) — comment travailler avec Git (débutants)
 - [Guide de travail](docs/GUIDE_WORKFLOW.md) — workflow, branches, commits, PR
 - [Ordre des tâches](docs/GUIDE_TACHES.md) — phases par développeur
 - [Pages de l'application](docs/PAGES_APPLICATION.md) — liste des 39 pages Angular
