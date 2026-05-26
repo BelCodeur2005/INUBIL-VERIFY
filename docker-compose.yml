@@ -70,6 +70,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
     command: npx ng serve --host 0.0.0.0 --poll 2000
+
     depends_on:
       - backend
     networks:
