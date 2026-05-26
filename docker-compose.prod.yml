@@ -1,17 +1,35 @@
 version: '3.9'
 
+networks:
+  inubil-network:
+    driver: bridge
+
+volumes:
+  postgres_data_prod:
+
 services:
+
+  # ─── Base de données ───────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     container_name: inubil_postgres_prod
     restart: always
+    env_file: .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
+    networks:
+      - inubil-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ─── Backend NestJS ────────────────────────────────────────────────────────
   backend:
     build:
       context: ./backend
@@ -23,7 +41,23 @@ services:
     ports:
       - '3000:3000'
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    networks:
+      - inubil-network
 
-volumes:
-  postgres_data_prod:
+  # ─── Frontend Angular (nginx) ──────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: inubil_frontend_prod
+    restart: always
+    ports:
+      - '80:80'
+      - '443:443'
+    depends_on:
+      - backend
+    networks:
+      - inubil-network
