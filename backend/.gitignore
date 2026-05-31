@@ -1,0 +1,25 @@
+# Compiled output
+/dist
+/node_modules
+/build
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Environment (les secrets ne sont jamais commites)
+.env
+.env.*
+!.env.example
+
+# Coverage
+/coverage
+
+# IDE / OS
+.idea
+.vscode
+.DS_Store
+
+# Nest / TS
+*.tsbuildinfo
