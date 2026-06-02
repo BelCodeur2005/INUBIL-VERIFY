@@ -1,0 +1,711 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model cles_api {
+  id                   String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  universite_id        String        @db.Uuid
+  nom                  String        @db.VarChar(100)
+  cle_hachee           String        @unique @db.VarChar(255)
+  prefix               String        @db.VarChar(12)
+  permissions          Json          @default("[]")
+  derniere_utilisation DateTime?     @db.Timestamptz(6)
+  nb_utilisations      BigInt        @default(0)
+  expiration           DateTime?     @db.Timestamptz(6)
+  est_active           Boolean       @default(true)
+  ip_whitelist         Json          @default("[]")
+  created_at           DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime      @default(now()) @db.Timestamptz(6)
+  created_by           String?       @db.Uuid
+  utilisateurs         utilisateurs? @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  universites          universites   @relation(fields: [universite_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([prefix], map: "idx_cles_api_prefix")
+  @@index([universite_id], map: "idx_cles_api_universite_id")
+}
+
+model configurations {
+  id             String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  cle            String        @unique @db.VarChar(100)
+  valeur         String
+  type           String        @default("string") @db.VarChar(20)
+  description    String?
+  modifiable_par String        @default("super_admin") @db.VarChar(20)
+  updated_at     DateTime      @default(now()) @db.Timestamptz(6)
+  updated_by     String?       @db.Uuid
+  utilisateurs   utilisateurs? @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model documents {
+  id                                               String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  numero_unique                                    String                    @unique @db.VarChar(20)
+  url_verification                                 String?                   @default(dbgenerated("('https://verify.inubil.com/d/'::text || (numero_unique)::text)")) @db.VarChar(500)
+  etudiant_id                                      String                    @db.Uuid
+  universite_id                                    String                    @db.Uuid
+  type_document_id                                 String                    @db.Uuid
+  annee_academique                                 String?                   @db.VarChar(9)
+  date_emission                                    DateTime                  @db.Date
+  date_validite                                    DateTime?                 @db.Date
+  lieu_delivrance                                  String?                   @db.VarChar(150)
+  filiere                                          String?                   @db.VarChar(255)
+  donnees                                          Json                      @default("{}")
+  mention_id                                       String?                   @db.Uuid
+  note_sur                                         Decimal                   @default(20) @db.Decimal(5, 2)
+  moyenne_generale                                 Decimal?                  @db.Decimal(5, 2)
+  pdf_url                                          String?                   @db.VarChar(500)
+  pdf_taille_ko                                    Int?
+  pdf_chiffre                                      Boolean                   @default(false)
+  chiffrement_iv                                   String?                   @db.VarChar(32)
+  chiffrement_cle_wrappee                          String?
+  hash_sha256                                      String?                   @unique @db.VarChar(64)
+  cid_ipfs                                         String?                   @db.VarChar(100)
+  adresse_contrat                                  String?                   @db.VarChar(42)
+  transaction_hash                                 String?                   @db.VarChar(66)
+  bloc_numero                                      BigInt?
+  reseau                                           reseau_blockchain?
+  qr_code_url                                      String?                   @db.VarChar(500)
+  statut                                           statut_document           @default(brouillon)
+  saisi_par                                        String?                   @db.Uuid
+  valide_par                                       String?                   @db.Uuid
+  valide_le                                        DateTime?                 @db.Timestamptz(6)
+  emis_le                                          DateTime?                 @db.Timestamptz(6)
+  revoque_par                                      String?                   @db.Uuid
+  raison_revocation                                String?
+  revoque_le                                       DateTime?                 @db.Timestamptz(6)
+  metadata                                         Json                      @default("{}")
+  deleted_at                                       DateTime?                 @db.Timestamptz(6)
+  created_at                                       DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at                                       DateTime                  @default(now()) @db.Timestamptz(6)
+  etudiants                                        etudiants                 @relation(fields: [etudiant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  mentions_document                                mentions_document?        @relation(fields: [mention_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  utilisateurs_documents_revoque_parToutilisateurs utilisateurs?             @relation("documents_revoque_parToutilisateurs", fields: [revoque_par], references: [id], onUpdate: NoAction)
+  utilisateurs_documents_saisi_parToutilisateurs   utilisateurs?             @relation("documents_saisi_parToutilisateurs", fields: [saisi_par], references: [id], onUpdate: NoAction)
+  types_document                                   types_document            @relation(fields: [type_document_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  universites                                      universites               @relation(fields: [universite_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  utilisateurs_documents_valide_parToutilisateurs  utilisateurs?             @relation("documents_valide_parToutilisateurs", fields: [valide_par], references: [id], onUpdate: NoAction)
+  invitations                                      invitations[]
+  matieres_document                                matieres_document[]
+  partages_document                                partages_document[]
+  transactions_blockchain                          transactions_blockchain[]
+  verifications                                    verifications[]
+
+  @@index([date_emission], map: "idx_documents_date_emission")
+  @@index([donnees], map: "idx_documents_donnees", type: Gin)
+  @@index([etudiant_id], map: "idx_documents_etudiant_id")
+  @@index([hash_sha256], map: "idx_documents_hash_sha256")
+  @@index([numero_unique], map: "idx_documents_numero_unique")
+  @@index([statut], map: "idx_documents_statut")
+  @@index([transaction_hash], map: "idx_documents_transaction_hash")
+  @@index([type_document_id], map: "idx_documents_type_id")
+  @@index([universite_id], map: "idx_documents_universite_id")
+}
+
+model emails_log {
+  id             String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  utilisateur_id String?       @db.Uuid
+  destinataire   String        @db.VarChar(255)
+  sujet          String        @db.VarChar(255)
+  template       String        @db.VarChar(100)
+  parametres     Json          @default("{}")
+  statut         statut_email  @default(en_attente)
+  tentatives     Int           @default(0)
+  max_tentatives Int           @default(3)
+  erreur         String?
+  message_id     String?       @db.VarChar(255)
+  envoye_le      DateTime?     @db.Timestamptz(6)
+  created_at     DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime      @default(now()) @db.Timestamptz(6)
+  utilisateurs   utilisateurs? @relation(fields: [utilisateur_id], references: [id], onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_emails_created_at")
+  @@index([destinataire], map: "idx_emails_destinataire")
+  @@index([statut], map: "idx_emails_statut")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model etudiants {
+  id                                                  String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  utilisateur_id                                      String?             @unique @db.Uuid
+  numero_etudiant                                     String              @unique @db.VarChar(50)
+  nom                                                 String              @db.VarChar(100)
+  prenom                                              String              @db.VarChar(100)
+  date_naissance                                      DateTime?           @db.Date
+  lieu_naissance                                      String?             @db.VarChar(150)
+  nationalite                                         String?             @db.VarChar(100)
+  email                                               String?             @db.VarChar(255)
+  telephone                                           String?             @db.VarChar(50)
+  photo_url                                           String?             @db.VarChar(500)
+  universite_id                                       String              @db.Uuid
+  annee_entree                                        Int?
+  metadata                                            Json                @default("{}")
+  deleted_at                                          DateTime?           @db.Timestamptz(6)
+  created_at                                          DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at                                          DateTime            @default(now()) @db.Timestamptz(6)
+  created_by                                          String?             @db.Uuid
+  documents                                           documents[]
+  utilisateurs_etudiants_created_byToutilisateurs     utilisateurs?       @relation("etudiants_created_byToutilisateurs", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  universites                                         universites         @relation(fields: [universite_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  utilisateurs_etudiants_utilisateur_idToutilisateurs utilisateurs?       @relation("etudiants_utilisateur_idToutilisateurs", fields: [utilisateur_id], references: [id], onUpdate: NoAction)
+  invitations                                         invitations[]
+  partages_document                                   partages_document[]
+
+  @@index([email], map: "idx_etudiants_email")
+  @@index([numero_etudiant], map: "idx_etudiants_numero")
+  @@index([universite_id], map: "idx_etudiants_universite_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model invitations {
+  id            String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  token         String            @unique @db.VarChar(64)
+  cible         cible_invitation  @default(etudiant)
+  email         String            @db.VarChar(255)
+  etudiant_id   String?           @db.Uuid
+  document_id   String?           @db.Uuid
+  role_id       String?           @db.Uuid
+  universite_id String?           @db.Uuid
+  statut        statut_invitation @default(en_attente)
+  expires_at    DateTime          @db.Timestamptz(6)
+  accepted_at   DateTime?         @db.Timestamptz(6)
+  nb_relances   Int               @default(0)
+  created_by    String?           @db.Uuid
+  created_at    DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime          @default(now()) @db.Timestamptz(6)
+  utilisateurs  utilisateurs?     @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  documents     documents?        @relation(fields: [document_id], references: [id], onUpdate: NoAction)
+  etudiants     etudiants?        @relation(fields: [etudiant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  roles         roles?            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  universites   universites?      @relation(fields: [universite_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([email], map: "idx_invitations_email")
+  @@index([etudiant_id], map: "idx_invitations_etudiant_id")
+  @@index([statut], map: "idx_invitations_statut")
+  @@index([token], map: "idx_invitations_token")
+}
+
+model journal_audit {
+  id                String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  utilisateur_id    String?       @db.Uuid
+  nom_utilisateur   String?       @db.VarChar(255)
+  action            String        @db.VarChar(100)
+  module            String        @db.VarChar(50)
+  table_concernee   String?       @db.VarChar(100)
+  enregistrement_id String?       @db.Uuid
+  donnees_avant     Json?
+  donnees_apres     Json?
+  ip_address        String?       @db.Inet
+  user_agent        String?
+  created_at        DateTime      @default(now()) @db.Timestamptz(6)
+  utilisateurs      utilisateurs? @relation(fields: [utilisateur_id], references: [id], onUpdate: NoAction)
+
+  @@index([action], map: "idx_audit_action")
+  @@index([created_at(sort: Desc)], map: "idx_audit_created_at")
+  @@index([enregistrement_id], map: "idx_audit_enregistrement_id")
+  @@index([module], map: "idx_audit_module")
+  @@index([table_concernee], map: "idx_audit_table_concernee")
+  @@index([utilisateur_id], map: "idx_audit_utilisateur_id")
+}
+
+model matieres_document {
+  id           String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  document_id  String           @db.Uuid
+  code_matiere String?          @db.VarChar(20)
+  nom_matiere  String           @db.VarChar(255)
+  credits      Int              @default(0)
+  coefficient  Decimal          @default(1) @db.Decimal(4, 2)
+  note         Decimal?         @db.Decimal(5, 2)
+  note_max     Decimal          @default(20) @db.Decimal(5, 2)
+  resultat     resultat_matiere @default(ajourne)
+  semestre     Int?
+  type_ue      String?          @db.VarChar(50)
+  ordre        Int              @default(0)
+  created_at   DateTime         @default(now()) @db.Timestamptz(6)
+  documents    documents        @relation(fields: [document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([document_id], map: "idx_matieres_document_id")
+}
+
+model mentions_document {
+  id            String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code          String       @db.VarChar(50)
+  nom           String       @db.VarChar(100)
+  note_min      Decimal?     @db.Decimal(5, 2)
+  note_max      Decimal?     @db.Decimal(5, 2)
+  universite_id String?      @db.Uuid
+  est_actif     Boolean      @default(true)
+  ordre         Int          @default(0)
+  created_at    DateTime     @default(now()) @db.Timestamptz(6)
+  documents     documents[]
+  universites   universites? @relation(fields: [universite_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([code, universite_id])
+}
+
+model notifications {
+  id             String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  utilisateur_id String              @db.Uuid
+  type           String              @db.VarChar(80)
+  titre          String              @db.VarChar(255)
+  message        String
+  lien           String?             @db.VarChar(500)
+  statut         statut_notification @default(non_lue)
+  lue_le         DateTime?           @db.Timestamptz(6)
+  archivee_le    DateTime?           @db.Timestamptz(6)
+  metadata       Json                @default("{}")
+  created_at     DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime            @default(now()) @db.Timestamptz(6)
+  utilisateurs   utilisateurs        @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_notifs_created_at")
+  @@index([statut], map: "idx_notifs_statut")
+  @@index([utilisateur_id], map: "idx_notifs_utilisateur_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model partages_document {
+  id                         String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  document_id                String          @db.Uuid
+  etudiant_id                String          @db.Uuid
+  universite_destinataire_id String?         @db.Uuid
+  email_destinataire_externe String?         @db.VarChar(255)
+  token_acces                String          @unique @db.VarChar(64)
+  date_expiration            DateTime?       @db.Timestamptz(6)
+  statut                     statut_partage  @default(actif)
+  nb_consultations           Int             @default(0)
+  derniere_consultation      DateTime?       @db.Timestamptz(6)
+  revoque_le                 DateTime?       @db.Timestamptz(6)
+  revoque_par                String?         @db.Uuid
+  created_at                 DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime        @default(now()) @db.Timestamptz(6)
+  documents                  documents       @relation(fields: [document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  etudiants                  etudiants       @relation(fields: [etudiant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  utilisateurs               utilisateurs?   @relation(fields: [revoque_par], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  universites                universites?    @relation(fields: [universite_destinataire_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  verifications              verifications[]
+
+  @@index([document_id], map: "idx_partages_document_id")
+  @@index([etudiant_id], map: "idx_partages_etudiant_id")
+  @@index([statut], map: "idx_partages_statut")
+  @@index([token_acces], map: "idx_partages_token_acces")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model partenariats_universite {
+  id                                                                  String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  universite_id                                                       String        @db.Uuid
+  universite_liee_id                                                  String        @db.Uuid
+  type_partenariat                                                    String        @db.VarChar(50)
+  date_debut                                                          DateTime?     @db.Date
+  date_fin                                                            DateTime?     @db.Date
+  description                                                         String?
+  document_url                                                        String?       @db.VarChar(500)
+  statut                                                              String        @default("actif") @db.VarChar(20)
+  created_at                                                          DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at                                                          DateTime      @default(now()) @db.Timestamptz(6)
+  created_by                                                          String?       @db.Uuid
+  utilisateurs                                                        utilisateurs? @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  universites_partenariats_universite_universite_idTouniversites      universites   @relation("partenariats_universite_universite_idTouniversites", fields: [universite_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  universites_partenariats_universite_universite_liee_idTouniversites universites   @relation("partenariats_universite_universite_liee_idTouniversites", fields: [universite_liee_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([universite_id, universite_liee_id, type_partenariat])
+  @@index([universite_liee_id], map: "idx_partenariats_liee_id")
+  @@index([statut], map: "idx_partenariats_statut")
+  @@index([universite_id], map: "idx_partenariats_universite_id")
+}
+
+model permissions {
+  id               String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nom              String             @unique @db.VarChar(100)
+  description      String?
+  module           String             @db.VarChar(50)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  role_permissions role_permissions[]
+}
+
+model role_permissions {
+  role_id       String        @db.Uuid
+  permission_id String        @db.Uuid
+  accordee_par  String?       @db.Uuid
+  created_at    DateTime      @default(now()) @db.Timestamptz(6)
+  utilisateurs  utilisateurs? @relation(fields: [accordee_par], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rp_accordee_par")
+  permissions   permissions   @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  roles         roles         @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([role_id, permission_id])
+}
+
+model roles {
+  id                                          String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nom                                         String             @db.VarChar(100)
+  description                                 String?
+  est_systeme                                 Boolean            @default(false)
+  universite_id                               String?            @db.Uuid
+  created_at                                  DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at                                  DateTime           @default(now()) @db.Timestamptz(6)
+  created_by                                  String?            @db.Uuid
+  invitations                                 invitations[]
+  role_permissions                            role_permissions[]
+  utilisateurs_roles_created_byToutilisateurs utilisateurs?      @relation("roles_created_byToutilisateurs", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_roles_created_by")
+  universites                                 universites?       @relation(fields: [universite_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  utilisateurs_utilisateurs_role_idToroles    utilisateurs[]     @relation("utilisateurs_role_idToroles")
+
+  @@unique([nom, universite_id])
+}
+
+model sessions {
+  id             String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  utilisateur_id String       @db.Uuid
+  token_hash     String       @unique @db.VarChar(255)
+  ip_address     String?      @db.Inet
+  user_agent     String?
+  expires_at     DateTime     @db.Timestamptz(6)
+  revoquee       Boolean      @default(false)
+  revoquee_le    DateTime?    @db.Timestamptz(6)
+  created_at     DateTime     @default(now()) @db.Timestamptz(6)
+  utilisateurs   utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expires_at], map: "idx_sessions_expires_at")
+  @@index([token_hash], map: "idx_sessions_token_hash")
+  @@index([utilisateur_id], map: "idx_sessions_utilisateur_id")
+}
+
+model tentatives_connexion {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email        String   @db.VarChar(255)
+  ip_address   String?  @db.Inet
+  user_agent   String?
+  succes       Boolean  @default(false)
+  raison_echec String?  @db.VarChar(100)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([created_at(sort: Desc)], map: "idx_tentatives_created_at")
+  @@index([email], map: "idx_tentatives_email")
+  @@index([ip_address], map: "idx_tentatives_ip")
+}
+
+model transactions_blockchain {
+  id               String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  document_id      String?            @db.Uuid
+  type             type_transaction
+  transaction_hash String             @unique @db.VarChar(66)
+  bloc_numero      BigInt?
+  reseau           reseau_blockchain
+  gas_utilise      BigInt?
+  gas_prix         BigInt?
+  statut           statut_transaction @default(en_attente)
+  erreur           String?
+  payload          Json               @default("{}")
+  confirme_le      DateTime?          @db.Timestamptz(6)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  documents        documents?         @relation(fields: [document_id], references: [id], onUpdate: NoAction)
+
+  @@index([document_id], map: "idx_tx_document_id")
+  @@index([transaction_hash], map: "idx_tx_hash")
+  @@index([statut], map: "idx_tx_statut")
+}
+
+model types_document {
+  id              String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code            String             @db.VarChar(50)
+  nom             String             @db.VarChar(200)
+  nom_court       String?            @db.VarChar(50)
+  categorie       categorie_document
+  niveau_bac_plus Int?
+  pays            String?            @default("International") @db.VarChar(100)
+  universite_id   String?            @db.Uuid
+  a_matieres      Boolean            @default(false)
+  est_partage     Boolean            @default(false)
+  est_actif       Boolean            @default(true)
+  ordre           Int                @default(0)
+  created_at      DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime           @default(now()) @db.Timestamptz(6)
+  documents       documents[]
+  universites     universites?       @relation(fields: [universite_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([code, universite_id])
+  @@index([categorie], map: "idx_types_document_categorie")
+}
+
+model universites {
+  id                                                                              String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nom                                                                             String                    @db.VarChar(255)
+  nom_court                                                                       String?                   @db.VarChar(50)
+  pays                                                                            String                    @default("Cameroun") @db.VarChar(100)
+  ville                                                                           String?                   @db.VarChar(100)
+  adresse                                                                         String?
+  type                                                                            type_universite           @default(privee)
+  logo_url                                                                        String?                   @db.VarChar(500)
+  site_web                                                                        String?                   @db.VarChar(255)
+  email_contact                                                                   String?                   @db.VarChar(255)
+  telephone                                                                       String?                   @db.VarChar(50)
+  description                                                                     String?
+  statut                                                                          statut_universite         @default(en_attente)
+  approuvee_par                                                                   String?                   @db.Uuid
+  approuvee_le                                                                    DateTime?                 @db.Timestamptz(6)
+  raison_rejet                                                                    String?
+  config                                                                          Json                      @default("{}")
+  metadata                                                                        Json                      @default("{}")
+  deleted_at                                                                      DateTime?                 @db.Timestamptz(6)
+  created_at                                                                      DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at                                                                      DateTime                  @default(now()) @db.Timestamptz(6)
+  created_by                                                                      String?                   @db.Uuid
+  cles_api                                                                        cles_api[]
+  documents                                                                       documents[]
+  etudiants                                                                       etudiants[]
+  invitations                                                                     invitations[]
+  mentions_document                                                               mentions_document[]
+  partages_document                                                               partages_document[]
+  partenariats_universite_partenariats_universite_universite_idTouniversites      partenariats_universite[] @relation("partenariats_universite_universite_idTouniversites")
+  partenariats_universite_partenariats_universite_universite_liee_idTouniversites partenariats_universite[] @relation("partenariats_universite_universite_liee_idTouniversites")
+  roles                                                                           roles[]
+  types_document                                                                  types_document[]
+  utilisateurs_universites_approuvee_parToutilisateurs                            utilisateurs?             @relation("universites_approuvee_parToutilisateurs", fields: [approuvee_par], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_universites_approuvee_par")
+  utilisateurs_universites_created_byToutilisateurs                               utilisateurs?             @relation("universites_created_byToutilisateurs", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_universites_created_by")
+  utilisateurs_utilisateurs_universite_idTouniversites                            utilisateurs[]            @relation("utilisateurs_universite_idTouniversites")
+  webhooks                                                                        webhooks[]
+
+  @@index([statut], map: "idx_universites_statut")
+}
+
+model utilisateurs {
+  id                                                  String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nom                                                 String                    @db.VarChar(100)
+  prenom                                              String                    @db.VarChar(100)
+  email                                               String                    @unique @db.VarChar(255)
+  mot_de_passe                                        String                    @db.VarChar(255)
+  role_id                                             String?                   @db.Uuid
+  universite_id                                       String?                   @db.Uuid
+  statut                                              statut_utilisateur        @default(en_attente_email)
+  email_verifie                                       Boolean                   @default(false)
+  token_verification_email                            String?                   @db.VarChar(255)
+  token_verification_expiry                           DateTime?                 @db.Timestamptz(6)
+  token_reset_password                                String?                   @db.VarChar(255)
+  token_reset_expiry                                  DateTime?                 @db.Timestamptz(6)
+  tentatives_connexion                                Int                       @default(0)
+  bloque_jusqu                                        DateTime?                 @db.Timestamptz(6)
+  derniere_connexion                                  DateTime?                 @db.Timestamptz(6)
+  avatar_url                                          String?                   @db.VarChar(500)
+  langue                                              langue_app                @default(fr)
+  preferences                                         Json                      @default("{}")
+  metadata                                            Json                      @default("{}")
+  deleted_at                                          DateTime?                 @db.Timestamptz(6)
+  created_at                                          DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at                                          DateTime                  @default(now()) @db.Timestamptz(6)
+  created_by                                          String?                   @db.Uuid
+  cles_api                                            cles_api[]
+  configurations                                      configurations[]
+  documents_documents_revoque_parToutilisateurs       documents[]               @relation("documents_revoque_parToutilisateurs")
+  documents_documents_saisi_parToutilisateurs         documents[]               @relation("documents_saisi_parToutilisateurs")
+  documents_documents_valide_parToutilisateurs        documents[]               @relation("documents_valide_parToutilisateurs")
+  emails_log                                          emails_log[]
+  etudiants_etudiants_created_byToutilisateurs        etudiants[]               @relation("etudiants_created_byToutilisateurs")
+  etudiants_etudiants_utilisateur_idToutilisateurs    etudiants?                @relation("etudiants_utilisateur_idToutilisateurs")
+  invitations                                         invitations[]
+  journal_audit                                       journal_audit[]
+  notifications                                       notifications[]
+  partages_document                                   partages_document[]
+  partenariats_universite                             partenariats_universite[]
+  role_permissions                                    role_permissions[]
+  roles_roles_created_byToutilisateurs                roles[]                   @relation("roles_created_byToutilisateurs")
+  sessions                                            sessions[]
+  universites_universites_approuvee_parToutilisateurs universites[]             @relation("universites_approuvee_parToutilisateurs")
+  universites_universites_created_byToutilisateurs    universites[]             @relation("universites_created_byToutilisateurs")
+  utilisateurs                                        utilisateurs?             @relation("utilisateursToutilisateurs", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_utilisateurs                                  utilisateurs[]            @relation("utilisateursToutilisateurs")
+  roles_utilisateurs_role_idToroles                   roles?                    @relation("utilisateurs_role_idToroles", fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  universites_utilisateurs_universite_idTouniversites universites?              @relation("utilisateurs_universite_idTouniversites", fields: [universite_id], references: [id], onUpdate: NoAction)
+  verifications                                       verifications[]
+  webhooks                                            webhooks[]
+
+  @@index([email], map: "idx_utilisateurs_email")
+  @@index([role_id], map: "idx_utilisateurs_role_id")
+  @@index([statut], map: "idx_utilisateurs_statut")
+  @@index([universite_id], map: "idx_utilisateurs_universite_id")
+}
+
+model verifications {
+  id                String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  document_id       String?               @db.Uuid
+  partage_id        String?               @db.Uuid
+  type_verification type_verification
+  resultat          resultat_verification
+  hash_soumis       String?               @db.VarChar(64)
+  ip_address        String?               @db.Inet
+  user_agent        String?
+  pays              String?               @db.VarChar(100)
+  ville             String?               @db.VarChar(100)
+  organisation      String?               @db.VarChar(255)
+  utilisateur_id    String?               @db.Uuid
+  rapport_genere    Boolean               @default(false)
+  rapport_pdf_url   String?               @db.VarChar(500)
+  created_at        DateTime              @default(now()) @db.Timestamptz(6)
+  documents         documents?            @relation(fields: [document_id], references: [id], onUpdate: NoAction)
+  partages_document partages_document?    @relation(fields: [partage_id], references: [id], onUpdate: NoAction)
+  utilisateurs      utilisateurs?         @relation(fields: [utilisateur_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_verifications_created_at")
+  @@index([document_id], map: "idx_verifications_document_id")
+  @@index([ip_address], map: "idx_verifications_ip")
+  @@index([partage_id], map: "idx_verifications_partage_id")
+  @@index([resultat], map: "idx_verifications_resultat")
+}
+
+model webhook_livraisons {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  webhook_id  String   @db.Uuid
+  evenement   String   @db.VarChar(100)
+  payload     Json
+  statut_http Int?
+  reponse     String?
+  duree_ms    Int?
+  succes      Boolean  @default(false)
+  tentative   Int      @default(1)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  webhooks    webhooks @relation(fields: [webhook_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_webhook_livraisons_date")
+  @@index([webhook_id], map: "idx_webhook_livraisons_wid")
+}
+
+model webhooks {
+  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  universite_id      String               @db.Uuid
+  nom                String               @db.VarChar(100)
+  url                String               @db.VarChar(500)
+  secret             String               @db.VarChar(255)
+  evenements         Json                 @default("[]")
+  statut             statut_webhook       @default(actif)
+  nb_succes          Int                  @default(0)
+  nb_echecs          Int                  @default(0)
+  derniere_livraison DateTime?            @db.Timestamptz(6)
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  created_by         String?              @db.Uuid
+  webhook_livraisons webhook_livraisons[]
+  utilisateurs       utilisateurs?        @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  universites        universites          @relation(fields: [universite_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([universite_id], map: "idx_webhooks_universite_id")
+}
+
+enum categorie_document {
+  diplome
+  releve
+  attestation
+  certificat
+  autre
+}
+
+enum cible_invitation {
+  etudiant
+  collaborateur
+}
+
+enum langue_app {
+  fr
+  en
+}
+
+enum reseau_blockchain {
+  polygon_amoy
+  polygon_mainnet
+}
+
+enum resultat_matiere {
+  valide
+  ajourne
+  absent
+  dispense
+}
+
+enum resultat_verification {
+  authentique
+  revoque
+  non_trouve
+  falsifie
+}
+
+enum statut_document {
+  brouillon
+  en_validation
+  actif
+  revoque
+  expire
+}
+
+enum statut_email {
+  en_attente
+  envoye
+  echoue
+  rebondi
+}
+
+enum statut_invitation {
+  en_attente
+  acceptee
+  expiree
+}
+
+enum statut_notification {
+  non_lue
+  lue
+  archivee
+}
+
+enum statut_partage {
+  actif
+  expire
+  revoque
+}
+
+enum statut_transaction {
+  en_attente
+  confirme
+  echoue
+}
+
+enum statut_universite {
+  en_attente
+  approuvee
+  active
+  suspendue
+  rejetee
+}
+
+enum statut_utilisateur {
+  actif
+  inactif
+  suspendu
+  en_attente_email
+}
+
+enum statut_webhook {
+  actif
+  inactif
+  en_erreur
+}
+
+enum type_transaction {
+  emission
+  revocation
+}
+
+enum type_universite {
+  publique
+  privee
+  partenaire_fr
+  partenaire_international
+}
+
+enum type_verification {
+  lien_unique
+  qr_code
+  hash
+  upload_pdf
+}

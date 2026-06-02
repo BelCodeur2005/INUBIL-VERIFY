@@ -47,3 +47,4 @@ blockchain/typechain-types/
 
 # Docker
 *.env.docker
+docker-compose.override.yml
