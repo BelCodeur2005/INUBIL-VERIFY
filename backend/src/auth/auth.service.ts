@@ -188,6 +188,19 @@ export class AuthService {
     });
   }
 
+  // ─── PERMISSIONS (RBAC) ─────────────────────────────────────────────
+  /** Retourne les noms des permissions accordees au role donne. */
+  async getPermissions(roleId: string | null): Promise<string[]> {
+    if (!roleId) {
+      return [];
+    }
+    const liens = await this.prisma.role_permissions.findMany({
+      where: { role_id: roleId },
+      select: { permissions: { select: { nom: true } } },
+    });
+    return liens.map((lien) => lien.permissions.nom);
+  }
+
   // ─── Helpers prives ─────────────────────────────────────────────────
 
   /** Incremente le compteur d'echecs et bloque le compte au-dela du seuil. */

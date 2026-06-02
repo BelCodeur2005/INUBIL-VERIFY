@@ -41,6 +41,34 @@ async function main(): Promise<void> {
     console.log('Role "super_admin" cree.');
   }
 
+  // 1b. Permissions systeme + attribution complete au role super_admin.
+  const PERMISSIONS: Array<{ nom: string; module: string }> = [
+    { nom: 'valider_diplome', module: 'documents' },
+    { nom: 'revoquer_diplome', module: 'documents' },
+    { nom: 'gerer_universites', module: 'universites' },
+    { nom: 'gerer_utilisateurs', module: 'utilisateurs' },
+    { nom: 'voir_statistiques', module: 'statistiques' },
+    { nom: 'voir_audit', module: 'audit' },
+    { nom: 'saisir_document', module: 'documents' },
+    { nom: 'voir_dossier_etudiant', module: 'etudiants' },
+    { nom: 'partager_document', module: 'partages' },
+  ];
+  for (const p of PERMISSIONS) {
+    const perm = await prisma.permissions.upsert({
+      where: { nom: p.nom },
+      update: {},
+      create: { nom: p.nom, module: p.module, description: `Permission : ${p.nom}` },
+    });
+    await prisma.role_permissions.upsert({
+      where: {
+        role_id_permission_id: { role_id: role.id, permission_id: perm.id },
+      },
+      update: {},
+      create: { role_id: role.id, permission_id: perm.id },
+    });
+  }
+  console.log(`${PERMISSIONS.length} permissions systeme accordees a "super_admin".`);
+
   // 2. Compte admin de test.
   const existant = await prisma.utilisateurs.findUnique({
     where: { email: adminEmail },
