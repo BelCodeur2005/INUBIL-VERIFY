@@ -28,6 +28,8 @@ const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  /** Hash bcrypt factice (calcule une fois) pour neutraliser le timing. */
+  private dummyHash: string | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -44,6 +46,10 @@ export class AuthService {
 
     // Compte introuvable : meme reponse qu'un mauvais mot de passe (anti-enumeration).
     if (!user) {
+      // Anti-timing : on execute un bcrypt.compare factice pour que cette branche
+      // coute le meme temps que la branche "mot de passe errone" (sinon l'ecart
+      // de duree revele si l'email existe ou non).
+      await bcrypt.compare(dto.mot_de_passe, await this.getDummyHash());
       await this.tracerTentative(dto.email, ip, userAgent, false, 'utilisateur_inconnu');
       throw new UnauthorizedException('Identifiants invalides');
     }
@@ -276,5 +282,14 @@ export class AuthService {
   /** Hash SHA-256 (pour stocker tokens/sessions sans jamais garder le clair). */
   private hash(value: string): string {
     return createHash('sha256').update(value).digest('hex');
+  }
+
+  /** Hash bcrypt factice (au cout configure), mis en cache apres le 1er appel. */
+  private async getDummyHash(): Promise<string> {
+    if (!this.dummyHash) {
+      const rounds = Number(this.config.get<number>('BCRYPT_SALT_ROUNDS'));
+      this.dummyHash = await bcrypt.hash('timing-attack-mitigation', rounds);
+    }
+    return this.dummyHash;
   }
 }
