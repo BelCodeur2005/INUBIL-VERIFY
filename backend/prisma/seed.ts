@@ -1,8 +1,9 @@
 /**
- * Script de seed — cree des donnees de test minimales.
+ * Script de seed — cree des donnees de test minimales (DEVELOPPEMENT UNIQUEMENT).
  *
  * Lancer :  docker compose exec backend npx prisma db seed
  *
+ * Identifiants configurables via SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD.
  * Idempotent : peut etre relance sans creer de doublons.
  */
 import { PrismaClient } from '@prisma/client';
@@ -10,13 +11,20 @@ import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-// Identifiants du compte admin de test.
-const ADMIN_EMAIL = 'admin@inubil.com';
-const ADMIN_PASSWORD = 'Admin123!';
+// Valeurs par defaut reservees au developpement local.
+const DEFAULT_ADMIN_EMAIL = 'admin@inubil.com';
+const DEFAULT_ADMIN_PASSWORD = 'Admin123!';
 
 async function main(): Promise<void> {
-  const rounds = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12);
-  const motDePasseHache = await bcrypt.hash(ADMIN_PASSWORD, rounds);
+  // SECURITE : ce seed cree un compte admin actif. Interdit en prod/staging.
+  const env = process.env.NODE_ENV;
+  if (env === 'production' || env === 'staging') {
+    throw new Error(`Seed interdit en environnement "${env}".`);
+  }
+
+  const adminEmail = (process.env.SEED_ADMIN_EMAIL ?? DEFAULT_ADMIN_EMAIL).toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? DEFAULT_ADMIN_PASSWORD;
+  const motDePasseFourniParEnv = Boolean(process.env.SEED_ADMIN_PASSWORD);
 
   // 1. Role super_admin (cree une seule fois).
   let role = await prisma.roles.findFirst({
@@ -33,43 +41,43 @@ async function main(): Promise<void> {
     console.log('Role "super_admin" cree.');
   }
 
-  // 2. Compte admin de test (cree ou mis a jour).
+  // 2. Compte admin de test.
   const existant = await prisma.utilisateurs.findUnique({
-    where: { email: ADMIN_EMAIL },
+    where: { email: adminEmail },
   });
+
   if (existant) {
+    // On n'ecrase JAMAIS le mot de passe d'un compte existant.
+    // On se contente de lever un eventuel blocage (utile en test).
     await prisma.utilisateurs.update({
-      where: { email: ADMIN_EMAIL },
-      data: {
-        mot_de_passe: motDePasseHache,
-        statut: 'actif',
-        email_verifie: true,
-        role_id: role.id,
-        tentatives_connexion: 0,
-        bloque_jusqu: null,
-      },
+      where: { email: adminEmail },
+      data: { tentatives_connexion: 0, bloque_jusqu: null },
     });
-    console.log(`Compte admin mis a jour : ${ADMIN_EMAIL}`);
+    console.log(
+      `Compte admin deja present : ${adminEmail} (deverrouille, mot de passe inchange).`,
+    );
   } else {
+    const rounds = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12);
+    const motDePasseHache = await bcrypt.hash(adminPassword, rounds);
     await prisma.utilisateurs.create({
       data: {
         nom: 'Admin',
         prenom: 'INUBIL',
-        email: ADMIN_EMAIL,
+        email: adminEmail,
         mot_de_passe: motDePasseHache,
         statut: 'actif',
         email_verifie: true,
         role_id: role.id,
       },
     });
-    console.log(`Compte admin cree : ${ADMIN_EMAIL}`);
+    console.log(`Compte admin cree : ${adminEmail}`);
+    // On n'affiche le mot de passe que s'il s'agit du defaut dev (non secret).
+    if (motDePasseFourniParEnv) {
+      console.log('  mot de passe : (defini via SEED_ADMIN_PASSWORD)');
+    } else {
+      console.log(`  mot de passe (defaut dev) : ${adminPassword}`);
+    }
   }
-
-  console.log('\n─────────────────────────────────────────');
-  console.log('  Identifiants de test :');
-  console.log(`  email        : ${ADMIN_EMAIL}`);
-  console.log(`  mot de passe : ${ADMIN_PASSWORD}`);
-  console.log('─────────────────────────────────────────\n');
 }
 
 main()
