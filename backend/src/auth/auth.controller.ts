@@ -1,25 +1,31 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Ip,
   Post,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
 import {
+  ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
+import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthTokensDto } from './dto/auth-response.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AuthenticatedUser } from './strategies/jwt.strategy';
 
 @ApiTags('Authentification')
 @Controller('auth')
@@ -80,5 +86,19 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Token invalide ou expire.' })
   resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
     return this.auth.resetPassword(dto.token, dto.nouveau_mot_de_passe);
+  }
+
+  @Get('permissions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: "Permissions de l'utilisateur connecte (RBAC)" })
+  @ApiOkResponse({
+    description: "Liste des permissions de l'utilisateur.",
+    type: String,
+    isArray: true,
+  })
+  @ApiResponse({ status: 401, description: 'Non authentifie.' })
+  getPermissions(@CurrentUser() user: AuthenticatedUser): Promise<string[]> {
+    return this.auth.getPermissions(user.role_id);
   }
 }
