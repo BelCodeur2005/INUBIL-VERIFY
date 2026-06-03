@@ -24,4 +24,12 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsEmail({}, { message: 'Email invalide' })
   email?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "Mot de passe actuel — OBLIGATOIRE pour changer l'email (re-authentification).",
+  })
+  @IsOptional()
+  @IsString()
+  mot_de_passe_actuel?: string;
 }
