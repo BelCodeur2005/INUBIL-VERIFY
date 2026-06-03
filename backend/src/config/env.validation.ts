@@ -23,13 +23,18 @@ export const envValidationSchema = Joi.object({
   DATABASE_URL: Joi.string().required(),
 
   // ─── JWT (cahier §9.1 : token + rotation) ──────────────────────
+  // Access token court (15 min) : limite l'exposition en cas de vol.
+  // La longevite de session vient du refresh token (revocable en base).
   JWT_SECRET: Joi.string().min(32).required(),
-  JWT_EXPIRES_IN: Joi.string().default('24h'),
+  JWT_EXPIRES_IN: Joi.string().default('15m'),
   JWT_REFRESH_SECRET: Joi.string().min(32).required(),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
 
   // ─── Securite (cahier §9.1 / §9.2) ─────────────────────────────
   BCRYPT_SALT_ROUNDS: Joi.number().min(12).default(12),
+  // Fenetre d'inactivite (minutes) : une session sans refresh au-dela
+  // de ce delai expire (deconnexion automatique apres inactivite).
+  SESSION_IDLE_MINUTES: Joi.number().min(1).default(30),
   ENCRYPTION_MASTER_KEY: Joi.string().length(64).required(), // 32 octets en hex
 
   // ─── Email — optionnel jusqu'a #25 ─────────────────────────────

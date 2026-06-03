@@ -5,6 +5,7 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -14,8 +15,10 @@ import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { AuditService } from '../audit/audit.service';
 import { LoginDto } from './dto/login.dto';
 import { AuthTokensDto } from './dto/auth-response.dto';
+import { SessionResponseDto } from './dto/session-response.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 
 /** Nombre d'echecs avant blocage temporaire du compte. */
@@ -36,6 +39,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly mail: MailService,
+    private readonly audit: AuditService,
   ) {}
 
   // ─── LOGIN ──────────────────────────────────────────────────────────
@@ -79,6 +83,17 @@ export class AuthService {
       data: { tentatives_connexion: 0, bloque_jusqu: null, derniere_connexion: new Date() },
     });
     await this.tracerTentative(dto.email, ip, userAgent, true, null);
+
+    // Nettoyage des sessions deja expirees + trace dans le journal d'audit.
+    await this.revoquerSessionsExpirees(user.id);
+    await this.audit.log({
+      utilisateurId: user.id,
+      nomUtilisateur: `${user.prenom} ${user.nom}`,
+      action: 'connexion',
+      module: 'auth',
+      ip,
+      userAgent,
+    });
 
     return this.genererTokens(user, ip, userAgent);
   }
@@ -126,11 +141,25 @@ export class AuthService {
   // ─── LOGOUT ─────────────────────────────────────────────────────────
   async logout(refreshToken: string): Promise<void> {
     const tokenHash = this.hash(refreshToken);
+    const session = await this.prisma.sessions.findFirst({
+      where: { token_hash: tokenHash },
+    });
+
     // Idempotent : revoque la session si elle existe, sans erreur sinon.
     await this.prisma.sessions.updateMany({
       where: { token_hash: tokenHash, revoquee: false },
       data: { revoquee: true, revoquee_le: new Date() },
     });
+
+    if (session) {
+      await this.audit.log({
+        utilisateurId: session.utilisateur_id,
+        action: 'deconnexion',
+        module: 'auth',
+        ip: session.ip_address ?? undefined,
+        userAgent: session.user_agent ?? undefined,
+      });
+    }
   }
 
   // ─── FORGOT PASSWORD ────────────────────────────────────────────────
@@ -201,7 +230,55 @@ export class AuthService {
     return liens.map((lien) => lien.permissions.nom);
   }
 
+  // ─── SESSIONS ───────────────────────────────────────────────────────
+  /** Liste les sessions actives (non revoquees, non expirees) d'un utilisateur. */
+  async listerSessions(userId: string): Promise<SessionResponseDto[]> {
+    return this.prisma.sessions.findMany({
+      where: {
+        utilisateur_id: userId,
+        revoquee: false,
+        expires_at: { gt: new Date() },
+      },
+      orderBy: { created_at: 'desc' },
+      select: {
+        id: true,
+        ip_address: true,
+        user_agent: true,
+        created_at: true,
+        expires_at: true,
+      },
+    });
+  }
+
+  /** Revoque une session precise, apres verif qu'elle appartient a l'utilisateur. */
+  async revoquerSession(userId: string, sessionId: string): Promise<void> {
+    const session = await this.prisma.sessions.findFirst({
+      where: { id: sessionId, utilisateur_id: userId },
+    });
+    if (!session) {
+      throw new NotFoundException('Session introuvable');
+    }
+    if (!session.revoquee) {
+      await this.prisma.sessions.update({
+        where: { id: session.id },
+        data: { revoquee: true, revoquee_le: new Date() },
+      });
+    }
+  }
+
   // ─── Helpers prives ─────────────────────────────────────────────────
+
+  /** Revoque les sessions deja expirees d'un utilisateur (nettoyage). */
+  private async revoquerSessionsExpirees(userId: string): Promise<void> {
+    await this.prisma.sessions.updateMany({
+      where: {
+        utilisateur_id: userId,
+        revoquee: false,
+        expires_at: { lte: new Date() },
+      },
+      data: { revoquee: true, revoquee_le: new Date() },
+    });
+  }
 
   /** Incremente le compteur d'echecs et bloque le compte au-dela du seuil. */
   private async gererEchec(user: utilisateurs): Promise<void> {
@@ -263,9 +340,13 @@ export class AuthService {
       },
     );
 
-    // Date d'expiration de la session = exp du refresh token.
-    const refreshDecoded = this.jwt.decode(refresh_token) as { exp: number };
     const accessDecoded = this.jwt.decode(access_token) as { exp: number };
+
+    // Fenetre d'inactivite glissante : la session expire si aucun refresh
+    // n'intervient dans ce delai -> deconnexion automatique apres inactivite.
+    // (Le refresh token JWT garde son propre plafond absolu via JWT_REFRESH_EXPIRES_IN.)
+    const idleMinutes = Number(this.config.get<number>('SESSION_IDLE_MINUTES'));
+    const sessionExpiresAt = new Date(Date.now() + idleMinutes * 60 * 1000);
 
     await this.prisma.sessions.create({
       data: {
@@ -273,7 +354,7 @@ export class AuthService {
         token_hash: this.hash(refresh_token),
         ip_address: ip,
         user_agent: userAgent,
-        expires_at: new Date(refreshDecoded.exp * 1000),
+        expires_at: sessionExpiresAt,
       },
     });
 
