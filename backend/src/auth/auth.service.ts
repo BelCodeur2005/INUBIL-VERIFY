@@ -289,9 +289,25 @@ export class AuthService {
     let verifToken: string | null = null;
     let nouvelEmail: string | null = null;
     if (dto.email !== undefined && dto.email.toLowerCase() !== user.email) {
+      // Step-up auth : changer l'email est une operation sensible (risque de
+      // prise de controle si un access token est vole). On exige donc le mot
+      // de passe actuel.
+      if (!dto.mot_de_passe_actuel) {
+        throw new BadRequestException(
+          "Le mot de passe actuel est requis pour changer l'email",
+        );
+      }
+      const motDePasseOk = await bcrypt.compare(
+        dto.mot_de_passe_actuel,
+        user.mot_de_passe,
+      );
+      if (!motDePasseOk) {
+        throw new BadRequestException('Mot de passe actuel incorrect');
+      }
+
       nouvelEmail = dto.email.toLowerCase();
-      const dejaPris = await this.prisma.utilisateurs.findUnique({
-        where: { email: nouvelEmail },
+      const dejaPris = await this.prisma.utilisateurs.findFirst({
+        where: { email: nouvelEmail, deleted_at: null },
       });
       if (dejaPris) {
         throw new ConflictException('Cet email est deja utilise');
@@ -308,6 +324,12 @@ export class AuthService {
     // Changement d'email : on declenche la re-verification (l'endpoint de
     // validation du token est la tache #69).
     if (verifToken && nouvelEmail) {
+      // Securite : un changement d'email revoque toutes les sessions actives.
+      await this.prisma.sessions.updateMany({
+        where: { utilisateur_id: userId, revoquee: false },
+        data: { revoquee: true, revoquee_le: new Date() },
+      });
+
       const verifyUrl = `${this.config.get<string>('FRONTEND_URL')}/verifier-email?token=${verifToken}`;
       await this.mail.sendEmailVerification(nouvelEmail, verifyUrl);
       await this.audit.log({
