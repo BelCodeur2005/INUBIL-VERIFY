@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Ip,
+  Param,
   Post,
   Req,
   UseGuards,
@@ -24,6 +26,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SessionResponseDto } from './dto/session-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthenticatedUser } from './strategies/jwt.strategy';
 
@@ -100,5 +103,32 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Non authentifie.' })
   getPermissions(@CurrentUser() user: AuthenticatedUser): Promise<string[]> {
     return this.auth.getPermissions(user.role_id);
+  }
+
+  @Get('sessions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: "Sessions actives de l'utilisateur connecte" })
+  @ApiOkResponse({ type: SessionResponseDto, isArray: true })
+  @ApiResponse({ status: 401, description: 'Non authentifie.' })
+  listerSessions(
+    @CurrentUser('id') userId: string,
+  ): Promise<SessionResponseDto[]> {
+    return this.auth.listerSessions(userId);
+  }
+
+  @Delete('sessions/:id')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Revoque une session (deconnexion a distance)' })
+  @ApiResponse({ status: 204, description: 'Session revoquee.' })
+  @ApiResponse({ status: 401, description: 'Non authentifie.' })
+  @ApiResponse({ status: 404, description: 'Session introuvable.' })
+  revoquerSession(
+    @CurrentUser('id') userId: string,
+    @Param('id') sessionId: string,
+  ): Promise<void> {
+    return this.auth.revoquerSession(userId, sessionId);
   }
 }
