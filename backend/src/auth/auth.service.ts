@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   HttpException,
   HttpStatus,
@@ -19,6 +20,9 @@ import { AuditService } from '../audit/audit.service';
 import { LoginDto } from './dto/login.dto';
 import { AuthTokensDto } from './dto/auth-response.dto';
 import { SessionResponseDto } from './dto/session-response.dto';
+import { ProfileResponseDto } from './dto/profile-response.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 
 /** Nombre d'echecs avant blocage temporaire du compte. */
@@ -27,6 +31,8 @@ const MAX_TENTATIVES = 5;
 const DUREE_BLOCAGE_MIN = 15;
 /** Duree de validite du token de reinitialisation (millisecondes). */
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
+/** Duree de validite du token de verification d'email (millisecondes). */
+const EMAIL_VERIF_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 @Injectable()
 export class AuthService {
@@ -228,6 +234,133 @@ export class AuthService {
       select: { permissions: { select: { nom: true } } },
     });
     return liens.map((lien) => lien.permissions.nom);
+  }
+
+  // ─── PROFIL ─────────────────────────────────────────────────────────
+  /** Profil complet de l'utilisateur (avec role et universite). */
+  async getProfile(userId: string): Promise<ProfileResponseDto> {
+    const user = await this.prisma.utilisateurs.findFirst({
+      where: { id: userId, deleted_at: null },
+      include: {
+        roles_utilisateurs_role_idToroles: { select: { id: true, nom: true } },
+        universites_utilisateurs_universite_idTouniversites: {
+          select: { id: true, nom: true },
+        },
+      },
+    });
+    if (!user) {
+      throw new NotFoundException('Utilisateur introuvable');
+    }
+
+    return {
+      id: user.id,
+      nom: user.nom,
+      prenom: user.prenom,
+      email: user.email,
+      email_verifie: user.email_verifie,
+      avatar_url: user.avatar_url,
+      langue: user.langue,
+      role: user.roles_utilisateurs_role_idToroles ?? null,
+      universite: user.universites_utilisateurs_universite_idTouniversites ?? null,
+      created_at: user.created_at,
+    };
+  }
+
+  /** Met a jour nom / prenom / email. Un changement d'email force une re-verification. */
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<ProfileResponseDto> {
+    const user = await this.prisma.utilisateurs.findFirst({
+      where: { id: userId, deleted_at: null },
+    });
+    if (!user) {
+      throw new NotFoundException('Utilisateur introuvable');
+    }
+
+    const data: {
+      nom?: string;
+      prenom?: string;
+      email?: string;
+      email_verifie?: boolean;
+      token_verification_email?: string;
+      token_verification_expiry?: Date;
+    } = {};
+    if (dto.nom !== undefined) data.nom = dto.nom;
+    if (dto.prenom !== undefined) data.prenom = dto.prenom;
+
+    let verifToken: string | null = null;
+    let nouvelEmail: string | null = null;
+    if (dto.email !== undefined && dto.email.toLowerCase() !== user.email) {
+      nouvelEmail = dto.email.toLowerCase();
+      const dejaPris = await this.prisma.utilisateurs.findUnique({
+        where: { email: nouvelEmail },
+      });
+      if (dejaPris) {
+        throw new ConflictException('Cet email est deja utilise');
+      }
+      verifToken = randomBytes(32).toString('hex');
+      data.email = nouvelEmail;
+      data.email_verifie = false;
+      data.token_verification_email = this.hash(verifToken);
+      data.token_verification_expiry = new Date(Date.now() + EMAIL_VERIF_TTL_MS);
+    }
+
+    await this.prisma.utilisateurs.update({ where: { id: userId }, data });
+
+    // Changement d'email : on declenche la re-verification (l'endpoint de
+    // validation du token est la tache #69).
+    if (verifToken && nouvelEmail) {
+      const verifyUrl = `${this.config.get<string>('FRONTEND_URL')}/verifier-email?token=${verifToken}`;
+      await this.mail.sendEmailVerification(nouvelEmail, verifyUrl);
+      await this.audit.log({
+        utilisateurId: userId,
+        nomUtilisateur: `${user.prenom} ${user.nom}`,
+        action: 'changement_email',
+        module: 'auth',
+      });
+    }
+
+    return this.getProfile(userId);
+  }
+
+  /** Change le mot de passe apres verification de l'ancien. */
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+    if (dto.nouveau_mot_de_passe !== dto.confirmation_mot_de_passe) {
+      throw new BadRequestException(
+        'La confirmation ne correspond pas au nouveau mot de passe',
+      );
+    }
+
+    const user = await this.prisma.utilisateurs.findFirst({
+      where: { id: userId, deleted_at: null },
+    });
+    if (!user) {
+      throw new NotFoundException('Utilisateur introuvable');
+    }
+
+    const ancienOk = await bcrypt.compare(dto.ancien_mot_de_passe, user.mot_de_passe);
+    if (!ancienOk) {
+      throw new BadRequestException('Ancien mot de passe incorrect');
+    }
+
+    const rounds = Number(this.config.get<number>('BCRYPT_SALT_ROUNDS'));
+    const hash = await bcrypt.hash(dto.nouveau_mot_de_passe, rounds);
+
+    await this.prisma.utilisateurs.update({
+      where: { id: userId },
+      data: { mot_de_passe: hash },
+    });
+
+    // Securite : un changement de mot de passe revoque toutes les sessions.
+    await this.prisma.sessions.updateMany({
+      where: { utilisateur_id: userId, revoquee: false },
+      data: { revoquee: true, revoquee_le: new Date() },
+    });
+
+    await this.audit.log({
+      utilisateurId: userId,
+      nomUtilisateur: `${user.prenom} ${user.nom}`,
+      action: 'changement_mot_de_passe',
+      module: 'auth',
+    });
   }
 
   // ─── SESSIONS ───────────────────────────────────────────────────────
