@@ -30,4 +30,23 @@ export class MailService {
       `[DEV-ONLY] Email simule — lien de reset pour ${destinataire} : ${resetUrl}`,
     );
   }
+
+  /** Email de verification d'adresse (creation ou changement d'email). */
+  async sendEmailVerification(destinataire: string, verifyUrl: string): Promise<void> {
+    // Meme regle de securite que sendPasswordReset : le lien (token) n'est
+    // jamais journalise en prod/staging.
+    const env = process.env.NODE_ENV;
+    const estProdOuStaging = env === 'production' || env === 'staging';
+
+    if (estProdOuStaging) {
+      this.logger.log(
+        `Email de verification a envoyer a ${destinataire} (SMTP non configure).`,
+      );
+      return;
+    }
+
+    this.logger.warn(
+      `[DEV-ONLY] Email simule — lien de verification pour ${destinataire} : ${verifyUrl}`,
+    );
+  }
 }

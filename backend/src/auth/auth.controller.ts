@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Ip,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -27,6 +28,9 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SessionResponseDto } from './dto/session-response.dto';
+import { ProfileResponseDto } from './dto/profile-response.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthenticatedUser } from './strategies/jwt.strategy';
 
@@ -130,5 +134,47 @@ export class AuthController {
     @Param('id') sessionId: string,
   ): Promise<void> {
     return this.auth.revoquerSession(userId, sessionId);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: "Profil complet de l'utilisateur connecte" })
+  @ApiOkResponse({ type: ProfileResponseDto })
+  @ApiResponse({ status: 401, description: 'Non authentifie.' })
+  getMe(@CurrentUser('id') userId: string): Promise<ProfileResponseDto> {
+    return this.auth.getProfile(userId);
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Modifier son profil (nom, prenom, email)' })
+  @ApiOkResponse({ type: ProfileResponseDto })
+  @ApiResponse({ status: 401, description: 'Non authentifie.' })
+  @ApiResponse({ status: 409, description: 'Email deja utilise.' })
+  updateMe(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateProfileDto,
+  ): Promise<ProfileResponseDto> {
+    return this.auth.updateProfile(userId, dto);
+  }
+
+  @Patch('password')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Changer son mot de passe' })
+  @ApiResponse({ status: 204, description: 'Mot de passe change.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Ancien mot de passe incorrect ou confirmation invalide.',
+  })
+  @ApiResponse({ status: 401, description: 'Non authentifie.' })
+  changePassword(
+    @CurrentUser('id') userId: string,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<void> {
+    return this.auth.changePassword(userId, dto);
   }
 }
