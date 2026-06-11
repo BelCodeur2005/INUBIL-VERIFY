@@ -11,6 +11,7 @@ import { UniversitesModule } from './universites/universites.module';
 import { RolesModule } from './roles/roles.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { UtilisateursModule } from './utilisateurs/utilisateurs.module';
+import { InvitationsModule } from './invitations/invitations.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { UtilisateursModule } from './utilisateurs/utilisateurs.module';
     RolesModule,
     PermissionsModule,
     UtilisateursModule,
+    InvitationsModule,
   ],
   controllers: [AppController],
   providers: [
