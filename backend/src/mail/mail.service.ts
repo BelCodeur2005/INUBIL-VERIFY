@@ -48,6 +48,23 @@ export class MailService {
     );
   }
 
+  /** Email d'invitation collaborateur contenant le lien d'activation. */
+  async sendInvitation(destinataire: string, activerUrl: string): Promise<void> {
+    const env = process.env.NODE_ENV;
+    const estProdOuStaging = env === 'production' || env === 'staging';
+
+    if (estProdOuStaging) {
+      this.logger.log(
+        `Email d'invitation a envoyer a ${destinataire} (SMTP non configure).`,
+      );
+      return;
+    }
+
+    this.logger.warn(
+      `[DEV-ONLY] Email simule — lien d'activation invitation pour ${destinataire} : ${activerUrl}`,
+    );
+  }
+
   /**
    * Notifie l'ancienne adresse qu'un changement d'email a ete demande.
    * Permet a l'utilisateur legitime de reagir si c'est frauduleux.

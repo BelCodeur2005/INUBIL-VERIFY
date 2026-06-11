@@ -534,6 +534,15 @@ export class AuthService {
     }
   }
 
+  // ─── JWT PUBLIC (utilisé par InvitationsService pour l'auto-login) ──
+  async genererJwtDepuisUtilisateur(
+    user: utilisateurs,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<AuthTokensDto> {
+    return this.genererTokens(user, ip, userAgent);
+  }
+
   // ─── Helpers prives ─────────────────────────────────────────────────
 
   private async revoquerSessionsExpirees(userId: string): Promise<void> {
