@@ -62,11 +62,11 @@ export class UniversitesController {
 
   @Post()
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(Permission.GERER_UNIVERSITES)
+  @RequirePermissions(Permission.UNIV_CREATE)
   @ApiOperation({ summary: 'Créer une université (statut initial : en_attente)' })
   @ApiCreatedResponse({ type: UniversiteResponseDto })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission GERER_UNIVERSITES requise.' })
+  @ApiResponse({ status: 403, description: 'Permission univ:create requise.' })
   creer(
     @Body() dto: CreateUniversiteDto,
     @CurrentUser('id') userId: string,
@@ -77,11 +77,11 @@ export class UniversitesController {
 
   @Patch(':id')
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(Permission.GERER_UNIVERSITES)
+  @RequirePermissions(Permission.UNIV_EDIT)
   @ApiOperation({ summary: "Modifier les informations d'une université" })
   @ApiOkResponse({ type: UniversiteResponseDto })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission GERER_UNIVERSITES requise.' })
+  @ApiResponse({ status: 403, description: 'Permission univ:edit requise.' })
   @ApiResponse({ status: 404, description: 'Université introuvable.' })
   modifier(
     @Param('id') id: string,
@@ -94,12 +94,12 @@ export class UniversitesController {
 
   @Delete(':id')
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(Permission.GERER_UNIVERSITES)
+  @RequirePermissions(Permission.UNIV_DELETE)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Supprimer (soft delete) une université non-active' })
   @ApiNoContentResponse()
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission GERER_UNIVERSITES requise.' })
+  @ApiResponse({ status: 403, description: 'Permission univ:delete requise.' })
   @ApiResponse({ status: 404, description: 'Université introuvable.' })
   @ApiResponse({ status: 409, description: 'Impossible de supprimer une université active.' })
   supprimer(
@@ -112,9 +112,10 @@ export class UniversitesController {
 
   @Post(':id/approuver')
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(Permission.GERER_UNIVERSITES)
+  @RequirePermissions(Permission.UNIV_APPROVE)
   @ApiOperation({ summary: 'Approuver une université (en_attente → approuvee)' })
   @ApiOkResponse({ type: UniversiteResponseDto })
+  @ApiResponse({ status: 403, description: 'Permission univ:approve requise.' })
   @ApiResponse({ status: 409, description: 'Statut incompatible avec cette action.' })
   approuver(
     @Param('id') id: string,
@@ -126,9 +127,10 @@ export class UniversitesController {
 
   @Post(':id/activer')
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(Permission.GERER_UNIVERSITES)
+  @RequirePermissions(Permission.UNIV_ACTIVATE)
   @ApiOperation({ summary: 'Activer une université (approuvee → active)' })
   @ApiOkResponse({ type: UniversiteResponseDto })
+  @ApiResponse({ status: 403, description: 'Permission univ:activate requise.' })
   @ApiResponse({ status: 409, description: 'Statut incompatible avec cette action.' })
   activer(
     @Param('id') id: string,
@@ -140,9 +142,10 @@ export class UniversitesController {
 
   @Post(':id/suspendre')
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(Permission.GERER_UNIVERSITES)
+  @RequirePermissions(Permission.UNIV_SUSPEND)
   @ApiOperation({ summary: 'Suspendre une université (active → suspendue)' })
   @ApiOkResponse({ type: UniversiteResponseDto })
+  @ApiResponse({ status: 403, description: 'Permission univ:suspend requise.' })
   @ApiResponse({ status: 409, description: 'Statut incompatible avec cette action.' })
   suspendre(
     @Param('id') id: string,
@@ -155,10 +158,11 @@ export class UniversitesController {
 
   @Post(':id/rejeter')
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(Permission.GERER_UNIVERSITES)
+  @RequirePermissions(Permission.UNIV_REJECT)
   @ApiOperation({ summary: 'Rejeter une université (en_attente → rejetee) — raison obligatoire' })
   @ApiOkResponse({ type: UniversiteResponseDto })
   @ApiResponse({ status: 400, description: 'Raison manquante.' })
+  @ApiResponse({ status: 403, description: 'Permission univ:reject requise.' })
   @ApiResponse({ status: 409, description: 'Statut incompatible avec cette action.' })
   rejeter(
     @Param('id') id: string,

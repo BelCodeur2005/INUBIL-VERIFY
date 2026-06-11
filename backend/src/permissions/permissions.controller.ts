@@ -10,7 +10,7 @@ import { PermissionsService } from './permissions.service';
 @ApiTags('Permissions')
 @ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions(Permission.GERER_UNIVERSITES)
+@RequirePermissions(Permission.ROLE_READ)
 @Controller('permissions')
 export class PermissionsController {
   constructor(private readonly service: PermissionsService) {}
@@ -19,7 +19,7 @@ export class PermissionsController {
   @ApiOperation({ summary: 'Liste toutes les permissions système (pour les assigner aux rôles)' })
   @ApiOkResponse({ type: [PermissionResponseDto] })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission GERER_UNIVERSITES requise.' })
+  @ApiResponse({ status: 403, description: 'Permission role:read requise.' })
   lister(): Promise<PermissionResponseDto[]> {
     return this.service.lister();
   }
