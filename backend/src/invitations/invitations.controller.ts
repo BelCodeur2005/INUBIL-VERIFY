@@ -86,8 +86,11 @@ export class InvitationsController {
   @ApiOkResponse({ type: InvitationListResponseDto })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   @ApiResponse({ status: 403, description: 'Permission user:read requise.' })
-  lister(@Query() query: InvitationQueryDto): Promise<InvitationListResponseDto> {
-    return this.service.lister(query);
+  lister(
+    @Query() query: InvitationQueryDto,
+    @CurrentUser('id') acteurId: string,
+  ): Promise<InvitationListResponseDto> {
+    return this.service.lister(query, acteurId);
   }
 
   // ─── RENVOYER ────────────────────────────────────────────────────────

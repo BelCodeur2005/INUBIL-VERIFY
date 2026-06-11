@@ -1,15 +1,16 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { InvitationsService } from './invitations.service';
-import { ConfigService } from '@nestjs/config';
 
 jest.mock('bcryptjs', () => ({
   hash: jest.fn().mockResolvedValue('$2a$04$hashed'),
@@ -20,6 +21,7 @@ const ACTEUR_ID = 'acteur-uuid-1';
 const INV_ID = 'inv-uuid-1';
 const ROLE_ID = 'role-uuid-1';
 const UNIV_ID = 'univ-uuid-1';
+const AUTRE_UNIV_ID = 'univ-uuid-2';
 const USER_ID = 'user-uuid-1';
 const TOKEN_BRUT = 'a'.repeat(64);
 
@@ -122,6 +124,7 @@ describe('InvitationsService', () => {
 
   describe('creer', () => {
     it('crée une invitation et envoie l\'email', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID }); // acteur
       prisma.universites.findFirst.mockResolvedValue({ id: UNIV_ID });
       prisma.roles.findFirst.mockResolvedValue({ id: ROLE_ID });
       prisma.invitations.findFirst.mockResolvedValue(null);
@@ -147,7 +150,35 @@ describe('InvitationsService', () => {
       expect(result.email).toBe('invite@istama.cm');
     });
 
+    it('lève ForbiddenException si l\'acteur essaie de créer pour une autre université', async () => {
+      // Acteur lié à UNIV_ID, mais dto.universite_id = AUTRE_UNIV_ID
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID });
+
+      await expect(
+        service.creer(
+          { email: 'x@x.cm', role_id: ROLE_ID, universite_id: AUTRE_UNIV_ID },
+          ACTEUR_ID,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('super-admin (universite_id=null) peut créer pour n\'importe quelle université', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null }); // super-admin
+      prisma.universites.findFirst.mockResolvedValue({ id: AUTRE_UNIV_ID });
+      prisma.roles.findFirst.mockResolvedValue({ id: ROLE_ID });
+      prisma.invitations.findFirst.mockResolvedValue(null);
+      prisma.invitations.create.mockResolvedValue(makeInvitation({ universite_id: AUTRE_UNIV_ID }));
+
+      await expect(
+        service.creer(
+          { email: 'x@x.cm', role_id: ROLE_ID, universite_id: AUTRE_UNIV_ID },
+          ACTEUR_ID,
+        ),
+      ).resolves.toBeDefined();
+    });
+
     it('lève NotFoundException si université introuvable', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID });
       prisma.universites.findFirst.mockResolvedValue(null);
 
       await expect(
@@ -156,6 +187,7 @@ describe('InvitationsService', () => {
     });
 
     it('lève NotFoundException si rôle introuvable', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID });
       prisma.universites.findFirst.mockResolvedValue({ id: UNIV_ID });
       prisma.roles.findFirst.mockResolvedValue(null);
 
@@ -165,6 +197,7 @@ describe('InvitationsService', () => {
     });
 
     it('lève ConflictException si invitation en attente déjà existante', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID });
       prisma.universites.findFirst.mockResolvedValue({ id: UNIV_ID });
       prisma.roles.findFirst.mockResolvedValue({ id: ROLE_ID });
       prisma.invitations.findFirst.mockResolvedValue(makeInvitation());
@@ -179,30 +212,43 @@ describe('InvitationsService', () => {
 
   describe('lister', () => {
     it('retourne une page vide si aucune invitation', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null }); // super-admin
       prisma.$transaction.mockResolvedValue([[], 0]);
 
-      const result = await service.lister({ page: 1, limit: 20 });
+      const result = await service.lister({ page: 1, limit: 20 }, ACTEUR_ID);
 
       expect(result.data).toHaveLength(0);
       expect(result.total).toBe(0);
       expect(result.totalPages).toBe(0);
     });
 
-    it('applique le filtre statut et universite_id', async () => {
+    it('force universite_id de l\'acteur dans le filtre (non super-admin)', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID });
       prisma.invitations.findMany.mockResolvedValue([makeInvitation()]);
       prisma.invitations.count.mockResolvedValue(1);
-      prisma.$transaction.mockImplementation((ops: Promise<unknown>[]) =>
-        Promise.all(ops),
-      );
+      prisma.$transaction.mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops));
 
-      await service.lister({ statut: 'en_attente', universite_id: UNIV_ID });
+      // L'acteur fournit AUTRE_UNIV_ID dans la query → doit être ignoré
+      await service.lister({ universite_id: AUTRE_UNIV_ID }, ACTEUR_ID);
 
       expect(prisma.invitations.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            statut: 'en_attente',
-            universite_id: UNIV_ID,
-          }),
+          where: expect.objectContaining({ universite_id: UNIV_ID }),
+        }),
+      );
+    });
+
+    it('le super-admin peut filtrer par universite_id arbitraire', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null }); // super-admin
+      prisma.invitations.findMany.mockResolvedValue([]);
+      prisma.invitations.count.mockResolvedValue(0);
+      prisma.$transaction.mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops));
+
+      await service.lister({ universite_id: AUTRE_UNIV_ID }, ACTEUR_ID);
+
+      expect(prisma.invitations.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ universite_id: AUTRE_UNIV_ID }),
         }),
       );
     });
@@ -212,6 +258,7 @@ describe('InvitationsService', () => {
 
   describe('annuler', () => {
     it('supprime l\'invitation en attente et trace dans l\'audit', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID }); // acteur
       prisma.invitations.findFirst.mockResolvedValue(makeInvitation());
       prisma.invitations.delete.mockResolvedValue(undefined);
 
@@ -223,13 +270,22 @@ describe('InvitationsService', () => {
       );
     });
 
+    it('lève ForbiddenException si invitation appartient à une autre université', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: AUTRE_UNIV_ID }); // acteur autre univ
+      prisma.invitations.findFirst.mockResolvedValue(makeInvitation({ universite_id: UNIV_ID }));
+
+      await expect(service.annuler(INV_ID, ACTEUR_ID)).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
     it('lève NotFoundException si invitation introuvable', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID });
       prisma.invitations.findFirst.mockResolvedValue(null);
 
       await expect(service.annuler(INV_ID, ACTEUR_ID)).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('lève BadRequestException si statut != en_attente', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID });
       prisma.invitations.findFirst.mockResolvedValue(makeInvitation({ statut: 'acceptee' }));
 
       await expect(service.annuler(INV_ID, ACTEUR_ID)).rejects.toBeInstanceOf(BadRequestException);
@@ -240,6 +296,7 @@ describe('InvitationsService', () => {
 
   describe('renvoyer', () => {
     it('régénère le token, incrémente nb_relances et renvoie l\'email', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID }); // acteur
       prisma.invitations.findFirst.mockResolvedValue(makeInvitation({ statut: 'expiree' }));
       prisma.invitations.update.mockResolvedValue(makeInvitation({ nb_relances: 1 }));
 
@@ -257,13 +314,22 @@ describe('InvitationsService', () => {
       expect(result.nb_relances).toBe(1);
     });
 
+    it('lève ForbiddenException si invitation appartient à une autre université', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: AUTRE_UNIV_ID }); // acteur autre univ
+      prisma.invitations.findFirst.mockResolvedValue(makeInvitation({ universite_id: UNIV_ID }));
+
+      await expect(service.renvoyer(INV_ID, ACTEUR_ID)).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
     it('lève NotFoundException si invitation introuvable', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID });
       prisma.invitations.findFirst.mockResolvedValue(null);
 
       await expect(service.renvoyer(INV_ID, ACTEUR_ID)).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('lève BadRequestException si invitation déjà acceptée', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID });
       prisma.invitations.findFirst.mockResolvedValue(makeInvitation({ statut: 'acceptee' }));
 
       await expect(service.renvoyer(INV_ID, ACTEUR_ID)).rejects.toBeInstanceOf(BadRequestException);
@@ -275,7 +341,7 @@ describe('InvitationsService', () => {
   describe('activer', () => {
     it('crée un nouveau compte et retourne JWT', async () => {
       prisma.invitations.findFirst.mockResolvedValue(makeInvitation());
-      prisma.utilisateurs.findFirst.mockResolvedValue(null);
+      prisma.utilisateurs.findFirst.mockResolvedValue(null); // pas de compte existant
       prisma.utilisateurs.create.mockResolvedValue(makeUser());
       prisma.invitations.update.mockResolvedValue(makeInvitation({ statut: 'acceptee' }));
 
@@ -288,11 +354,7 @@ describe('InvitationsService', () => {
 
       expect(prisma.utilisateurs.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            email: 'invite@istama.cm',
-            statut: 'actif',
-            email_verifie: true,
-          }),
+          data: expect.objectContaining({ email: 'invite@istama.cm', statut: 'actif', email_verifie: true }),
         }),
       );
       expect(prisma.invitations.update).toHaveBeenCalledWith(
@@ -302,7 +364,7 @@ describe('InvitationsService', () => {
       expect(result.access_token).toBe('jwt-token');
     });
 
-    it('assigne le rôle à un compte existant et retourne JWT', async () => {
+    it('assigne le rôle à un compte existant sans rôle et retourne JWT', async () => {
       prisma.invitations.findFirst.mockResolvedValue(makeInvitation());
       prisma.utilisateurs.findFirst.mockResolvedValue(makeUser({ role_id: null }));
       prisma.utilisateurs.update.mockResolvedValue(makeUser());
@@ -319,30 +381,32 @@ describe('InvitationsService', () => {
       expect(result.access_token).toBe('jwt-token');
     });
 
+    it('lève BadRequestException si le compte est déjà actif avec un rôle (Fix SEC-2)', async () => {
+      prisma.invitations.findFirst.mockResolvedValue(makeInvitation());
+      // Compte actif avec rôle déjà assigné → refus d'écrasement silencieux
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeUser({ statut: 'actif', role_id: ROLE_ID }));
+
+      await expect(service.activer({ token: TOKEN_BRUT })).rejects.toBeInstanceOf(BadRequestException);
+    });
+
     it('lève BadRequestException si token invalide ou expiré', async () => {
       prisma.invitations.findFirst.mockResolvedValue(null);
 
-      await expect(service.activer({ token: TOKEN_BRUT })).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(service.activer({ token: TOKEN_BRUT })).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('lève BadRequestException si champs manquants pour nouveau compte', async () => {
       prisma.invitations.findFirst.mockResolvedValue(makeInvitation());
       prisma.utilisateurs.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.activer({ token: TOKEN_BRUT }),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.activer({ token: TOKEN_BRUT })).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('lève BadRequestException si le compte existant est suspendu', async () => {
       prisma.invitations.findFirst.mockResolvedValue(makeInvitation());
       prisma.utilisateurs.findFirst.mockResolvedValue(makeUser({ statut: 'suspendu' }));
 
-      await expect(service.activer({ token: TOKEN_BRUT })).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(service.activer({ token: TOKEN_BRUT })).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 });
