@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -35,9 +36,18 @@ export class InvitationsService {
   // ─── CRÉER ──────────────────────────────────────────────────────────
   async creer(
     dto: CreerInvitationDto,
-    createurId: string,
+    acteurId: string,
     ip?: string,
   ): Promise<InvitationResponseDto> {
+    // Fix SEC-1 : un acteur lié à une université ne peut inviter QUE pour la sienne.
+    // Un acteur sans université (universite_id = null) est super-admin → pas de restriction.
+    const acteurUniversiteId = await this.getActeurUniversiteId(acteurId);
+    if (acteurUniversiteId !== null && dto.universite_id !== acteurUniversiteId) {
+      throw new ForbiddenException(
+        'Vous ne pouvez créer des invitations que pour votre propre université',
+      );
+    }
+
     const universite = await this.prisma.universites.findFirst({
       where: { id: dto.universite_id },
     });
@@ -75,7 +85,7 @@ export class InvitationsService {
         statut: 'en_attente' as any,
         expires_at: expiresAt,
         nb_relances: 0,
-        created_by: createurId,
+        created_by: acteurId,
       },
     });
 
@@ -83,7 +93,7 @@ export class InvitationsService {
     await this.mail.sendInvitation(email, activerUrl);
 
     await this.audit.log({
-      utilisateurId: createurId,
+      utilisateurId: acteurId,
       action: 'INVITATION_CREEE',
       module: 'invitations',
       enregistrementId: invitation.id,
@@ -95,14 +105,25 @@ export class InvitationsService {
   }
 
   // ─── LISTER ─────────────────────────────────────────────────────────
-  async lister(query: InvitationQueryDto): Promise<InvitationListResponseDto> {
+  async lister(
+    query: InvitationQueryDto,
+    acteurId: string,
+  ): Promise<InvitationListResponseDto> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
 
     const where: any = { cible: 'collaborateur' };
     if (query.statut) where.statut = query.statut;
-    if (query.universite_id) where.universite_id = query.universite_id;
+
+    // Fix SEC-3 (cross-tenant) : l'acteur avec université ne voit que les siennes.
+    // Le super-admin (universite_id = null) peut filtrer librement par query.universite_id.
+    const acteurUniversiteId = await this.getActeurUniversiteId(acteurId);
+    if (acteurUniversiteId !== null) {
+      where.universite_id = acteurUniversiteId;
+    } else if (query.universite_id) {
+      where.universite_id = query.universite_id;
+    }
 
     const [invitations, total] = await this.prisma.$transaction([
       this.prisma.invitations.findMany({
@@ -125,8 +146,15 @@ export class InvitationsService {
 
   // ─── ANNULER ─────────────────────────────────────────────────────────
   async annuler(id: string, acteurId: string, ip?: string): Promise<void> {
+    const acteurUniversiteId = await this.getActeurUniversiteId(acteurId);
+
     const invitation = await this.prisma.invitations.findFirst({ where: { id } });
     if (!invitation) throw new NotFoundException('Invitation introuvable');
+
+    // Fix SEC-1 : vérifier l'appartenance à l'université de l'acteur.
+    if (acteurUniversiteId !== null && invitation.universite_id !== acteurUniversiteId) {
+      throw new ForbiddenException("Vous n'avez pas accès à cette invitation");
+    }
 
     if (invitation.statut !== 'en_attente') {
       throw new BadRequestException(
@@ -152,8 +180,15 @@ export class InvitationsService {
     acteurId: string,
     ip?: string,
   ): Promise<InvitationResponseDto> {
+    const acteurUniversiteId = await this.getActeurUniversiteId(acteurId);
+
     const invitation = await this.prisma.invitations.findFirst({ where: { id } });
     if (!invitation) throw new NotFoundException('Invitation introuvable');
+
+    // Fix SEC-1 : vérifier l'appartenance à l'université de l'acteur.
+    if (acteurUniversiteId !== null && invitation.universite_id !== acteurUniversiteId) {
+      throw new ForbiddenException("Vous n'avez pas accès à cette invitation");
+    }
 
     if (invitation.statut === 'acceptee') {
       throw new BadRequestException('Cette invitation a déjà été acceptée');
@@ -216,12 +251,22 @@ export class InvitationsService {
           'Ce compte est désactivé et ne peut pas accepter une invitation',
         );
       }
+
+      // Fix SEC-2 : refuser l'écrasement silencieux du rôle d'un compte déjà actif.
+      // Pour changer le rôle d'un utilisateur actif, utiliser PATCH /utilisateurs/:id/role.
+      if (existant.statut === 'actif' && existant.role_id !== null) {
+        throw new BadRequestException(
+          'Ce compte est déjà actif avec un rôle assigné. ' +
+            "Utilisez la gestion des utilisateurs pour modifier son rôle.",
+        );
+      }
+
       utilisateur = await this.prisma.utilisateurs.update({
         where: { id: existant.id },
         data: {
           role_id: invitation.role_id,
           universite_id: invitation.universite_id,
-          statut: existant.statut === 'en_attente_email' ? ('actif' as any) : existant.statut,
+          statut: 'actif' as any,
           email_verifie: true,
         },
       });
@@ -268,6 +313,15 @@ export class InvitationsService {
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────
+
+  // Renvoie universite_id de l'acteur — null = super-admin (pas de restriction tenant).
+  private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
+    const acteur = await this.prisma.utilisateurs.findFirst({
+      where: { id: acteurId, deleted_at: null },
+      select: { universite_id: true },
+    });
+    return acteur?.universite_id ?? null;
+  }
 
   private hash(value: string): string {
     return createHash('sha256').update(value).digest('hex');
