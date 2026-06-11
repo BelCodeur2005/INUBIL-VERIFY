@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { UniversitesModule } from './universites/universites.module';
 import { RolesModule } from './roles/roles.module';
 import { PermissionsModule } from './permissions/permissions.module';
+import { UtilisateursModule } from './utilisateurs/utilisateurs.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PermissionsModule } from './permissions/permissions.module';
     UniversitesModule,
     RolesModule,
     PermissionsModule,
+    UtilisateursModule,
   ],
   controllers: [AppController],
   providers: [
