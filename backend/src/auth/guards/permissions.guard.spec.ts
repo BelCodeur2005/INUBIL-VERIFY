@@ -33,7 +33,7 @@ describe('PermissionsGuard', () => {
   it('renvoie 403 si la permission requise est absente', async () => {
     jest
       .spyOn(reflector, 'getAllAndOverride')
-      .mockReturnValue([Permission.GERER_UTILISATEURS]);
+      .mockReturnValue([Permission.USER_EDIT]);
     prisma.role_permissions.findMany.mockResolvedValue([]);
     await expect(
       guard.canActivate(contexte({ id: '1', role_id: 'r1' })),
@@ -43,9 +43,9 @@ describe('PermissionsGuard', () => {
   it('laisse passer si la permission requise est presente', async () => {
     jest
       .spyOn(reflector, 'getAllAndOverride')
-      .mockReturnValue([Permission.GERER_UTILISATEURS]);
+      .mockReturnValue([Permission.USER_EDIT]);
     prisma.role_permissions.findMany.mockResolvedValue([
-      { permissions: { nom: Permission.GERER_UTILISATEURS } },
+      { permissions: { nom: Permission.USER_EDIT } },
     ]);
     await expect(
       guard.canActivate(contexte({ id: '1', role_id: 'r1' })),
@@ -55,7 +55,7 @@ describe('PermissionsGuard', () => {
   it('renvoie 403 si l utilisateur n a pas de role', async () => {
     jest
       .spyOn(reflector, 'getAllAndOverride')
-      .mockReturnValue([Permission.VOIR_AUDIT]);
+      .mockReturnValue([Permission.AUDIT_READ]);
     await expect(
       guard.canActivate(contexte({ id: '1', role_id: null })),
     ).rejects.toBeInstanceOf(ForbiddenException);

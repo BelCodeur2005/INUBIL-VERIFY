@@ -485,6 +485,7 @@ model utilisateurs {
   email_verifie                                       Boolean                   @default(false)
   token_verification_email                            String?                   @db.VarChar(255)
   token_verification_expiry                           DateTime?                 @db.Timestamptz(6)
+  email_en_attente                                    String?                   @db.VarChar(255)
   token_reset_password                                String?                   @db.VarChar(255)
   token_reset_expiry                                  DateTime?                 @db.Timestamptz(6)
   tentatives_connexion                                Int                       @default(0)

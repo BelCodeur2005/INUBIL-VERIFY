@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { envValidationSchema } from './config/env.validation';
@@ -13,12 +15,14 @@ import { PermissionsModule } from './permissions/permissions.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      // En local hors Docker : lit le .env. En Docker : les variables sont
-      // injectees via env_file et deja presentes dans process.env.
       envFilePath: ['.env'],
       validationSchema: envValidationSchema,
       validationOptions: { abortEarly: false, allowUnknown: true },
     }),
+    // Rate limiting global : 100 requetes / minute par IP.
+    // Les endpoints sensibles (register, forgot-password, renvoyer-verif)
+    // appliquent leurs propres limites plus strictes via @Throttle().
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     PrismaModule,
     AuthModule,
     UniversitesModule,
@@ -26,6 +30,9 @@ import { PermissionsModule } from './permissions/permissions.module';
     PermissionsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

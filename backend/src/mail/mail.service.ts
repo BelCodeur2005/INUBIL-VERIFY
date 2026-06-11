@@ -33,8 +33,6 @@ export class MailService {
 
   /** Email de verification d'adresse (creation ou changement d'email). */
   async sendEmailVerification(destinataire: string, verifyUrl: string): Promise<void> {
-    // Meme regle de securite que sendPasswordReset : le lien (token) n'est
-    // jamais journalise en prod/staging.
     const env = process.env.NODE_ENV;
     const estProdOuStaging = env === 'production' || env === 'staging';
 
@@ -47,6 +45,29 @@ export class MailService {
 
     this.logger.warn(
       `[DEV-ONLY] Email simule — lien de verification pour ${destinataire} : ${verifyUrl}`,
+    );
+  }
+
+  /**
+   * Notifie l'ancienne adresse qu'un changement d'email a ete demande.
+   * Permet a l'utilisateur legitime de reagir si c'est frauduleux.
+   */
+  async sendEmailChangeNotification(
+    ancienEmail: string,
+    nouvelEmail: string,
+  ): Promise<void> {
+    const env = process.env.NODE_ENV;
+    const estProdOuStaging = env === 'production' || env === 'staging';
+
+    if (estProdOuStaging) {
+      this.logger.log(
+        `Notification de changement d'email a envoyer a ${ancienEmail} (SMTP non configure).`,
+      );
+      return;
+    }
+
+    this.logger.warn(
+      `[DEV-ONLY] Email simule — notification changement d'adresse pour ${ancienEmail} vers ${nouvelEmail}`,
     );
   }
 }
