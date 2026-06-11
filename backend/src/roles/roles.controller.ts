@@ -63,11 +63,11 @@ export class RolesController {
 
   @Post()
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(Permission.GERER_UNIVERSITES)
+  @RequirePermissions(Permission.ROLE_CREATE)
   @ApiOperation({ summary: 'Créer un rôle' })
   @ApiCreatedResponse({ type: RoleResponseDto })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission GERER_UNIVERSITES requise.' })
+  @ApiResponse({ status: 403, description: 'Permission role:create requise.' })
   @ApiResponse({ status: 409, description: 'Nom de rôle déjà utilisé pour cette université.' })
   creer(
     @Body() dto: CreateRoleDto,
@@ -79,11 +79,11 @@ export class RolesController {
 
   @Patch(':id')
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(Permission.GERER_UNIVERSITES)
+  @RequirePermissions(Permission.ROLE_EDIT)
   @ApiOperation({ summary: 'Modifier un rôle (y compris les rôles système)' })
   @ApiOkResponse({ type: RoleResponseDto })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission GERER_UNIVERSITES requise.' })
+  @ApiResponse({ status: 403, description: 'Permission role:edit requise.' })
   @ApiResponse({ status: 404, description: 'Rôle introuvable.' })
   @ApiResponse({ status: 409, description: 'Nom déjà utilisé.' })
   modifier(
@@ -97,12 +97,12 @@ export class RolesController {
 
   @Delete(':id')
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(Permission.GERER_UNIVERSITES)
+  @RequirePermissions(Permission.ROLE_DELETE)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Supprimer un rôle (bloqué si système ou utilisé)' })
   @ApiNoContentResponse()
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission GERER_UNIVERSITES requise ou rôle système.' })
+  @ApiResponse({ status: 403, description: 'Permission role:delete requise ou rôle système.' })
   @ApiResponse({ status: 404, description: 'Rôle introuvable.' })
   @ApiResponse({ status: 409, description: 'Rôle assigné à des utilisateurs.' })
   supprimer(
@@ -115,14 +115,14 @@ export class RolesController {
 
   @Put(':id/permissions')
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(Permission.GERER_UNIVERSITES)
+  @RequirePermissions(Permission.ROLE_ASSIGN)
   @ApiOperation({
     summary: 'Remplacer toutes les permissions d\'un rôle (opération atomique)',
   })
   @ApiOkResponse({ type: RoleResponseDto })
   @ApiResponse({ status: 400, description: 'Permission(s) inconnue(s).' })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission GERER_UNIVERSITES requise.' })
+  @ApiResponse({ status: 403, description: 'Permission role:assign requise.' })
   @ApiResponse({ status: 404, description: 'Rôle introuvable.' })
   assignerPermissions(
     @Param('id') id: string,
