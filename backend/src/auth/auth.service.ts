@@ -18,6 +18,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { AuditService } from '../audit/audit.service';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 import { AuthTokensDto } from './dto/auth-response.dto';
 import { SessionResponseDto } from './dto/session-response.dto';
 import { ProfileResponseDto } from './dto/profile-response.dto';
@@ -25,19 +26,14 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 
-/** Nombre d'echecs avant blocage temporaire du compte. */
 const MAX_TENTATIVES = 5;
-/** Duree du blocage apres MAX_TENTATIVES echecs (minutes). */
 const DUREE_BLOCAGE_MIN = 15;
-/** Duree de validite du token de reinitialisation (millisecondes). */
-const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
-/** Duree de validite du token de verification d'email (millisecondes). */
-const EMAIL_VERIF_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;       // 1h
+const EMAIL_VERIF_TTL_MS = 24 * 60 * 60 * 1000;  // 24h
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  /** Hash bcrypt factice (calcule une fois) pour neutraliser le timing. */
   private dummyHash: string | null = null;
 
   constructor(
@@ -48,27 +44,146 @@ export class AuthService {
     private readonly audit: AuditService,
   ) {}
 
+  // ─── REGISTER ───────────────────────────────────────────────────────
+  async register(dto: RegisterDto): Promise<{ message: string }> {
+    const email = dto.email.toLowerCase();
+
+    const existant = await this.prisma.utilisateurs.findFirst({
+      where: { email, deleted_at: null },
+    });
+    if (existant) {
+      // Reponse volontairement vague pour ne pas confirmer l'existence du compte.
+      return { message: 'Si cette adresse est valide, un email de verification vient d\'etre envoye.' };
+    }
+
+    const rounds = Number(this.config.get<number>('BCRYPT_SALT_ROUNDS'));
+    const motDePasseHache = await bcrypt.hash(dto.mot_de_passe, rounds);
+    const tokenBrut = randomBytes(32).toString('hex');
+
+    await this.prisma.utilisateurs.create({
+      data: {
+        nom: dto.nom,
+        prenom: dto.prenom,
+        email,
+        mot_de_passe: motDePasseHache,
+        statut: 'en_attente_email',
+        email_verifie: false,
+        token_verification_email: this.hash(tokenBrut),
+        token_verification_expiry: new Date(Date.now() + EMAIL_VERIF_TTL_MS),
+      },
+    });
+
+    const verifyUrl = `${this.config.get<string>('FRONTEND_URL')}/verifier-email?token=${tokenBrut}`;
+    await this.mail.sendEmailVerification(email, verifyUrl);
+
+    return { message: 'Compte cree. Verifiez votre email pour activer votre compte.' };
+  }
+
+  // ─── VERIFY EMAIL ───────────────────────────────────────────────────
+  async verifierEmail(token: string): Promise<{ message: string }> {
+    const tokenHash = this.hash(token);
+
+    const user = await this.prisma.utilisateurs.findFirst({
+      where: {
+        token_verification_email: tokenHash,
+        token_verification_expiry: { gt: new Date() },
+        deleted_at: null,
+      },
+    });
+    if (!user) {
+      throw new BadRequestException('Token de verification invalide ou expire');
+    }
+
+    if (user.email_en_attente) {
+      // Flux changement d'email : on applique la nouvelle adresse.
+      await this.prisma.utilisateurs.update({
+        where: { id: user.id },
+        data: {
+          email: user.email_en_attente,
+          email_en_attente: null,
+          email_verifie: true,
+          token_verification_email: null,
+          token_verification_expiry: null,
+        },
+      });
+      await this.audit.log({
+        utilisateurId: user.id,
+        nomUtilisateur: `${user.prenom} ${user.nom}`,
+        action: 'email_change_confirme',
+        module: 'auth',
+        enregistrementId: user.id,
+        tableConcernee: 'utilisateurs',
+      });
+      return { message: 'Email mis a jour et verifie avec succes.' };
+    }
+
+    // Flux creation de compte : on active le compte.
+    await this.prisma.utilisateurs.update({
+      where: { id: user.id },
+      data: {
+        email_verifie: true,
+        statut: 'actif',
+        token_verification_email: null,
+        token_verification_expiry: null,
+      },
+    });
+    await this.audit.log({
+      utilisateurId: user.id,
+      nomUtilisateur: `${user.prenom} ${user.nom}`,
+      action: 'email_verifie',
+      module: 'auth',
+      enregistrementId: user.id,
+      tableConcernee: 'utilisateurs',
+    });
+
+    return { message: 'Email verifie. Votre compte est maintenant actif.' };
+  }
+
+  // ─── RESEND VERIFICATION ────────────────────────────────────────────
+  async renvoyerVerification(email: string): Promise<void> {
+    const user = await this.prisma.utilisateurs.findFirst({
+      where: { email: email.toLowerCase(), deleted_at: null },
+    });
+
+    // Reponse identique qu'on trouve le compte ou non (anti-enumeration).
+    if (!user || user.email_verifie) {
+      return;
+    }
+
+    const tokenBrut = randomBytes(32).toString('hex');
+    await this.prisma.utilisateurs.update({
+      where: { id: user.id },
+      data: {
+        token_verification_email: this.hash(tokenBrut),
+        token_verification_expiry: new Date(Date.now() + EMAIL_VERIF_TTL_MS),
+      },
+    });
+
+    const destinataire = user.email_en_attente ?? user.email;
+    const verifyUrl = `${this.config.get<string>('FRONTEND_URL')}/verifier-email?token=${tokenBrut}`;
+    await this.mail.sendEmailVerification(destinataire, verifyUrl);
+  }
+
   // ─── LOGIN ──────────────────────────────────────────────────────────
   async login(dto: LoginDto, ip?: string, userAgent?: string): Promise<AuthTokensDto> {
     const user = await this.prisma.utilisateurs.findFirst({
       where: { email: dto.email.toLowerCase(), deleted_at: null },
     });
 
-    // Compte introuvable : meme reponse qu'un mauvais mot de passe (anti-enumeration).
     if (!user) {
-      // Anti-timing : on execute un bcrypt.compare factice pour que cette branche
-      // coute le meme temps que la branche "mot de passe errone" (sinon l'ecart
-      // de duree revele si l'email existe ou non).
       await bcrypt.compare(dto.mot_de_passe, await this.getDummyHash());
       await this.tracerTentative(dto.email, ip, userAgent, false, 'utilisateur_inconnu');
       throw new UnauthorizedException('Identifiants invalides');
+    }
+
+    if (user.statut === 'en_attente_email') {
+      throw new ForbiddenException('Veuillez verifier votre email avant de vous connecter');
     }
 
     if (user.statut === 'suspendu' || user.statut === 'inactif') {
       throw new ForbiddenException('Compte desactive');
     }
 
-    // Compte temporairement bloque (trop d'echecs) -> 429.
     if (user.bloque_jusqu && user.bloque_jusqu > new Date()) {
       throw new HttpException(
         'Compte temporairement bloque suite a trop de tentatives. Reessayez plus tard.',
@@ -83,14 +198,12 @@ export class AuthService {
       throw new UnauthorizedException('Identifiants invalides');
     }
 
-    // Succes : on remet le compteur a zero et on note la connexion.
     await this.prisma.utilisateurs.update({
       where: { id: user.id },
       data: { tentatives_connexion: 0, bloque_jusqu: null, derniere_connexion: new Date() },
     });
     await this.tracerTentative(dto.email, ip, userAgent, true, null);
 
-    // Nettoyage des sessions deja expirees + trace dans le journal d'audit.
     await this.revoquerSessionsExpirees(user.id);
     await this.audit.log({
       utilisateurId: user.id,
@@ -135,7 +248,6 @@ export class AuthService {
       throw new UnauthorizedException('Session invalide');
     }
 
-    // Rotation : l'ancienne session est revoquee, une nouvelle est creee.
     await this.prisma.sessions.update({
       where: { id: session.id },
       data: { revoquee: true, revoquee_le: new Date() },
@@ -151,7 +263,6 @@ export class AuthService {
       where: { token_hash: tokenHash },
     });
 
-    // Idempotent : revoque la session si elle existe, sans erreur sinon.
     await this.prisma.sessions.updateMany({
       where: { token_hash: tokenHash, revoquee: false },
       data: { revoquee: true, revoquee_le: new Date() },
@@ -174,7 +285,6 @@ export class AuthService {
       where: { email: email.toLowerCase(), deleted_at: null },
     });
 
-    // Reponse toujours identique, qu'on trouve le compte ou non (anti-enumeration).
     if (user) {
       const tokenBrut = randomBytes(32).toString('hex');
       await this.prisma.utilisateurs.update({
@@ -216,7 +326,6 @@ export class AuthService {
       },
     });
 
-    // Securite : on revoque toutes les sessions actives apres un reset.
     await this.prisma.sessions.updateMany({
       where: { utilisateur_id: user.id, revoquee: false },
       data: { revoquee: true, revoquee_le: new Date() },
@@ -224,7 +333,6 @@ export class AuthService {
   }
 
   // ─── PERMISSIONS (RBAC) ─────────────────────────────────────────────
-  /** Retourne les noms des permissions accordees au role donne. */
   async getPermissions(roleId: string | null): Promise<string[]> {
     if (!roleId) {
       return [];
@@ -237,7 +345,6 @@ export class AuthService {
   }
 
   // ─── PROFIL ─────────────────────────────────────────────────────────
-  /** Profil complet de l'utilisateur (avec role et universite). */
   async getProfile(userId: string): Promise<ProfileResponseDto> {
     const user = await this.prisma.utilisateurs.findFirst({
       where: { id: userId, deleted_at: null },
@@ -266,7 +373,12 @@ export class AuthService {
     };
   }
 
-  /** Met a jour nom / prenom / email. Un changement d'email force une re-verification. */
+  /**
+   * Met a jour nom / prenom / email.
+   * Un changement d'email est mis en attente dans `email_en_attente` et ne
+   * prend effet qu'apres verification du token envoye a la nouvelle adresse.
+   * L'ancienne adresse est notifiee pour securite.
+   */
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<ProfileResponseDto> {
     const user = await this.prisma.utilisateurs.findFirst({
       where: { id: userId, deleted_at: null },
@@ -278,8 +390,7 @@ export class AuthService {
     const data: {
       nom?: string;
       prenom?: string;
-      email?: string;
-      email_verifie?: boolean;
+      email_en_attente?: string;
       token_verification_email?: string;
       token_verification_expiry?: Date;
     } = {};
@@ -288,10 +399,8 @@ export class AuthService {
 
     let verifToken: string | null = null;
     let nouvelEmail: string | null = null;
+
     if (dto.email !== undefined && dto.email.toLowerCase() !== user.email) {
-      // Step-up auth : changer l'email est une operation sensible (risque de
-      // prise de controle si un access token est vole). On exige donc le mot
-      // de passe actuel.
       if (!dto.mot_de_passe_actuel) {
         throw new BadRequestException(
           "Le mot de passe actuel est requis pour changer l'email",
@@ -312,38 +421,45 @@ export class AuthService {
       if (dejaPris) {
         throw new ConflictException('Cet email est deja utilise');
       }
+
       verifToken = randomBytes(32).toString('hex');
-      data.email = nouvelEmail;
-      data.email_verifie = false;
+      // Le nouvel email est stocke en attente — l'email actuel reste actif
+      // jusqu'a la confirmation via le lien de verification.
+      data.email_en_attente = nouvelEmail;
       data.token_verification_email = this.hash(verifToken);
       data.token_verification_expiry = new Date(Date.now() + EMAIL_VERIF_TTL_MS);
     }
 
     await this.prisma.utilisateurs.update({ where: { id: userId }, data });
 
-    // Changement d'email : on declenche la re-verification (l'endpoint de
-    // validation du token est la tache #69).
     if (verifToken && nouvelEmail) {
-      // Securite : un changement d'email revoque toutes les sessions actives.
+      // Revocation des sessions : le changement d'email est une op sensible.
       await this.prisma.sessions.updateMany({
         where: { utilisateur_id: userId, revoquee: false },
         data: { revoquee: true, revoquee_le: new Date() },
       });
 
+      // Envoyer la verification au NOUVEL email.
       const verifyUrl = `${this.config.get<string>('FRONTEND_URL')}/verifier-email?token=${verifToken}`;
       await this.mail.sendEmailVerification(nouvelEmail, verifyUrl);
+
+      // Notifier l'ANCIENNE adresse (alerte securite).
+      await this.mail.sendEmailChangeNotification(user.email, nouvelEmail);
+
       await this.audit.log({
         utilisateurId: userId,
         nomUtilisateur: `${user.prenom} ${user.nom}`,
-        action: 'changement_email',
+        action: 'changement_email_demande',
         module: 'auth',
+        enregistrementId: userId,
+        tableConcernee: 'utilisateurs',
       });
     }
 
     return this.getProfile(userId);
   }
 
-  /** Change le mot de passe apres verification de l'ancien. */
+  // ─── CHANGE PASSWORD ────────────────────────────────────────────────
   async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
     if (dto.nouveau_mot_de_passe !== dto.confirmation_mot_de_passe) {
       throw new BadRequestException(
@@ -371,7 +487,6 @@ export class AuthService {
       data: { mot_de_passe: hash },
     });
 
-    // Securite : un changement de mot de passe revoque toutes les sessions.
     await this.prisma.sessions.updateMany({
       where: { utilisateur_id: userId, revoquee: false },
       data: { revoquee: true, revoquee_le: new Date() },
@@ -386,7 +501,6 @@ export class AuthService {
   }
 
   // ─── SESSIONS ───────────────────────────────────────────────────────
-  /** Liste les sessions actives (non revoquees, non expirees) d'un utilisateur. */
   async listerSessions(userId: string): Promise<SessionResponseDto[]> {
     return this.prisma.sessions.findMany({
       where: {
@@ -405,7 +519,6 @@ export class AuthService {
     });
   }
 
-  /** Revoque une session precise, apres verif qu'elle appartient a l'utilisateur. */
   async revoquerSession(userId: string, sessionId: string): Promise<void> {
     const session = await this.prisma.sessions.findFirst({
       where: { id: sessionId, utilisateur_id: userId },
@@ -423,7 +536,6 @@ export class AuthService {
 
   // ─── Helpers prives ─────────────────────────────────────────────────
 
-  /** Revoque les sessions deja expirees d'un utilisateur (nettoyage). */
   private async revoquerSessionsExpirees(userId: string): Promise<void> {
     await this.prisma.sessions.updateMany({
       where: {
@@ -435,7 +547,6 @@ export class AuthService {
     });
   }
 
-  /** Incremente le compteur d'echecs et bloque le compte au-dela du seuil. */
   private async gererEchec(user: utilisateurs): Promise<void> {
     const tentatives = user.tentatives_connexion + 1;
     const data: { tentatives_connexion: number; bloque_jusqu?: Date } = {
@@ -447,7 +558,6 @@ export class AuthService {
     await this.prisma.utilisateurs.update({ where: { id: user.id }, data });
   }
 
-  /** Journalise une tentative de connexion (sans jamais bloquer l'auth). */
   private async tracerTentative(
     email: string,
     ip: string | undefined,
@@ -470,7 +580,6 @@ export class AuthService {
     }
   }
 
-  /** Genere access + refresh tokens et cree la session correspondante. */
   private async genererTokens(
     user: utilisateurs,
     ip?: string,
@@ -497,9 +606,6 @@ export class AuthService {
 
     const accessDecoded = this.jwt.decode(access_token) as { exp: number };
 
-    // Fenetre d'inactivite glissante : la session expire si aucun refresh
-    // n'intervient dans ce delai -> deconnexion automatique apres inactivite.
-    // (Le refresh token JWT garde son propre plafond absolu via JWT_REFRESH_EXPIRES_IN.)
     const idleMinutes = Number(this.config.get<number>('SESSION_IDLE_MINUTES'));
     const sessionExpiresAt = new Date(Date.now() + idleMinutes * 60 * 1000);
 
@@ -528,12 +634,10 @@ export class AuthService {
     };
   }
 
-  /** Hash SHA-256 (pour stocker tokens/sessions sans jamais garder le clair). */
   private hash(value: string): string {
     return createHash('sha256').update(value).digest('hex');
   }
 
-  /** Hash bcrypt factice (au cout configure), mis en cache apres le 1er appel. */
   private async getDummyHash(): Promise<string> {
     if (!this.dummyHash) {
       const rounds = Number(this.config.get<number>('BCRYPT_SALT_ROUNDS'));
