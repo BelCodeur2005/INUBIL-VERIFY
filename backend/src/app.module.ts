@@ -12,6 +12,7 @@ import { RolesModule } from './roles/roles.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { UtilisateursModule } from './utilisateurs/utilisateurs.module';
 import { InvitationsModule } from './invitations/invitations.module';
+import { VerificationsModule } from './verifications/verifications.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { InvitationsModule } from './invitations/invitations.module';
     PermissionsModule,
     UtilisateursModule,
     InvitationsModule,
+    VerificationsModule,
   ],
   controllers: [AppController],
   providers: [
