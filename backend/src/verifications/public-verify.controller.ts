@@ -14,27 +14,36 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { memoryStorage } from 'multer';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { PublicVerifyService } from './public-verify.service';
 import { VerifierHashDto } from './dto/verifier-hash.dto';
 import { VerifyResponseDto } from './dto/verify-response.dto';
 
 const PDF_MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 Mo
 
-/**
- * Endpoints 100% publics — aucun JWT requis.
- * Chaque appel est loggué dans la table `verifications`.
- */
+@ApiTags('Vérification publique')
 @Controller('verify')
 export class PublicVerifyController {
   constructor(private readonly service: PublicVerifyService) {}
 
-  /**
-   * GET /verify/:identifiant/rapport
-   * Génère et télécharge un rapport PDF horodaté de la vérification.
-   * Déclaré AVANT :identifiant pour éviter que NestJS confonde "rapport" avec un identifiant.
-   */
   @Get(':identifiant/rapport')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Télécharger un rapport PDF horodaté de vérification (10 req/min par IP)',
+    description: 'Format identifiant attendu : INUB-YYYY-XXXX',
+  })
+  @ApiParam({ name: 'identifiant', example: 'INUB-2026-0001' })
+  @ApiResponse({ status: 200, description: 'Rapport PDF généré (application/pdf).' })
+  @ApiResponse({ status: 400, description: 'Format d\'identifiant invalide.' })
+  @ApiResponse({ status: 404, description: 'Document introuvable.' })
   async telechargerRapport(
     @Param('identifiant') identifiant: string,
     @Req() req: Request,
@@ -63,13 +72,15 @@ export class PublicVerifyController {
     res.end(buffer);
   }
 
-  /**
-   * GET /verify/:identifiant
-   * Vérifie un document par son numéro unique (ex: INUB-2026-0001).
-   * C'est l'endpoint scanné par le QR code sur le diplôme physique.
-   */
   @Get(':identifiant')
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Vérifier un document par numéro unique — endpoint QR code (30 req/min par IP)',
+    description: 'Scanné par le QR code imprimé sur le diplôme physique.',
+  })
+  @ApiParam({ name: 'identifiant', example: 'INUB-2026-0001' })
+  @ApiOkResponse({ type: VerifyResponseDto })
+  @ApiResponse({ status: 404, description: 'Document introuvable.' })
   verifierParIdentifiant(
     @Param('identifiant') identifiant: string,
     @Req() req: Request,
@@ -81,12 +92,12 @@ export class PublicVerifyController {
     );
   }
 
-  /**
-   * POST /verify/hash
-   * Vérifie en soumettant directement un hash SHA-256 (64 hex chars).
-   */
   @Post('hash')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Vérifier par hash SHA-256 (64 hex chars) — 10 req/min par IP' })
+  @ApiOkResponse({ type: VerifyResponseDto })
+  @ApiResponse({ status: 400, description: 'Hash invalide (format attendu : 64 hex chars).' })
+  @ApiResponse({ status: 404, description: 'Aucun document avec ce hash.' })
   verifierParHash(
     @Body() dto: VerifierHashDto,
     @Req() req: Request,
@@ -98,13 +109,24 @@ export class PublicVerifyController {
     );
   }
 
-  /**
-   * POST /verify/upload
-   * Vérifie en uploadant le fichier PDF (multipart/form-data, champ "fichier").
-   * Le hash SHA-256 est calculé côté serveur et comparé à la base.
-   */
   @Post('upload')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Vérifier en uploadant le PDF — hash calculé côté serveur (5 req/min par IP)',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['fichier'],
+      properties: {
+        fichier: { type: 'string', format: 'binary', description: 'PDF à vérifier (max 20 Mo)' },
+      },
+    },
+  })
+  @ApiOkResponse({ type: VerifyResponseDto })
+  @ApiResponse({ status: 400, description: 'Fichier manquant ou format non-PDF.' })
+  @ApiResponse({ status: 404, description: 'Aucun document avec ce hash.' })
   @UseInterceptors(
     FileInterceptor('fichier', {
       storage: memoryStorage(),

@@ -19,6 +19,17 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
 import { memoryStorage } from 'multer';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
@@ -32,14 +43,18 @@ import { DocumentQueryDto } from './dto/document-query.dto';
 
 const PDF_MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 Mo
 
+@ApiTags('Documents')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('documents')
 export class DocumentsController {
   constructor(private readonly service: DocumentsService) {}
 
-  /** POST /documents — créer un brouillon */
   @Post()
   @RequirePermissions(Permission.DOC_CREATE)
+  @ApiOperation({ summary: 'Créer un brouillon de document (permission doc:create)' })
+  @ApiCreatedResponse({ description: 'Brouillon créé.' })
+  @ApiResponse({ status: 403, description: 'Permission doc:create requise.' })
   creer(
     @Body() dto: CreerDocumentDto,
     @CurrentUser('id') acteurId: string,
@@ -48,9 +63,11 @@ export class DocumentsController {
     return this.service.creer(dto, acteurId, req.ip);
   }
 
-  /** GET /documents — liste avec filtres */
   @Get()
   @RequirePermissions(Permission.DOC_READ)
+  @ApiOperation({ summary: 'Lister les documents avec filtres (permission doc:read)' })
+  @ApiOkResponse({ description: 'Liste paginée de documents.' })
+  @ApiResponse({ status: 403, description: 'Permission doc:read requise.' })
   lister(
     @Query() query: DocumentQueryDto,
     @CurrentUser('id') acteurId: string,
@@ -58,9 +75,12 @@ export class DocumentsController {
     return this.service.lister(query, acteurId);
   }
 
-  /** GET /documents/:id — détail */
   @Get(':id')
   @RequirePermissions(Permission.DOC_READ)
+  @ApiOperation({ summary: 'Détail d\'un document (permission doc:read)' })
+  @ApiOkResponse({ description: 'Document trouvé.' })
+  @ApiResponse({ status: 403, description: 'Permission doc:read requise.' })
+  @ApiResponse({ status: 404, description: 'Document introuvable.' })
   trouver(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') acteurId: string,
@@ -68,9 +88,12 @@ export class DocumentsController {
     return this.service.trouver(id, acteurId);
   }
 
-  /** PATCH /documents/:id — modifier un brouillon */
   @Patch(':id')
   @RequirePermissions(Permission.DOC_CREATE)
+  @ApiOperation({ summary: 'Modifier un brouillon (permission doc:create)' })
+  @ApiOkResponse({ description: 'Document mis à jour.' })
+  @ApiResponse({ status: 403, description: 'Permission doc:create requise.' })
+  @ApiResponse({ status: 404, description: 'Document introuvable ou non en brouillon.' })
   modifier(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateDocumentDto,
@@ -80,12 +103,6 @@ export class DocumentsController {
     return this.service.modifier(id, dto, acteurId, req.ip);
   }
 
-  /**
-   * POST /documents/:id/valider
-   * Upload du PDF officiel (multipart/form-data, champ "fichier").
-   * Déclenche : hash SHA-256 → QR → statut actif.
-   * IPFS (#21) et Blockchain (#22) seront branchés dans les sprints suivants.
-   */
   @Post(':id/valider')
   @RequirePermissions(Permission.DOC_VALIDATE)
   @UseInterceptors(
@@ -100,6 +117,26 @@ export class DocumentsController {
       },
     }),
   )
+  @ApiOperation({
+    summary: 'Valider un document — upload du PDF officiel (permission doc:validate)',
+    description:
+      'Calcule le hash SHA-256, génère le QR code, passe le statut à actif. ' +
+      'IPFS (#21) et Blockchain (#22) seront branchés dans les sprints suivants.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['fichier'],
+      properties: {
+        fichier: { type: 'string', format: 'binary', description: 'PDF officiel (max 20 Mo)' },
+      },
+    },
+  })
+  @ApiOkResponse({ description: 'Document validé et activé.' })
+  @ApiResponse({ status: 400, description: 'Fichier manquant ou format non-PDF.' })
+  @ApiResponse({ status: 403, description: 'Permission doc:validate requise.' })
+  @ApiResponse({ status: 404, description: 'Document introuvable ou non en brouillon.' })
   valider(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() fichier: Express.Multer.File,
@@ -117,9 +154,13 @@ export class DocumentsController {
     );
   }
 
-  /** POST /documents/:id/revoquer — révocation avec motif obligatoire */
   @Post(':id/revoquer')
   @RequirePermissions(Permission.DOC_REVOKE)
+  @ApiOperation({ summary: 'Révoquer un document avec motif obligatoire (permission doc:revoke)' })
+  @ApiOkResponse({ description: 'Document révoqué.' })
+  @ApiResponse({ status: 400, description: 'Motif de révocation manquant.' })
+  @ApiResponse({ status: 403, description: 'Permission doc:revoke requise.' })
+  @ApiResponse({ status: 404, description: 'Document introuvable.' })
   revoquer(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RevoquerDocumentDto,
@@ -129,10 +170,13 @@ export class DocumentsController {
     return this.service.revoquer(id, dto, acteurId, req.ip);
   }
 
-  /** DELETE /documents/:id — supprime un brouillon uniquement */
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions(Permission.DOC_DELETE)
+  @ApiOperation({ summary: 'Supprimer un brouillon (permission doc:delete)' })
+  @ApiNoContentResponse({ description: 'Brouillon supprimé.' })
+  @ApiResponse({ status: 403, description: 'Permission doc:delete requise.' })
+  @ApiResponse({ status: 404, description: 'Document introuvable ou non en brouillon.' })
   supprimer(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') acteurId: string,
