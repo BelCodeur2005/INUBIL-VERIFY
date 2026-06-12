@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DocumentsService } from './documents.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { HashService } from './hash.service';
 import { QrCodeService } from './qr-code.service';
 import { NotificationEmissionService } from './notification-emission.service';
+import { IpfsService } from '../ipfs/ipfs.service';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────
 
@@ -14,6 +16,7 @@ const UNIV_ID     = 'bbb-univ-0000-0000-000000000002';
 const DOC_ID      = 'ccc-doc-0000-0000-000000000003';
 const ETUDIANT_ID = 'ddd-etu-0000-0000-000000000004';
 const TYPE_ID     = 'eee-type-0000-0000-000000000005';
+const FAKE_CID    = 'QmFakeCid123';
 
 const makePrisma = () => ({
   utilisateurs:       { findFirst: jest.fn() },
@@ -23,13 +26,18 @@ const makePrisma = () => ({
   matieres_document:  {},
 });
 
-const makeAudit = () => ({ log: jest.fn() });
-const makeHash  = () => ({ calculateHash: jest.fn().mockReturnValue('a'.repeat(64)) });
-const makeQr    = () => ({ generateQr: jest.fn().mockResolvedValue(Buffer.from('PNG')) });
-const makeNotif = () => ({
+const makeAudit  = () => ({ log: jest.fn() });
+const makeHash   = () => ({ calculateHash: jest.fn().mockReturnValue('a'.repeat(64)) });
+const makeQr     = () => ({ generateQr: jest.fn().mockResolvedValue(Buffer.from('PNG')) });
+const makeNotif  = () => ({
   notifierEtudiant:   jest.fn().mockResolvedValue(undefined),
   notifierRevocation: jest.fn().mockResolvedValue(undefined),
 });
+const makeIpfs   = () => ({
+  configured: true,
+  uploadFile: jest.fn().mockResolvedValue({ cid: FAKE_CID, url: `https://gateway.pinata.cloud/ipfs/${FAKE_CID}` }),
+});
+const makeConfig = () => ({ get: jest.fn().mockReturnValue('https://verify.inubil.com') });
 
 const makeActeur = (univId: string | null = UNIV_ID) => ({
   universite_id: univId,
@@ -56,22 +64,28 @@ describe('DocumentsService', () => {
   let hash: ReturnType<typeof makeHash>;
   let qr: ReturnType<typeof makeQr>;
   let notif: ReturnType<typeof makeNotif>;
+  let ipfs: ReturnType<typeof makeIpfs>;
+  let config: ReturnType<typeof makeConfig>;
 
   beforeEach(async () => {
-    prisma = makePrisma();
-    audit  = makeAudit();
-    hash   = makeHash();
-    qr     = makeQr();
-    notif  = makeNotif();
+    prisma  = makePrisma();
+    audit   = makeAudit();
+    hash    = makeHash();
+    qr      = makeQr();
+    notif   = makeNotif();
+    ipfs    = makeIpfs();
+    config  = makeConfig();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DocumentsService,
-        { provide: PrismaService,               useValue: prisma },
-        { provide: AuditService,                useValue: audit  },
-        { provide: HashService,                 useValue: hash   },
-        { provide: QrCodeService,               useValue: qr     },
-        { provide: NotificationEmissionService, useValue: notif  },
+        { provide: PrismaService,               useValue: prisma  },
+        { provide: ConfigService,               useValue: config  },
+        { provide: AuditService,                useValue: audit   },
+        { provide: HashService,                 useValue: hash    },
+        { provide: QrCodeService,               useValue: qr      },
+        { provide: NotificationEmissionService, useValue: notif   },
+        { provide: IpfsService,                 useValue: ipfs    },
       ],
     }).compile();
 
@@ -229,6 +243,39 @@ describe('DocumentsService', () => {
       prisma.documents.update.mockResolvedValue(makeDocument({ statut: 'actif' }));
 
       await expect(service.valider(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID)).resolves.toBeDefined();
+    });
+
+    it('upload le PDF et le QR sur IPFS et stocke cid_ipfs + pdf_url + qr_code_url', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst
+        .mockResolvedValueOnce(makeDocument({ statut: 'brouillon' }))
+        .mockResolvedValueOnce(null);
+      prisma.documents.update.mockResolvedValue(makeDocument({ statut: 'actif' }));
+
+      await service.valider(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID);
+
+      expect(ipfs.uploadFile).toHaveBeenCalledTimes(2);
+      expect(ipfs.uploadFile).toHaveBeenCalledWith(fakePdf, 'INUB-2026-0001.pdf', 'application/pdf');
+      expect(ipfs.uploadFile).toHaveBeenCalledWith(expect.any(Buffer), 'qr-INUB-2026-0001.png', 'image/png');
+      const updateData = (prisma.documents.update as jest.Mock).mock.calls[0][0].data;
+      expect(updateData.cid_ipfs).toBe(FAKE_CID);
+      expect(updateData.pdf_url).toContain(FAKE_CID);
+      expect(updateData.qr_code_url).toContain(FAKE_CID);
+    });
+
+    it('continue la validation même si l\'upload IPFS échoue', async () => {
+      ipfs.uploadFile.mockRejectedValue(new Error('Pinata down'));
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst
+        .mockResolvedValueOnce(makeDocument({ statut: 'brouillon' }))
+        .mockResolvedValueOnce(null);
+      prisma.documents.update.mockResolvedValue(makeDocument({ statut: 'actif' }));
+
+      await expect(service.valider(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID)).resolves.toBeDefined();
+      const updateData = (prisma.documents.update as jest.Mock).mock.calls[0][0].data;
+      expect(updateData.statut).toBe('actif');
+      expect(updateData.cid_ipfs).toBeNull();
+      expect(updateData.pdf_url).toBeNull();
     });
   });
 

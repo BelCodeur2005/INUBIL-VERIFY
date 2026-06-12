@@ -6,12 +6,14 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { HashService } from './hash.service';
 import { QrCodeService } from './qr-code.service';
 import { NotificationEmissionService } from './notification-emission.service';
+import { IpfsService } from '../ipfs/ipfs.service';
 import { CreerDocumentDto } from './dto/creer-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { RevoquerDocumentDto } from './dto/revoquer-document.dto';
@@ -23,10 +25,12 @@ export class DocumentsService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
     private readonly audit: AuditService,
     private readonly hash: HashService,
     private readonly qr: QrCodeService,
     private readonly notif: NotificationEmissionService,
+    private readonly ipfs: IpfsService,
   ) {}
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -283,11 +287,30 @@ export class DocumentsService {
       );
     }
 
-    // QR code vers l'URL de vérification publique
-    // La qr_code_url sera l'URL IPFS du PNG une fois #21 implémenté.
-    // Pour l'instant on génère le QR mais on ne le stocke pas (pas d'IPFS).
-    const urlVerification = `https://verify.inubil.com/d/${doc.numero_unique}`;
-    await this.qr.generateQr(urlVerification); // exécuté pour valider la génération
+    const publicVerifyUrl = this.config.get<string>('PUBLIC_VERIFY_URL', 'https://verify.inubil.com');
+    const urlVerification = `${publicVerifyUrl}/d/${doc.numero_unique}`;
+
+    // Upload PDF sur IPFS — fire & forget : un échec n'empêche pas la validation
+    let pdfUrl: string | null = null;
+    let cidIpfs: string | null = null;
+    const ipfsPdf = await this.ipfs
+      .uploadFile(fichierBuffer, `${doc.numero_unique}.pdf`, 'application/pdf')
+      .catch((err: Error) => {
+        this.logger.error(`Upload IPFS PDF échoué pour doc ${id} : ${err.message}`);
+        return null;
+      });
+    if (ipfsPdf) { pdfUrl = ipfsPdf.url; cidIpfs = ipfsPdf.cid; }
+
+    // Générer QR code PNG et uploader sur IPFS
+    const qrBuffer = await this.qr.generateQr(urlVerification);
+    let qrCodeUrl: string | null = null;
+    const ipfsQr = await this.ipfs
+      .uploadFile(qrBuffer, `qr-${doc.numero_unique}.png`, 'image/png')
+      .catch((err: Error) => {
+        this.logger.error(`Upload IPFS QR échoué pour doc ${id} : ${err.message}`);
+        return null;
+      });
+    if (ipfsQr) { qrCodeUrl = ipfsQr.url; }
 
     const maintenant = new Date();
     const tailleKo = Math.ceil(fichierTailleOctets / 1024);
@@ -297,8 +320,9 @@ export class DocumentsService {
       data: {
         hash_sha256: hashSha256,
         pdf_taille_ko: tailleKo,
-        // pdf_url   → sera renseigné par #21 (IPFS Pinata)
-        // cid_ipfs  → sera renseigné par #21
+        pdf_url: pdfUrl,
+        cid_ipfs: cidIpfs,
+        qr_code_url: qrCodeUrl,
         // transaction_hash / bloc_numero / reseau → seront renseignés par #22
         statut: 'actif',
         valide_par: acteurId,
