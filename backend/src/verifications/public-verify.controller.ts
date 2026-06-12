@@ -40,14 +40,24 @@ export class PublicVerifyController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
+    // Validation stricte : seul le format INUB-YYYY-XXXX est accepté.
+    // Protège contre l'injection de header via Content-Disposition.
+    if (!/^INUB-\d{4}-\d{4,}$/.test(identifiant)) {
+      throw new BadRequestException('Identifiant invalide — format attendu : INUB-YYYY-XXXX');
+    }
+
     const { buffer, filename } = await this.service.genererRapport(
       identifiant,
       req.ip,
       req.headers['user-agent'],
     );
+
+    // Sanitize the filename : ne conserver que les caractères alphanumériques, tirets et points.
+    const safeFilename = filename.replace(/[^A-Za-z0-9._-]/g, '_');
+
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Disposition': `attachment; filename="${safeFilename}"`,
       'Content-Length': buffer.length,
     });
     res.end(buffer);
