@@ -25,7 +25,7 @@ import { EtudiantsAdminModule } from './etudiants-admin/etudiants-admin.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env'],
+      envFilePath: ['.env', '../.env'],
       validationSchema: envValidationSchema,
       validationOptions: { abortEarly: false, allowUnknown: true },
     }),
