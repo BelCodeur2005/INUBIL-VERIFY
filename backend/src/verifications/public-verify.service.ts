@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { HashService } from '../documents/hash.service';
+import { RapportVerificationPdfService, RapportVerificationData } from '../documents/rapport-verification-pdf.service';
 import { VerifyResponseDto, DocumentPublicDto, MatierePublicDto } from './dto/verify-response.dto';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class PublicVerifyService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly hash: HashService,
+    private readonly rapportPdf: RapportVerificationPdfService,
   ) {}
 
   // ─── Points d'entrée publics ──────────────────────────────────────────
@@ -44,6 +46,56 @@ export class PublicVerifyService {
     const doc = await this.chargerDocument({ hash_sha256: hashCalcule });
     const resultat = this.evaluerStatut(doc);
     return this.construireReponse(resultat, doc, hashCalcule, 'upload_pdf', ip, userAgent);
+  }
+
+  // ─── Rapport PDF ─────────────────────────────────────────────────────
+
+  /**
+   * Génère un rapport PDF horodaté pour un document identifié par son numéro unique.
+   * Accessible publiquement — crée une entrée verifications avec rapport_genere:true.
+   */
+  async genererRapport(
+    identifiant: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const doc = await this.chargerDocument({ numero_unique: identifiant });
+    const resultat = this.evaluerStatut(doc);
+    const maintenant = new Date();
+
+    const verif = await this.prisma.verifications.create({
+      data: {
+        document_id:       doc?.id ?? null,
+        type_verification: 'lien_unique',
+        resultat,
+        ip_address:        ip ?? null,
+        user_agent:        userAgent ?? null,
+        rapport_genere:    true,
+      },
+    });
+
+    const rapportData: RapportVerificationData = {
+      resultat,
+      verification_id:  verif.id,
+      verifie_le:       maintenant,
+      type_verification: 'lien_unique',
+      ip_verifieur:     ip,
+      ...(doc ? {
+        numero_unique:    doc.numero_unique,
+        etudiant_nom:     `${doc.etudiants.prenom} ${doc.etudiants.nom}`,
+        filiere:          doc.filiere ?? undefined,
+        mention:          doc.mentions_document?.nom ?? undefined,
+        universite:       doc.universites.nom,
+        date_emission:    doc.date_emission,
+        hash_sha256:      doc.hash_sha256 ?? undefined,
+        transaction_hash: doc.transaction_hash ?? undefined,
+      } : {}),
+    };
+
+    const buffer = await this.rapportPdf.generateRapport(rapportData);
+    const filename = `rapport-verification-${identifiant}-${maintenant.toISOString().slice(0, 10)}.pdf`;
+
+    return { buffer, filename };
   }
 
   // ─── Helpers privés ──────────────────────────────────────────────────
