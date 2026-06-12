@@ -19,6 +19,7 @@ import { AdminModule } from './admin/admin.module';
 import { PartagesModule } from './partages/partages.module';
 import { TypesDocumentModule } from './types-document/types-document.module';
 import { MentionsModule } from './mentions/mentions.module';
+import { EtudiantsAdminModule } from './etudiants-admin/etudiants-admin.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { MentionsModule } from './mentions/mentions.module';
     PartagesModule,
     TypesDocumentModule,
     MentionsModule,
+    EtudiantsAdminModule,
   ],
   controllers: [AppController],
   providers: [
