@@ -5,6 +5,14 @@
  *
  * Identifiants configurables via SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD.
  * Idempotent : peut etre relance sans creer de doublons.
+ *
+ * Donnees crees :
+ *   1. Role super_admin + 25 permissions granulaires
+ *   2. Compte admin  (admin@inubil.com / Admin123!)
+ *   3. Universite    ISTAMA INUBIL (statut active)
+ *   4. Type document Licence en Informatique (categorie diplome)
+ *   5. Mention       Assez Bien (12-14/20)
+ *   6. Etudiant      KAMGA Bertrand (ISTAMA-2023-0001)
  */
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
@@ -14,11 +22,6 @@ const prisma = new PrismaClient();
 const DEFAULT_ADMIN_EMAIL = 'admin@inubil.com';
 const DEFAULT_ADMIN_PASSWORD = 'Admin123!';
 
-/**
- * Permissions granulaires (namespace:action).
- * Chaque permission est upsertee ; les anciennes permissions domaine
- * (valider_diplome, gerer_universites, etc.) sont supprimees si presentes.
- */
 const PERMISSIONS: Array<{ nom: string; module: string; description: string }> = [
   // ── Universités ──────────────────────────────────────────────────────────
   { nom: 'univ:read',     module: 'universites', description: 'Consulter la liste et le detail des universites' },
@@ -58,7 +61,6 @@ const PERMISSIONS: Array<{ nom: string; module: string; description: string }> =
   { nom: 'audit:read', module: 'audit',        description: "Consulter le journal d'audit" },
 ];
 
-/** Anciennes permissions domaine a supprimer (migration). */
 const ANCIENNES_PERMISSIONS = [
   'valider_diplome',
   'revoquer_diplome',
@@ -81,7 +83,7 @@ async function main(): Promise<void> {
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? DEFAULT_ADMIN_PASSWORD;
   const motDePasseFourniParEnv = Boolean(process.env.SEED_ADMIN_PASSWORD);
 
-  // 1. Role super_admin.
+  // ── 1. Role super_admin ────────────────────────────────────────────────────
   let role = await prisma.roles.findFirst({
     where: { nom: 'super_admin', universite_id: null },
   });
@@ -96,7 +98,7 @@ async function main(): Promise<void> {
     console.log('Role "super_admin" cree.');
   }
 
-  // 2. Supprimer les anciennes permissions domaine (migration idempotente).
+  // ── 2. Supprimer les anciennes permissions domaine (migration idempotente) ─
   const anciennesExistantes = await prisma.permissions.findMany({
     where: { nom: { in: ANCIENNES_PERMISSIONS } },
     select: { id: true },
@@ -108,7 +110,7 @@ async function main(): Promise<void> {
     console.log(`${anciennesExistantes.length} ancienne(s) permission(s) domaine supprimee(s).`);
   }
 
-  // 3. Upsert des 25 permissions granulaires + attribution au super_admin.
+  // ── 3. Upsert des 25 permissions granulaires + attribution au super_admin ──
   for (const p of PERMISSIONS) {
     const perm = await prisma.permissions.upsert({
       where: { nom: p.nom },
@@ -125,10 +127,10 @@ async function main(): Promise<void> {
   }
   console.log(`${PERMISSIONS.length} permissions granulaires accordees a "super_admin".`);
 
-  // 4. Compte admin de test.
-  const existant = await prisma.utilisateurs.findUnique({ where: { email: adminEmail } });
+  // ── 4. Compte admin de test ─────────────────────────────────────────────────
+  let admin = await prisma.utilisateurs.findUnique({ where: { email: adminEmail } });
 
-  if (existant) {
+  if (admin) {
     await prisma.utilisateurs.update({
       where: { email: adminEmail },
       data: { tentatives_connexion: 0, bloque_jusqu: null },
@@ -137,7 +139,7 @@ async function main(): Promise<void> {
   } else {
     const rounds = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12);
     const motDePasseHache = await bcrypt.hash(adminPassword, rounds);
-    await prisma.utilisateurs.create({
+    admin = await prisma.utilisateurs.create({
       data: {
         nom: 'Admin',
         prenom: 'INUBIL',
@@ -155,6 +157,144 @@ async function main(): Promise<void> {
       console.log(`  mot de passe (defaut dev) : ${adminPassword}`);
     }
   }
+
+  // ── 5. Université ISTAMA INUBIL ─────────────────────────────────────────────
+  let universite = await prisma.universites.findFirst({
+    where: { nom: 'Institut Supérieur de Technologie et de Management INUBIL', deleted_at: null },
+  });
+  if (!universite) {
+    universite = await prisma.universites.create({
+      data: {
+        nom: 'Institut Supérieur de Technologie et de Management INUBIL',
+        nom_court: 'ISTAMA INUBIL',
+        pays: 'Cameroun',
+        ville: 'Douala',
+        adresse: 'Bonanjo, Douala, Cameroun',
+        type: 'privee',
+        email_contact: 'contact@istama-inubil.cm',
+        telephone: '+237 6 77 00 00 00',
+        statut: 'active',
+        approuvee_par: admin.id,
+        approuvee_le: new Date(),
+        created_by: admin.id,
+      },
+    });
+    console.log(`Universite cree : ${universite.nom_court} (${universite.id})`);
+  } else {
+    console.log(`Universite deja presente : ${universite.nom_court} (${universite.id})`);
+  }
+
+  // ── 6. Types de document ────────────────────────────────────────────────────
+  const typesDocs = [
+    {
+      code: 'LIC-INFO',
+      nom: 'Licence en Informatique',
+      nom_court: 'Licence',
+      categorie: 'diplome' as const,
+      niveau_bac_plus: 3,
+      a_matieres: true,
+    },
+    {
+      code: 'RELEVE-L3',
+      nom: 'Relevé de notes Licence 3',
+      nom_court: 'Relevé L3',
+      categorie: 'releve' as const,
+      niveau_bac_plus: 3,
+      a_matieres: true,
+    },
+    {
+      code: 'ATTEST-SCOL',
+      nom: 'Attestation de scolarité',
+      nom_court: 'Attestation',
+      categorie: 'attestation' as const,
+      niveau_bac_plus: null,
+      a_matieres: false,
+    },
+  ];
+
+  for (const td of typesDocs) {
+    await prisma.types_document.upsert({
+      where: { code_universite_id: { code: td.code, universite_id: universite.id } },
+      update: { nom: td.nom, est_actif: true },
+      create: {
+        code: td.code,
+        nom: td.nom,
+        nom_court: td.nom_court,
+        categorie: td.categorie,
+        niveau_bac_plus: td.niveau_bac_plus,
+        pays: 'Cameroun',
+        universite_id: universite.id,
+        a_matieres: td.a_matieres,
+        est_actif: true,
+      },
+    });
+  }
+  console.log(`${typesDocs.length} types de document upserted pour ${universite.nom_court}.`);
+
+  // ── 7. Mentions ─────────────────────────────────────────────────────────────
+  const mentions = [
+    { code: 'TB', nom: 'Très Bien',   note_min: 16, note_max: 20, ordre: 1 },
+    { code: 'B',  nom: 'Bien',        note_min: 14, note_max: 16, ordre: 2 },
+    { code: 'AB', nom: 'Assez Bien',  note_min: 12, note_max: 14, ordre: 3 },
+    { code: 'P',  nom: 'Passable',    note_min: 10, note_max: 12, ordre: 4 },
+  ];
+
+  for (const m of mentions) {
+    await prisma.mentions_document.upsert({
+      where: { code_universite_id: { code: m.code, universite_id: universite.id } },
+      update: { nom: m.nom },
+      create: {
+        code: m.code,
+        nom: m.nom,
+        note_min: m.note_min,
+        note_max: m.note_max,
+        universite_id: universite.id,
+        est_actif: true,
+        ordre: m.ordre,
+      },
+    });
+  }
+  console.log(`${mentions.length} mentions upserted pour ${universite.nom_court}.`);
+
+  // ── 8. Étudiant de test ─────────────────────────────────────────────────────
+  const numeroEtudiant = 'ISTAMA-2023-0001';
+  const etudiantExistant = await prisma.etudiants.findFirst({
+    where: { numero_etudiant: numeroEtudiant, deleted_at: null },
+  });
+  if (!etudiantExistant) {
+    const etudiant = await prisma.etudiants.create({
+      data: {
+        numero_etudiant: numeroEtudiant,
+        nom: 'KAMGA',
+        prenom: 'Bertrand',
+        email: 'bertrand.kamga@istama.cm',
+        date_naissance: new Date('2001-03-15'),
+        lieu_naissance: 'Douala',
+        nationalite: 'Camerounaise',
+        universite_id: universite.id,
+        annee_entree: 2023,
+        created_by: admin.id,
+      },
+    });
+    console.log(`Etudiant cree : ${etudiant.nom} ${etudiant.prenom} (${etudiant.id})`);
+  } else {
+    console.log(`Etudiant deja present : ${etudiantExistant.nom} ${etudiantExistant.prenom} (${etudiantExistant.id})`);
+  }
+
+  // ── Résumé ──────────────────────────────────────────────────────────────────
+  console.log('\n=== SEED TERMINE ===');
+  console.log(`Admin     : ${adminEmail} / ${motDePasseFourniParEnv ? '(env)' : adminPassword}`);
+  console.log(`Universite: ${universite.nom_court}  id=${universite.id}`);
+
+  const typeDoc = await prisma.types_document.findFirst({
+    where: { code: 'LIC-INFO', universite_id: universite.id },
+  });
+  const etudiant = await prisma.etudiants.findFirst({
+    where: { numero_etudiant: numeroEtudiant },
+  });
+  console.log(`Type doc  : ${typeDoc?.nom}  id=${typeDoc?.id}`);
+  console.log(`Etudiant  : ${etudiant?.nom} ${etudiant?.prenom}  id=${etudiant?.id}`);
+  console.log('====================\n');
 }
 
 main()
