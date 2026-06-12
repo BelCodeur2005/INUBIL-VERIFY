@@ -1,4 +1,4 @@
-import { PartialType, OmitType } from '@nestjs/mapped-types';
+import { PartialType, OmitType } from '@nestjs/swagger';
 import { CreerDocumentDto } from './creer-document.dto';
 
 export class UpdateDocumentDto extends PartialType(
