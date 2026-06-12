@@ -5,13 +5,14 @@ import {
   Param,
   Body,
   Req,
+  Res,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { memoryStorage } from 'multer';
 import { PublicVerifyService } from './public-verify.service';
 import { VerifierHashDto } from './dto/verifier-hash.dto';
@@ -26,6 +27,31 @@ const PDF_MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 Mo
 @Controller('verify')
 export class PublicVerifyController {
   constructor(private readonly service: PublicVerifyService) {}
+
+  /**
+   * GET /verify/:identifiant/rapport
+   * Génère et télécharge un rapport PDF horodaté de la vérification.
+   * Déclaré AVANT :identifiant pour éviter que NestJS confonde "rapport" avec un identifiant.
+   */
+  @Get(':identifiant/rapport')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  async telechargerRapport(
+    @Param('identifiant') identifiant: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { buffer, filename } = await this.service.genererRapport(
+      identifiant,
+      req.ip,
+      req.headers['user-agent'],
+    );
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  }
 
   /**
    * GET /verify/:identifiant

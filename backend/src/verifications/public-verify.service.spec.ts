@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PublicVerifyService } from './public-verify.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HashService } from '../documents/hash.service';
+import { RapportVerificationPdfService } from '../documents/rapport-verification-pdf.service';
 
 const HASH_REEL  = 'a'.repeat(64);
 const HASH_FAUX  = 'b'.repeat(64);
@@ -38,20 +39,27 @@ const makeHash = () => ({
   calculateHash: jest.fn().mockReturnValue(HASH_REEL),
 });
 
+const makeRapportPdf = () => ({
+  generateRapport: jest.fn().mockResolvedValue(Buffer.from('%PDF-fake-rapport')),
+});
+
 describe('PublicVerifyService', () => {
   let service: PublicVerifyService;
   let prisma: ReturnType<typeof makePrisma>;
   let hash: ReturnType<typeof makeHash>;
+  let rapportPdf: ReturnType<typeof makeRapportPdf>;
 
   beforeEach(async () => {
-    prisma = makePrisma();
-    hash   = makeHash();
+    prisma     = makePrisma();
+    hash       = makeHash();
+    rapportPdf = makeRapportPdf();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PublicVerifyService,
-        { provide: PrismaService, useValue: prisma },
-        { provide: HashService,   useValue: hash  },
+        { provide: PrismaService,                 useValue: prisma     },
+        { provide: HashService,                   useValue: hash       },
+        { provide: RapportVerificationPdfService, useValue: rapportPdf },
       ],
     }).compile();
 
@@ -245,6 +253,40 @@ describe('PublicVerifyService', () => {
       const res = await service.verifierParIdentifiant('INUB-XXXX-9999');
 
       expect(res.conseil_verification).toBe('');
+    });
+  });
+
+  // ── genererRapport ─────────────────────────────────────────────────────
+
+  describe('genererRapport', () => {
+    it('retourne un buffer PDF et un nom de fichier', async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+
+      const { buffer, filename } = await service.genererRapport('INUB-2026-0001', '1.2.3.4');
+
+      expect(Buffer.isBuffer(buffer)).toBe(true);
+      expect(filename).toMatch(/^rapport-verification-INUB-2026-0001-\d{4}-\d{2}-\d{2}\.pdf$/);
+    });
+
+    it('logue dans verifications avec rapport_genere:true', async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+
+      await service.genererRapport('INUB-2026-0001');
+
+      expect(prisma.verifications.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ rapport_genere: true }),
+        }),
+      );
+    });
+
+    it('fonctionne si le document est introuvable (non_trouve)', async () => {
+      prisma.documents.findFirst.mockResolvedValue(null);
+
+      const { buffer, filename } = await service.genererRapport('INUB-XXXX-9999');
+
+      expect(Buffer.isBuffer(buffer)).toBe(true);
+      expect(filename).toContain('INUB-XXXX-9999');
     });
   });
 });
