@@ -8,9 +8,10 @@ import { DocumentsController } from './documents.controller';
 import { NotificationEmissionService } from './notification-emission.service';
 import { AuditModule } from '../audit/audit.module';
 import { MailModule } from '../mail/mail.module';
+import { IpfsModule } from '../ipfs/ipfs.module';
 
 @Module({
-  imports: [AuditModule, MailModule],
+  imports: [AuditModule, MailModule, IpfsModule],
   controllers: [DocumentsController],
   providers: [DocumentsService, NotificationEmissionService, HashService, PdfService, QrCodeService, RapportVerificationPdfService],
   exports: [DocumentsService, NotificationEmissionService, HashService, PdfService, QrCodeService, RapportVerificationPdfService],
