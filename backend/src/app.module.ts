@@ -14,6 +14,7 @@ import { UtilisateursModule } from './utilisateurs/utilisateurs.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { VerificationsModule } from './verifications/verifications.module';
 import { DocumentsModule } from './documents/documents.module';
+import { EtudiantsModule } from './etudiants/etudiants.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { DocumentsModule } from './documents/documents.module';
     InvitationsModule,
     VerificationsModule,
     DocumentsModule,
+    EtudiantsModule,
   ],
   controllers: [AppController],
   providers: [
