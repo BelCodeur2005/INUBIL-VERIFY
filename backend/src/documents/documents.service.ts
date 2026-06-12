@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
@@ -10,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { HashService } from './hash.service';
 import { QrCodeService } from './qr-code.service';
+import { NotificationEmissionService } from './notification-emission.service';
 import { CreerDocumentDto } from './dto/creer-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { RevoquerDocumentDto } from './dto/revoquer-document.dto';
@@ -17,11 +19,14 @@ import { DocumentQueryDto } from './dto/document-query.dto';
 
 @Injectable()
 export class DocumentsService {
+  private readonly logger = new Logger(DocumentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly hash: HashService,
     private readonly qr: QrCodeService,
+    private readonly notif: NotificationEmissionService,
   ) {}
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -312,6 +317,11 @@ export class DocumentsService {
       ip,
       userAgent,
     });
+
+    // Notification email étudiant en fire & forget — un échec mail ne fait pas échouer la validation
+    this.notif.notifierEtudiant(id).catch((err) =>
+      this.logger.error(`Notification émission échouée pour doc ${id} : ${err.message}`),
+    );
 
     return updated;
   }

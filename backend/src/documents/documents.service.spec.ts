@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { HashService } from './hash.service';
 import { QrCodeService } from './qr-code.service';
+import { NotificationEmissionService } from './notification-emission.service';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────
 
@@ -25,6 +26,7 @@ const makePrisma = () => ({
 const makeAudit = () => ({ log: jest.fn() });
 const makeHash  = () => ({ calculateHash: jest.fn().mockReturnValue('a'.repeat(64)) });
 const makeQr    = () => ({ generateQr: jest.fn().mockResolvedValue(Buffer.from('PNG')) });
+const makeNotif = () => ({ notifierEtudiant: jest.fn().mockResolvedValue(undefined) });
 
 const makeActeur = (univId: string | null = UNIV_ID) => ({
   universite_id: univId,
@@ -50,20 +52,23 @@ describe('DocumentsService', () => {
   let audit: ReturnType<typeof makeAudit>;
   let hash: ReturnType<typeof makeHash>;
   let qr: ReturnType<typeof makeQr>;
+  let notif: ReturnType<typeof makeNotif>;
 
   beforeEach(async () => {
     prisma = makePrisma();
     audit  = makeAudit();
     hash   = makeHash();
     qr     = makeQr();
+    notif  = makeNotif();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DocumentsService,
-        { provide: PrismaService,  useValue: prisma },
-        { provide: AuditService,   useValue: audit  },
-        { provide: HashService,    useValue: hash   },
-        { provide: QrCodeService,  useValue: qr     },
+        { provide: PrismaService,               useValue: prisma },
+        { provide: AuditService,                useValue: audit  },
+        { provide: HashService,                 useValue: hash   },
+        { provide: QrCodeService,               useValue: qr     },
+        { provide: NotificationEmissionService, useValue: notif  },
       ],
     }).compile();
 
