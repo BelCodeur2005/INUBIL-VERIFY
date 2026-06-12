@@ -31,7 +31,10 @@ const makePrisma = () => ({
   emails_log: { create: jest.fn(), update: jest.fn() },
 });
 
-const makeMail = () => ({ sendDocumentEmis: jest.fn() });
+const makeMail = () => ({
+  sendDocumentEmis:     jest.fn(),
+  sendDocumentRévoqué:  jest.fn(),
+});
 
 describe('NotificationEmissionService', () => {
   let service: NotificationEmissionService;
@@ -143,5 +146,86 @@ describe('NotificationEmissionService', () => {
         }),
       }),
     );
+  });
+
+  // ── notifierRevocation ────────────────────────────────────────────────────
+
+  describe('notifierRevocation', () => {
+    const makeDocRévoqué = (overrides: any = {}) => ({
+      ...makeDoc(),
+      raison_revocation: 'Diplôme émis par erreur — dossier étudiant incorrect',
+      ...overrides,
+    });
+
+    it('envoie l\'email de révocation et logue statut "envoye"', async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDocRévoqué());
+      prisma.emails_log.create.mockResolvedValue({ id: LOG_ID });
+      mail.sendDocumentRévoqué.mockResolvedValue(undefined);
+      prisma.emails_log.update.mockResolvedValue({});
+
+      await service.notifierRevocation(DOC_ID);
+
+      expect(mail.sendDocumentRévoqué).toHaveBeenCalledWith(
+        EMAIL,
+        expect.objectContaining({ numeroUnique: NUM_UNIQUE }),
+      );
+      expect(prisma.emails_log.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ statut: 'envoye' }) }),
+      );
+    });
+
+    it('crée le log avec template "document_revoque"', async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDocRévoqué());
+      prisma.emails_log.create.mockResolvedValue({ id: LOG_ID });
+      mail.sendDocumentRévoqué.mockResolvedValue(undefined);
+      prisma.emails_log.update.mockResolvedValue({});
+
+      await service.notifierRevocation(DOC_ID);
+
+      expect(prisma.emails_log.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            template:    'document_revoque',
+            statut:      'en_attente',
+            destinataire: EMAIL,
+          }),
+        }),
+      );
+    });
+
+    it('logue statut "echoue" si MailService lève une erreur', async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDocRévoqué());
+      prisma.emails_log.create.mockResolvedValue({ id: LOG_ID });
+      mail.sendDocumentRévoqué.mockRejectedValue(new Error('SMTP down'));
+      prisma.emails_log.update.mockResolvedValue({});
+
+      await service.notifierRevocation(DOC_ID);
+
+      expect(prisma.emails_log.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ statut: 'echoue', erreur: 'SMTP down' }),
+        }),
+      );
+    });
+
+    it('ne lève pas d\'erreur si le document est introuvable', async () => {
+      prisma.documents.findFirst.mockResolvedValue(null);
+      await expect(service.notifierRevocation(DOC_ID)).resolves.toBeUndefined();
+      expect(mail.sendDocumentRévoqué).not.toHaveBeenCalled();
+    });
+
+    it('ne lève pas d\'erreur si l\'étudiant n\'a pas d\'email', async () => {
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocRévoqué({
+          etudiants: {
+            ...makeDoc().etudiants,
+            email: null,
+            utilisateurs_etudiants_utilisateur_idToutilisateurs: null,
+          },
+        }),
+      );
+      await expect(service.notifierRevocation(DOC_ID)).resolves.toBeUndefined();
+      expect(mail.sendDocumentRévoqué).not.toHaveBeenCalled();
+    });
   });
 });

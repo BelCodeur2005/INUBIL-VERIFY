@@ -342,6 +342,8 @@ export class DocumentsService {
         revoque_par: acteurId,
         revoque_le: new Date(),
         raison_revocation: dto.raison,
+        // #22 — Blockchain : revokeDiploma(bytes32 hash) sera appelé ici une fois
+        // le service Ethers.js + Polygon implémenté (transaction_hash mis à jour en retour).
       },
       include: { matieres_document: { orderBy: { ordre: 'asc' } } },
     });
@@ -354,6 +356,11 @@ export class DocumentsService {
       tableConcernee: 'documents',
       ip,
     });
+
+    // Notification email étudiant en fire & forget — un échec mail ne fait pas échouer la révocation
+    this.notif.notifierRevocation(id).catch((err) =>
+      this.logger.error(`Notification révocation échouée pour doc ${id} : ${err.message}`),
+    );
 
     return updated;
   }
