@@ -12,6 +12,87 @@ export class NotificationEmissionService {
   ) {}
 
   /**
+   * Notifie l'étudiant que son document a été révoqué par l'établissement.
+   * Doit être appelé en fire & forget depuis DocumentsService.revoquer() :
+   *   this.notif.notifierRevocation(docId).catch(err => this.logger.error(...))
+   * Un échec d'envoi ne doit jamais faire échouer la révocation.
+   */
+  async notifierRevocation(documentId: string): Promise<void> {
+    const doc = await this.prisma.documents.findFirst({
+      where: { id: documentId },
+      include: {
+        etudiants: {
+          include: {
+            utilisateurs_etudiants_utilisateur_idToutilisateurs: {
+              select: { email: true },
+            },
+          },
+        },
+        universites:    { select: { nom: true } },
+        types_document: { select: { nom: true } },
+      },
+    });
+
+    if (!doc) {
+      this.logger.warn(`notifierRevocation : document ${documentId} introuvable`);
+      return;
+    }
+
+    const destinataire =
+      doc.etudiants.utilisateurs_etudiants_utilisateur_idToutilisateurs?.email ??
+      doc.etudiants.email;
+
+    if (!destinataire) {
+      this.logger.warn(
+        `notifierRevocation : aucun email pour l'étudiant ${doc.etudiants.id} — notification ignorée`,
+      );
+      return;
+    }
+
+    const prenomNom   = `${doc.etudiants.prenom} ${doc.etudiants.nom}`;
+    const parametres  = {
+      prenomNom,
+      numeroUnique:  doc.numero_unique,
+      typeDocument:  doc.types_document.nom,
+      nomUniversite: doc.universites.nom,
+      raison:        (doc as any).raison_revocation ?? 'Motif non précisé',
+    };
+
+    const logEntry = await this.prisma.emails_log.create({
+      data: {
+        destinataire,
+        sujet:         `Votre document a été révoqué — ${doc.numero_unique}`,
+        template:      'document_revoque',
+        parametres,
+        statut:        'en_attente',
+        max_tentatives: 3,
+      },
+    });
+
+    try {
+      await this.mail.sendDocumentRévoqué(destinataire, parametres);
+
+      await this.prisma.emails_log.update({
+        where: { id: logEntry.id },
+        data: { statut: 'envoye', tentatives: 1, envoye_le: new Date() },
+      });
+    } catch (err: any) {
+      this.logger.error(
+        `Échec envoi email révocation doc ${documentId} vers ${destinataire} : ${err.message}`,
+      );
+
+      await this.prisma.emails_log.update({
+        where: { id: logEntry.id },
+        data: {
+          statut:     'echoue',
+          tentatives: 1,
+          erreur:     err.message ?? 'Erreur inconnue',
+        },
+      });
+    }
+  }
+
+  /**
    * Notifie l'étudiant que son document a été émis et certifié.
    * Doit être appelé en fire & forget depuis DocumentsService.valider() :
    *   this.notif.notifierEtudiant(docId).catch(err => this.logger.error(...))

@@ -99,6 +99,39 @@ export class MailService {
   }
 
   /**
+   * Notifie l'étudiant que son document a été révoqué par l'établissement.
+   * Inclut le motif de révocation pour transparence.
+   */
+  async sendDocumentRévoqué(
+    destinataire: string,
+    data: {
+      prenomNom: string;
+      numeroUnique: string;
+      typeDocument: string;
+      nomUniversite: string;
+      raison: string;
+    },
+  ): Promise<void> {
+    const env = process.env.NODE_ENV;
+    const estProdOuStaging = env === 'production' || env === 'staging';
+
+    if (estProdOuStaging) {
+      this.logger.log(
+        `Email de révocation à envoyer à ${destinataire} — doc ${data.numeroUnique}`,
+      );
+      return;
+    }
+
+    this.logger.warn(
+      `[DEV-ONLY] Email simulé — document révoqué pour ${destinataire}\n` +
+      `  Étudiant : ${data.prenomNom}\n` +
+      `  Numéro   : ${data.numeroUnique}\n` +
+      `  Type     : ${data.typeDocument}\n` +
+      `  Motif    : ${data.raison}`,
+    );
+  }
+
+  /**
    * Notifie l'ancienne adresse qu'un changement d'email a ete demande.
    * Permet a l'utilisateur legitime de reagir si c'est frauduleux.
    */

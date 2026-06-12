@@ -26,7 +26,10 @@ const makePrisma = () => ({
 const makeAudit = () => ({ log: jest.fn() });
 const makeHash  = () => ({ calculateHash: jest.fn().mockReturnValue('a'.repeat(64)) });
 const makeQr    = () => ({ generateQr: jest.fn().mockResolvedValue(Buffer.from('PNG')) });
-const makeNotif = () => ({ notifierEtudiant: jest.fn().mockResolvedValue(undefined) });
+const makeNotif = () => ({
+  notifierEtudiant:   jest.fn().mockResolvedValue(undefined),
+  notifierRevocation: jest.fn().mockResolvedValue(undefined),
+});
 
 const makeActeur = (univId: string | null = UNIV_ID) => ({
   universite_id: univId,
@@ -252,6 +255,16 @@ describe('DocumentsService', () => {
       await expect(
         service.revoquer(DOC_ID, { raison: 'Erreur sur le nom' }, ACTEUR_ID),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('déclenche notifierRevocation en fire & forget', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'actif' }));
+      prisma.documents.update.mockResolvedValue(makeDocument({ statut: 'revoque' }));
+
+      await service.revoquer(DOC_ID, { raison: 'Erreur sur le nom de l\'étudiant' }, ACTEUR_ID);
+
+      expect(notif.notifierRevocation).toHaveBeenCalledWith(DOC_ID);
     });
   });
 
