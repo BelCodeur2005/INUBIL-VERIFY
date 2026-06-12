@@ -132,6 +132,43 @@ export class MailService {
   }
 
   /**
+   * Notifie le destinataire externe qu'un relevé/diplôme a été partagé avec lui.
+   * Contient le lien d'accès direct (token dans l'URL) et la date d'expiration.
+   */
+  async sendPartageCreé(
+    destinataire: string,
+    data: {
+      prenomNomEtudiant: string;
+      typeDocument: string;
+      nomUniversite: string;
+      urlPartage: string;
+      dateExpiration: Date | null;
+    },
+  ): Promise<void> {
+    const env = process.env.NODE_ENV;
+    const estProdOuStaging = env === 'production' || env === 'staging';
+
+    const expInfo = data.dateExpiration
+      ? `Expire le ${data.dateExpiration.toLocaleDateString('fr-FR')}`
+      : 'Accès illimité';
+
+    if (estProdOuStaging) {
+      this.logger.log(
+        `Email de partage à envoyer à ${destinataire} — doc de ${data.prenomNomEtudiant}`,
+      );
+      return;
+    }
+
+    this.logger.warn(
+      `[DEV-ONLY] Email simulé — partage document pour ${destinataire}\n` +
+      `  Étudiant   : ${data.prenomNomEtudiant}\n` +
+      `  Document   : ${data.typeDocument} — ${data.nomUniversite}\n` +
+      `  Lien       : ${data.urlPartage}\n` +
+      `  Expiration : ${expInfo}`,
+    );
+  }
+
+  /**
    * Notifie l'ancienne adresse qu'un changement d'email a ete demande.
    * Permet a l'utilisateur legitime de reagir si c'est frauduleux.
    */

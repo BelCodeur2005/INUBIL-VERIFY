@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { EtudiantsService } from './etudiants.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 
 const USER_ID   = 'usr-0000-0000-0000-000000000001';
 const ETU_ID    = 'etu-0000-0000-0000-000000000002';
@@ -63,6 +64,10 @@ const makePartage = (overrides = {}) => ({
   ...overrides,
 });
 
+const makeMail = () => ({
+  sendPartageCreé: jest.fn().mockResolvedValue(undefined),
+});
+
 const makePrisma = () => ({
   etudiants: {
     findFirst: jest.fn(),
@@ -88,14 +93,17 @@ const makePrisma = () => ({
 describe('EtudiantsService', () => {
   let service: EtudiantsService;
   let prisma: ReturnType<typeof makePrisma>;
+  let mail: ReturnType<typeof makeMail>;
 
   beforeEach(async () => {
     prisma = makePrisma();
+    mail   = makeMail();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EtudiantsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: MailService,   useValue: mail   },
       ],
     }).compile();
 
@@ -219,6 +227,33 @@ describe('EtudiantsService', () => {
 
       await expect(service.creerPartage(USER_ID, { document_id: DOC_ID }))
         .rejects.toThrow(BadRequestException);
+    });
+
+    it('envoie l\'email au destinataire si email_destinataire est fourni', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+      prisma.partages_document.create.mockResolvedValue(makePartage());
+
+      await service.creerPartage(USER_ID, {
+        document_id:        DOC_ID,
+        email_destinataire: 'recruteur@entreprise.cm',
+      });
+
+      // fire & forget — on vérifie juste que sendPartageCreé a été appelé
+      expect(mail.sendPartageCreé).toHaveBeenCalledWith(
+        'recruteur@entreprise.cm',
+        expect.objectContaining({ prenomNomEtudiant: 'Bertrand KAMGA' }),
+      );
+    });
+
+    it('n\'envoie pas d\'email si aucun destinataire n\'est fourni', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+      prisma.partages_document.create.mockResolvedValue(makePartage());
+
+      await service.creerPartage(USER_ID, { document_id: DOC_ID });
+
+      expect(mail.sendPartageCreé).not.toHaveBeenCalled();
     });
   });
 
