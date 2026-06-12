@@ -13,13 +13,20 @@ const makeDoc = (statut = 'actif') => ({
   numero_unique: 'INUB-2026-0001',
   url_verification: 'https://verify.inubil.com/d/INUB-2026-0001',
   filiere: 'Licence en Informatique',
+  annee_academique: '2025-2026',
   date_emission: new Date('2026-06-12'),
+  moyenne_generale: 13.5,
   statut,
   hash_sha256: HASH_REEL,
   deleted_at: null,
-  etudiants:     { prenom: 'Bertrand', nom: 'KAMGA' },
-  universites:   { nom: 'ISTAMA INUBIL' },
-  types_document: { nom: 'Licence', categorie: 'diplome' },
+  etudiants:         { prenom: 'Bertrand', nom: 'KAMGA' },
+  universites:       { nom: 'ISTAMA INUBIL' },
+  types_document:    { nom: 'Licence', categorie: 'diplome', a_matieres: false },
+  mentions_document: { nom: 'Assez Bien' },
+  matieres_document: [
+    { nom_matiere: 'Algorithmique', note: 14, note_max: 20, resultat: 'valide', semestre: 1 },
+    { nom_matiere: 'Base de données', note: 13, note_max: 20, resultat: 'valide', semestre: 1 },
+  ],
 });
 
 const makePrisma = () => ({
@@ -183,7 +190,7 @@ describe('PublicVerifyService', () => {
   // ── réponse enrichie ───────────────────────────────────────────────────
 
   describe('structure de la réponse', () => {
-    it('inclut verification_id, verifie_le et message', async () => {
+    it('inclut verification_id, verifie_le, message et conseil_verification', async () => {
       prisma.documents.findFirst.mockResolvedValue(makeDoc());
 
       const res = await service.verifierParIdentifiant('INUB-2026-0001');
@@ -191,6 +198,7 @@ describe('PublicVerifyService', () => {
       expect(res.verification_id).toBe(VERIF_ID);
       expect(res.verifie_le).toBeInstanceOf(Date);
       expect(res.message).toBeTruthy();
+      expect(res.conseil_verification).toContain('POST /verify/upload');
     });
 
     it('le document public ne contient pas de données sensibles internes', async () => {
@@ -201,6 +209,42 @@ describe('PublicVerifyService', () => {
       expect(res.document).not.toHaveProperty('hash_sha256');
       expect(res.document).not.toHaveProperty('etudiant_id');
       expect(res.document).not.toHaveProperty('saisi_par');
+    });
+
+    it('inclut mention et moyenne_generale pour la comparaison visuelle', async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+
+      const res = await service.verifierParIdentifiant('INUB-2026-0001');
+
+      expect(res.document?.mention).toBe('Assez Bien');
+      expect(res.document?.moyenne_generale).toBe(13.5);
+      expect(res.document?.annee_academique).toBe('2025-2026');
+    });
+
+    it('inclut la liste des matières pour comparer avec le relevé physique', async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+
+      const res = await service.verifierParIdentifiant('INUB-2026-0001');
+
+      expect(res.document?.matieres).toHaveLength(2);
+      expect(res.document?.matieres[0].nom_matiere).toBe('Algorithmique');
+      expect(res.document?.matieres[0].note).toBe(14);
+    });
+
+    it('indique verifiable_par_upload:true pour guider vers la preuve cryptographique', async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+
+      const res = await service.verifierParIdentifiant('INUB-2026-0001');
+
+      expect(res.document?.verifiable_par_upload).toBe(true);
+    });
+
+    it('conseil_verification est vide pour les résultats non-authentiques', async () => {
+      prisma.documents.findFirst.mockResolvedValue(null);
+
+      const res = await service.verifierParIdentifiant('INUB-XXXX-9999');
+
+      expect(res.conseil_verification).toBe('');
     });
   });
 });

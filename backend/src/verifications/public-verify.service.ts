@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { HashService } from '../documents/hash.service';
-import { VerifyResponseDto, DocumentPublicDto } from './dto/verify-response.dto';
+import { VerifyResponseDto, DocumentPublicDto, MatierePublicDto } from './dto/verify-response.dto';
 
 @Injectable()
 export class PublicVerifyService {
@@ -52,9 +52,14 @@ export class PublicVerifyService {
     return this.prisma.documents.findFirst({
       where: { ...where, deleted_at: null },
       include: {
-        etudiants: { select: { prenom: true, nom: true } },
-        universites: { select: { nom: true } },
-        types_document: { select: { nom: true, categorie: true } },
+        etudiants:      { select: { prenom: true, nom: true } },
+        universites:    { select: { nom: true } },
+        types_document: { select: { nom: true, categorie: true, a_matieres: true } },
+        mentions_document: { select: { nom: true } },
+        matieres_document: {
+          orderBy: [{ semestre: 'asc' }, { ordre: 'asc' }],
+          select: { nom_matiere: true, note: true, note_max: true, resultat: true, semestre: true },
+        },
       },
     });
   }
@@ -81,17 +86,38 @@ export class PublicVerifyService {
     return messages[resultat];
   }
 
+  private conseilPourResultat(resultat: VerifyResponseDto['resultat']): string {
+    if (resultat === 'authentique') {
+      return 'Comparez les informations affichées avec celles présentes sur le document physique. ' +
+             'Pour une preuve cryptographique inviolable, utilisez POST /verify/upload avec le fichier PDF.';
+    }
+    return '';
+  }
+
   private formaterDocumentPublic(doc: any): DocumentPublicDto {
+    const matieres: MatierePublicDto[] = (doc.matieres_document ?? []).map((m: any) => ({
+      nom_matiere: m.nom_matiere,
+      note:        m.note !== null ? Number(m.note) : null,
+      note_max:    Number(m.note_max),
+      resultat:    m.resultat,
+      semestre:    m.semestre ?? null,
+    }));
+
     return {
-      numero_unique:    doc.numero_unique,
-      url_verification: doc.url_verification ?? null,
-      type_document:    doc.types_document.nom,
-      categorie:        doc.types_document.categorie,
-      filiere:          doc.filiere ?? null,
-      date_emission:    doc.date_emission,
-      universite:       doc.universites.nom,
-      etudiant_nom:     `${doc.etudiants.prenom} ${doc.etudiants.nom}`,
-      statut:           doc.statut,
+      numero_unique:      doc.numero_unique,
+      url_verification:   doc.url_verification ?? null,
+      type_document:      doc.types_document.nom,
+      categorie:          doc.types_document.categorie,
+      filiere:            doc.filiere ?? null,
+      annee_academique:   doc.annee_academique ?? null,
+      date_emission:      doc.date_emission,
+      etudiant_nom:       `${doc.etudiants.prenom} ${doc.etudiants.nom}`,
+      mention:            doc.mentions_document?.nom ?? null,
+      moyenne_generale:   doc.moyenne_generale !== null ? Number(doc.moyenne_generale) : null,
+      matieres,
+      universite:         doc.universites.nom,
+      statut:             doc.statut,
+      verifiable_par_upload: true,
     };
   }
 
@@ -120,10 +146,11 @@ export class PublicVerifyService {
 
     return {
       resultat,
-      message:          this.messagesPourResultat(resultat),
-      document:         doc ? this.formaterDocumentPublic(doc) : null,
-      verification_id:  verif.id,
-      verifie_le:       maintenant,
+      message:               this.messagesPourResultat(resultat),
+      conseil_verification:  this.conseilPourResultat(resultat),
+      document:              doc ? this.formaterDocumentPublic(doc) : null,
+      verification_id:       verif.id,
+      verifie_le:            maintenant,
     };
   }
 }
