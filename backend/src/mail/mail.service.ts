@@ -66,6 +66,39 @@ export class MailService {
   }
 
   /**
+   * Notifie l'étudiant que son document officiel a été émis et certifié.
+   * Contient le lien de vérification unique et l'invitation à accéder à l'espace étudiant.
+   */
+  async sendDocumentEmis(
+    destinataire: string,
+    data: {
+      prenomNom: string;
+      filiere: string;
+      numeroUnique: string;
+      urlVerification: string;
+      nomUniversite: string;
+    },
+  ): Promise<void> {
+    const env = process.env.NODE_ENV;
+    const estProdOuStaging = env === 'production' || env === 'staging';
+
+    if (estProdOuStaging) {
+      this.logger.log(
+        `Email d'émission de document à envoyer à ${destinataire} — doc ${data.numeroUnique}`,
+      );
+      return;
+    }
+
+    this.logger.warn(
+      `[DEV-ONLY] Email simule — document émis pour ${destinataire}\n` +
+      `  Étudiant : ${data.prenomNom}\n` +
+      `  Filière  : ${data.filiere}\n` +
+      `  Numéro   : ${data.numeroUnique}\n` +
+      `  Vérif.   : ${data.urlVerification}`,
+    );
+  }
+
+  /**
    * Notifie l'ancienne adresse qu'un changement d'email a ete demande.
    * Permet a l'utilisateur legitime de reagir si c'est frauduleux.
    */
