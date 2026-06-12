@@ -13,6 +13,7 @@ import { PermissionsModule } from './permissions/permissions.module';
 import { UtilisateursModule } from './utilisateurs/utilisateurs.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { VerificationsModule } from './verifications/verifications.module';
+import { DocumentsModule } from './documents/documents.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { VerificationsModule } from './verifications/verifications.module';
     UtilisateursModule,
     InvitationsModule,
     VerificationsModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [
