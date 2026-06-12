@@ -16,6 +16,7 @@ import { VerificationsModule } from './verifications/verifications.module';
 import { DocumentsModule } from './documents/documents.module';
 import { EtudiantsModule } from './etudiants/etudiants.module';
 import { AdminModule } from './admin/admin.module';
+import { PartagesModule } from './partages/partages.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { AdminModule } from './admin/admin.module';
     DocumentsModule,
     EtudiantsModule,
     AdminModule,
+    PartagesModule,
   ],
   controllers: [AppController],
   providers: [

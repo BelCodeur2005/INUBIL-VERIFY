@@ -1,11 +1,13 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { ProfilEtudiantDto } from './dto/profil-etudiant.dto';
 import {
   DocumentEtudiantDto,
@@ -19,7 +21,12 @@ import { StatistiquesEtudiantDto } from './dto/statistiques-etudiant.dto';
 
 @Injectable()
 export class EtudiantsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(EtudiantsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+  ) {}
 
   // ─── Profil ────────────────────────────────────────────────────────────────
 
@@ -123,7 +130,26 @@ export class EtudiantsService {
       },
     });
 
-    return this.formaterPartage(partage, (doc as any).types_document.nom);
+    const partageFormate = this.formaterPartage(partage, (doc as any).types_document.nom);
+
+    // Notification email au destinataire externe (fire & forget)
+    if (dto.email_destinataire) {
+      const etudiant = await this.trouverEtudiantDuCompte(userId);
+      const urlPartage = `https://verify.inubil.com/partages/${tokenAcces}`;
+      this.mail
+        .sendPartageCreé(dto.email_destinataire, {
+          prenomNomEtudiant: `${etudiant.prenom} ${etudiant.nom}`,
+          typeDocument:      (doc as any).types_document.nom,
+          nomUniversite:     (doc as any).universites.nom,
+          urlPartage,
+          dateExpiration:    expiration,
+        })
+        .catch((err) =>
+          this.logger.error(`Notification partage échouée vers ${dto.email_destinataire} : ${String(err)}`),
+        );
+    }
+
+    return partageFormate;
   }
 
   async listerPartages(userId: string): Promise<PartageResponseDto[]> {
