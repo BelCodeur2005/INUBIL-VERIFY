@@ -7,5 +7,6 @@ import { UtilisateursService } from './utilisateurs.service';
   imports: [AuditModule],
   controllers: [UtilisateursController],
   providers: [UtilisateursService],
+  exports: [UtilisateursService],
 })
 export class UtilisateursModule {}
