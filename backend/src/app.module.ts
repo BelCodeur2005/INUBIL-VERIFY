@@ -15,6 +15,7 @@ import { InvitationsModule } from './invitations/invitations.module';
 import { VerificationsModule } from './verifications/verifications.module';
 import { DocumentsModule } from './documents/documents.module';
 import { EtudiantsModule } from './etudiants/etudiants.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { EtudiantsModule } from './etudiants/etudiants.module';
     VerificationsModule,
     DocumentsModule,
     EtudiantsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [
