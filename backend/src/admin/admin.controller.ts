@@ -25,6 +25,8 @@ import { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { Permission } from '../auth/constants/permissions.constant';
 import { UtilisateursService } from '../utilisateurs/utilisateurs.service';
 import { UtilisateurQueryDto } from '../utilisateurs/dto/utilisateur-query.dto';
+import { DocumentsService } from '../documents/documents.service';
+import { DocumentQueryDto } from '../documents/dto/document-query.dto';
 import { AdminStatsService } from './admin-stats.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AuditInterceptor } from './interceptors/audit.interceptor';
@@ -41,6 +43,7 @@ export class AdminController {
     private readonly stats: AdminStatsService,
     private readonly auditSvc: AdminAuditService,
     private readonly utilisateurs: UtilisateursService,
+    private readonly documents: DocumentsService,
   ) {}
 
   // ── Statistiques ──────────────────────────────────────────────────────────
@@ -76,6 +79,25 @@ export class AdminController {
   @ApiResponse({ status: 403, description: 'Permission audit:read requise.' })
   journal(@Query() query: AuditQueryDto) {
     return this.auditSvc.lireJournal(query);
+  }
+
+  // ── Documents admin ───────────────────────────────────────────────────────
+
+  @Get('documents')
+  @RequirePermissions(Permission.DOC_READ)
+  @ApiOperation({
+    summary: 'Lister tous les documents de la plateforme (permission doc:read)',
+    description:
+      'Super-admin : voit tous les documents de toutes les universités. ' +
+      'Admin université : voit uniquement les documents de son université (même comportement que GET /documents).',
+  })
+  @ApiOkResponse({ description: 'Liste paginée de documents avec filtres.' })
+  @ApiResponse({ status: 403, description: 'Permission doc:read requise.' })
+  listerDocuments(
+    @Query() query: DocumentQueryDto,
+    @CurrentUser('id') acteurId: string,
+  ) {
+    return this.documents.lister(query, acteurId);
   }
 
   // ── Utilisateurs admin ────────────────────────────────────────────────────
