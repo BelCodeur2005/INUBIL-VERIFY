@@ -13,7 +13,7 @@ import { AuditService } from '../audit/audit.service';
 import { HashService } from './hash.service';
 import { QrCodeService } from './qr-code.service';
 import { NotificationEmissionService } from './notification-emission.service';
-import { IpfsService } from '../ipfs/ipfs.service';
+import { StorageService } from '../storage/storage.service';
 import { CreerDocumentDto } from './dto/creer-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { RevoquerDocumentDto } from './dto/revoquer-document.dto';
@@ -30,7 +30,7 @@ export class DocumentsService {
     private readonly hash: HashService,
     private readonly qr: QrCodeService,
     private readonly notif: NotificationEmissionService,
-    private readonly ipfs: IpfsService,
+    private readonly storage: StorageService,
   ) {}
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -290,27 +290,28 @@ export class DocumentsService {
     const publicVerifyUrl = this.config.get<string>('PUBLIC_VERIFY_URL', 'https://verify.inubil.com');
     const urlVerification = `${publicVerifyUrl}/d/${doc.numero_unique}`;
 
-    // Upload PDF sur IPFS — fire & forget : un échec n'empêche pas la validation
+    // Upload PDF sur S3 (privé) — fire & forget : un échec n'empêche pas la validation
+    const pdfKey = `diplomes/${doc.numero_unique}.pdf`;
     let pdfUrl: string | null = null;
-    let cidIpfs: string | null = null;
-    const ipfsPdf = await this.ipfs
-      .uploadFile(fichierBuffer, `${doc.numero_unique}.pdf`, 'application/pdf')
+    const s3Pdf = await this.storage
+      .uploadFile(fichierBuffer, pdfKey, 'application/pdf')
       .catch((err: Error) => {
-        this.logger.error(`Upload IPFS PDF échoué pour doc ${id} : ${err.message}`);
+        this.logger.error(`Upload S3 PDF échoué pour doc ${id} : ${err.message}`);
         return null;
       });
-    if (ipfsPdf) { pdfUrl = ipfsPdf.url; cidIpfs = ipfsPdf.cid; }
+    if (s3Pdf) { pdfUrl = s3Pdf.key; }
 
-    // Générer QR code PNG et uploader sur IPFS
+    // Générer QR code PNG et uploader sur S3 (privé)
     const qrBuffer = await this.qr.generateQr(urlVerification);
+    const qrKey = `qrcodes/qr-${doc.numero_unique}.png`;
     let qrCodeUrl: string | null = null;
-    const ipfsQr = await this.ipfs
-      .uploadFile(qrBuffer, `qr-${doc.numero_unique}.png`, 'image/png')
+    const s3Qr = await this.storage
+      .uploadFile(qrBuffer, qrKey, 'image/png')
       .catch((err: Error) => {
-        this.logger.error(`Upload IPFS QR échoué pour doc ${id} : ${err.message}`);
+        this.logger.error(`Upload S3 QR échoué pour doc ${id} : ${err.message}`);
         return null;
       });
-    if (ipfsQr) { qrCodeUrl = ipfsQr.url; }
+    if (s3Qr) { qrCodeUrl = s3Qr.key; }
 
     const maintenant = new Date();
     const tailleKo = Math.ceil(fichierTailleOctets / 1024);
@@ -320,8 +321,8 @@ export class DocumentsService {
       data: {
         hash_sha256: hashSha256,
         pdf_taille_ko: tailleKo,
-        pdf_url: pdfUrl,
-        cid_ipfs: cidIpfs,
+        pdf_url: pdfUrl,       // clé S3 : diplomes/INUB-2026-xxxx.pdf
+        cid_ipfs: null,        // réservé pour ancrage blockchain (#22)
         qr_code_url: qrCodeUrl,
         // transaction_hash / bloc_numero / reseau → seront renseignés par #22
         statut: 'actif',
@@ -387,6 +388,25 @@ export class DocumentsService {
     );
 
     return updated;
+  }
+
+  async getPdfUrl(
+    id: string,
+    acteurId: string,
+  ): Promise<{ url: string; expires_in_seconds: number }> {
+    const acteurUnivId = await this.getActeurUniversiteId(acteurId);
+    const doc = await this.trouverOuEchouer(id);
+    this.assertMemeUniversite(doc.universite_id, acteurUnivId);
+
+    if (!doc.pdf_url) {
+      throw new BadRequestException('Aucun PDF associé à ce document');
+    }
+
+    const EXPIRES = 900; // 15 minutes
+    const url = await this.storage.getPresignedUrl(doc.pdf_url, EXPIRES);
+    if (!url) throw new BadRequestException('Stockage S3 non configuré');
+
+    return { url, expires_in_seconds: EXPIRES };
   }
 
   async supprimer(id: string, acteurId: string, ip?: string) {

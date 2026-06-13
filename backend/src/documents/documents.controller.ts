@@ -75,6 +75,31 @@ export class DocumentsController {
     return this.service.lister(query, acteurId);
   }
 
+  @Get(':id/pdf')
+  @RequirePermissions(Permission.DOC_READ)
+  @ApiOperation({
+    summary: 'Obtenir un lien temporaire de téléchargement du PDF (permission doc:read)',
+    description: 'Génère un lien pré-signé AWS S3 valable 15 minutes. Le PDF est privé — jamais accessible directement.',
+  })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', example: 'https://s3.eu-west-1.amazonaws.com/...?X-Amz-Signature=...' },
+        expires_in_seconds: { type: 'number', example: 900 },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Aucun PDF associé ou S3 non configuré.' })
+  @ApiResponse({ status: 403, description: 'Accès refusé.' })
+  @ApiResponse({ status: 404, description: 'Document introuvable.' })
+  getPdfUrl(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') acteurId: string,
+  ) {
+    return this.service.getPdfUrl(id, acteurId);
+  }
+
   @Get(':id')
   @RequirePermissions(Permission.DOC_READ)
   @ApiOperation({ summary: 'Détail d\'un document (permission doc:read)' })

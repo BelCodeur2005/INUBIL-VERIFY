@@ -44,7 +44,13 @@ export const envValidationSchema = Joi.object({
   MAIL_PASS: Joi.string().optional().allow(''),
   MAIL_FROM: Joi.string().optional().allow(''),
 
-  // ─── IPFS Pinata — optionnel jusqu'a #21 ───────────────────────
+  // ─── AWS S3 — stockage privé des PDF de diplômes ──────────────
+  AWS_ACCESS_KEY_ID: Joi.string().optional().allow(''),
+  AWS_SECRET_ACCESS_KEY: Joi.string().optional().allow(''),
+  AWS_REGION: Joi.string().optional().default('eu-west-1'),
+  AWS_S3_BUCKET: Joi.string().optional().allow(''),
+
+  // ─── IPFS Pinata — conservé pour compatibilité (optionnel) ────
   PINATA_API_KEY: Joi.string().optional().allow(''),
   PINATA_SECRET_KEY: Joi.string().optional().allow(''),
   PINATA_GATEWAY: Joi.string().uri().optional(),
