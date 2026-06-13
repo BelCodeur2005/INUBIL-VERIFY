@@ -291,7 +291,8 @@ export class DocumentsService {
     const urlVerification = `${publicVerifyUrl}/d/${doc.numero_unique}`;
 
     // Upload PDF sur S3 (privé) — fire & forget : un échec n'empêche pas la validation
-    const pdfKey = `diplomes/${doc.numero_unique}.pdf`;
+    const annee  = new Date(doc.date_emission).getFullYear();
+    const pdfKey = `universites/${doc.universite_id}/diplomes/${annee}/${doc.numero_unique}.pdf`;
     let pdfUrl: string | null = null;
     const s3Pdf = await this.storage
       .uploadFile(fichierBuffer, pdfKey, 'application/pdf')
@@ -303,7 +304,7 @@ export class DocumentsService {
 
     // Générer QR code PNG et uploader sur S3 (privé)
     const qrBuffer = await this.qr.generateQr(urlVerification);
-    const qrKey = `qrcodes/qr-${doc.numero_unique}.png`;
+    const qrKey = `universites/${doc.universite_id}/qrcodes/${annee}/${doc.numero_unique}-qr.png`;
     let qrCodeUrl: string | null = null;
     const s3Qr = await this.storage
       .uploadFile(qrBuffer, qrKey, 'image/png')
@@ -321,7 +322,7 @@ export class DocumentsService {
       data: {
         hash_sha256: hashSha256,
         pdf_taille_ko: tailleKo,
-        pdf_url: pdfUrl,       // clé S3 : diplomes/INUB-2026-xxxx.pdf
+        pdf_url: pdfUrl,       // clé S3 : universites/{id}/diplomes/{année}/{numero}.pdf
         cid_ipfs: null,        // réservé pour ancrage blockchain (#22)
         qr_code_url: qrCodeUrl,
         // transaction_hash / bloc_numero / reseau → seront renseignés par #22
