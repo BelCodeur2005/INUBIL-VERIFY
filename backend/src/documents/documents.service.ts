@@ -253,19 +253,70 @@ export class DocumentsService {
     return updated;
   }
 
-  /**
-   * Valide un document : reçoit le PDF uploadé par l'université, calcule le
-   * hash SHA-256, génère le QR de vérification, passe le document en `actif`.
-   * IPFS (#21) et Blockchain (#22) sont des stubs — intégrés dans les sprints suivants.
-   */
-  async valider(
+  /** Upload du PDF par l'agent de saisie — calcule le hash et stocke sur R2. */
+  async uploadPdf(
     id: string,
     fichierBuffer: Buffer,
     fichierTailleOctets: number,
     acteurId: string,
     ip?: string,
-    userAgent?: string,
   ) {
+    const acteurUnivId = await this.getActeurUniversiteId(acteurId);
+    const doc = await this.trouverOuEchouer(id);
+    this.assertMemeUniversite(doc.universite_id, acteurUnivId);
+
+    if (!['brouillon', 'en_validation'].includes(doc.statut)) {
+      throw new BadRequestException(
+        `Impossible d'uploader un PDF pour un document en statut "${doc.statut}"`,
+      );
+    }
+
+    const hashSha256 = this.hash.calculateHash(fichierBuffer);
+
+    const doublon = await this.prisma.documents.findFirst({
+      where: { hash_sha256: hashSha256, id: { not: id } },
+    });
+    if (doublon) {
+      throw new ConflictException(
+        'Ce fichier est déjà enregistré sur la plateforme (hash identique)',
+      );
+    }
+
+    const annee  = new Date(doc.date_emission).getFullYear();
+    const pdfKey = `universites/${doc.universite_id}/diplomes/${annee}/${doc.numero_unique}.pdf`;
+    const s3Pdf  = await this.storage
+      .uploadFile(fichierBuffer, pdfKey, 'application/pdf')
+      .catch((err: Error) => {
+        this.logger.error(`Upload R2 PDF échoué pour doc ${id} : ${err.message}`);
+        return null;
+      });
+
+    const tailleKo = Math.ceil(fichierTailleOctets / 1024);
+
+    const updated = await this.prisma.documents.update({
+      where: { id },
+      data: {
+        hash_sha256: hashSha256,
+        pdf_taille_ko: tailleKo,
+        pdf_url: s3Pdf?.key ?? null,
+      },
+      include: { matieres_document: { orderBy: { ordre: 'asc' } } },
+    });
+
+    await this.audit.log({
+      utilisateurId: acteurId,
+      action: 'DOCUMENT_UPLOAD_PDF',
+      module: 'documents',
+      enregistrementId: id,
+      tableConcernee: 'documents',
+      ip,
+    });
+
+    return updated;
+  }
+
+  /** Validation par le directeur — approuve le document, génère le QR, déclenche la blockchain. */
+  async valider(id: string, acteurId: string, ip?: string, userAgent?: string) {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const doc = await this.trouverOuEchouer(id);
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
@@ -276,58 +327,33 @@ export class DocumentsService {
       );
     }
 
-    // Hash SHA-256 du PDF original uploadé par l'université
-    const hashSha256 = this.hash.calculateHash(fichierBuffer);
-
-    // Vérification unicité du hash (anti-doublon)
-    const doublon = await this.prisma.documents.findFirst({
-      where: { hash_sha256: hashSha256, id: { not: id } },
-    });
-    if (doublon) {
-      throw new ConflictException(
-        'Ce fichier est déjà enregistré sur la plateforme (hash identique)',
+    if (!doc.pdf_url || !doc.hash_sha256) {
+      throw new BadRequestException(
+        'Le PDF doit être uploadé avant la validation — utiliser POST /documents/{id}/pdf',
       );
     }
 
     const publicVerifyUrl = this.config.get<string>('PUBLIC_VERIFY_URL', 'https://verify.inubil.com');
     const urlVerification = `${publicVerifyUrl}/d/${doc.numero_unique}`;
 
-    // Upload PDF sur S3 (privé) — fire & forget : un échec n'empêche pas la validation
     const annee  = new Date(doc.date_emission).getFullYear();
-    const pdfKey = `universites/${doc.universite_id}/diplomes/${annee}/${doc.numero_unique}.pdf`;
-    let pdfUrl: string | null = null;
-    const s3Pdf = await this.storage
-      .uploadFile(fichierBuffer, pdfKey, 'application/pdf')
-      .catch((err: Error) => {
-        this.logger.error(`Upload S3 PDF échoué pour doc ${id} : ${err.message}`);
-        return null;
-      });
-    if (s3Pdf) { pdfUrl = s3Pdf.key; }
-
-    // Générer QR code PNG et uploader sur S3 (privé)
     const qrBuffer = await this.qr.generateQr(urlVerification);
     const qrKey = `universites/${doc.universite_id}/qrcodes/${annee}/${doc.numero_unique}-qr.png`;
     let qrCodeUrl: string | null = null;
     const s3Qr = await this.storage
       .uploadFile(qrBuffer, qrKey, 'image/png')
       .catch((err: Error) => {
-        this.logger.error(`Upload S3 QR échoué pour doc ${id} : ${err.message}`);
+        this.logger.error(`Upload R2 QR échoué pour doc ${id} : ${err.message}`);
         return null;
       });
     if (s3Qr) { qrCodeUrl = s3Qr.key; }
 
     const maintenant = new Date();
-    const tailleKo = Math.ceil(fichierTailleOctets / 1024);
 
     const updated = await this.prisma.documents.update({
       where: { id },
       data: {
-        hash_sha256: hashSha256,
-        pdf_taille_ko: tailleKo,
-        pdf_url: pdfUrl,       // clé S3 : universites/{id}/diplomes/{année}/{numero}.pdf
-        cid_ipfs: null,        // réservé pour ancrage blockchain (#22)
         qr_code_url: qrCodeUrl,
-        // transaction_hash / bloc_numero / reseau → seront renseignés par #22
         statut: 'actif',
         valide_par: acteurId,
         valide_le: maintenant,
@@ -346,13 +372,11 @@ export class DocumentsService {
       userAgent,
     });
 
-    // Notification email étudiant en fire & forget — un échec mail ne fait pas échouer la validation
     this.notif.notifierEtudiant(id).catch((err) =>
       this.logger.error(`Notification émission échouée pour doc ${id} : ${err.message}`),
     );
 
-    // Blockchain fire & forget — n'attend pas la confirmation pour ne pas bloquer l'admin
-    this.enregistrerSurBlockchain(updated.id, hashSha256, updated.universite_id, updated.numero_unique)
+    this.enregistrerSurBlockchain(updated.id, doc.hash_sha256, updated.universite_id, updated.numero_unique)
       .catch((err) =>
         this.logger.error(`Blockchain enregistrement échoué pour doc ${id} : ${err.message}`),
       );

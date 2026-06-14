@@ -128,8 +128,8 @@ export class DocumentsController {
     return this.service.modifier(id, dto, acteurId, req.ip);
   }
 
-  @Post(':id/valider')
-  @RequirePermissions(Permission.DOC_VALIDATE)
+  @Post(':id/pdf')
+  @RequirePermissions(Permission.DOC_CREATE)
   @UseInterceptors(
     FileInterceptor('fichier', {
       storage: memoryStorage(),
@@ -143,10 +143,8 @@ export class DocumentsController {
     }),
   )
   @ApiOperation({
-    summary: 'Valider un document — upload du PDF officiel (permission doc:validate)',
-    description:
-      'Calcule le hash SHA-256, génère le QR code, passe le statut à actif. ' +
-      'IPFS (#21) et Blockchain (#22) seront branchés dans les sprints suivants.',
+    summary: 'Uploader le PDF officiel du document — agent de saisie (permission doc:create)',
+    description: 'Calcule le hash SHA-256 et stocke le PDF sur Cloudflare R2. À faire avant la validation par le directeur.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -158,25 +156,36 @@ export class DocumentsController {
       },
     },
   })
-  @ApiOkResponse({ description: 'Document validé et activé.' })
-  @ApiResponse({ status: 400, description: 'Fichier manquant ou format non-PDF.' })
-  @ApiResponse({ status: 403, description: 'Permission doc:validate requise.' })
-  @ApiResponse({ status: 404, description: 'Document introuvable ou non en brouillon.' })
-  valider(
+  @ApiOkResponse({ description: 'PDF enregistré, hash SHA-256 calculé.' })
+  @ApiResponse({ status: 400, description: 'Fichier manquant, format non-PDF, ou document déjà actif.' })
+  @ApiResponse({ status: 403, description: 'Permission doc:create requise.' })
+  @ApiResponse({ status: 404, description: 'Document introuvable.' })
+  uploadPdf(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() fichier: Express.Multer.File,
     @CurrentUser('id') acteurId: string,
     @Req() req: Request,
   ) {
     if (!fichier) throw new BadRequestException('Le fichier PDF est obligatoire');
-    return this.service.valider(
-      id,
-      fichier.buffer,
-      fichier.size,
-      acteurId,
-      req.ip,
-      req.headers['user-agent'],
-    );
+    return this.service.uploadPdf(id, fichier.buffer, fichier.size, acteurId, req.ip);
+  }
+
+  @Post(':id/valider')
+  @RequirePermissions(Permission.DOC_VALIDATE)
+  @ApiOperation({
+    summary: 'Valider un document — directeur pédagogique (permission doc:validate)',
+    description: 'Approuve le document : génère le QR code, passe le statut à actif, enregistre sur la blockchain. Le PDF doit être uploadé au préalable via POST /documents/{id}/pdf.',
+  })
+  @ApiOkResponse({ description: 'Document validé et activé.' })
+  @ApiResponse({ status: 400, description: 'PDF manquant — utiliser POST /documents/{id}/pdf d\'abord.' })
+  @ApiResponse({ status: 403, description: 'Permission doc:validate requise.' })
+  @ApiResponse({ status: 404, description: 'Document introuvable ou non en brouillon.' })
+  valider(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') acteurId: string,
+    @Req() req: Request,
+  ) {
+    return this.service.valider(id, acteurId, req.ip, req.headers['user-agent']);
   }
 
   @Post(':id/revoquer')
