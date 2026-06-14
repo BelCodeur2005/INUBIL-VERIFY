@@ -215,7 +215,9 @@ export class PublicVerifyService {
       document:              doc ? this.formaterDocumentPublic(doc) : null,
       verification_id:       verif.id,
       verifie_le:            maintenant,
-      blockchain:            infoBlockchain,
+      blockchain: infoBlockchain
+        ? { ...infoBlockchain, transaction_hash: doc?.transaction_hash ?? null }
+        : null,
     };
   }
 
