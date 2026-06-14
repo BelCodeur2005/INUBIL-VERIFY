@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { join } from 'path';
 import PDFDocument = require('pdfkit');
 
 export interface RapportVerificationData {
@@ -66,20 +67,35 @@ export class RapportVerificationPdfService {
     const largeurContenu = width - marge * 2;
 
     // ── En-tête ────────────────────────────────────────────────────────
-    doc.rect(0, 0, width, 75).fill(NAVY);
+    const headerHeight = 85;
+    doc.rect(0, 0, width, headerHeight).fill(NAVY);
 
-    doc.fontSize(20).fillColor(OR).font('Helvetica-Bold')
-      .text('INUBIL VERIFY', marge, 18, { align: 'left' });
+    // Logo INUBIL (512x269 RGBA - fond transparent)
+    const logoPath = join(__dirname, '..', 'assets', 'inubil-logo.png');
+    const logoH = 60;
+    const logoW = Math.round(logoH * (512 / 269)); // ratio original ~113px
+    const logoY = (headerHeight - logoH) / 2;
+    try {
+      doc.image(logoPath, marge, logoY, { height: logoH, width: logoW });
+    } catch {
+      // Fallback texte si le fichier est introuvable
+      doc.fontSize(20).fillColor(OR).font('Helvetica-Bold')
+        .text('INUBIL', marge, 22, { align: 'left' });
+    }
 
-    doc.fontSize(9).fillColor(BLANC).font('Helvetica')
-      .text('Plateforme Nationale de Certification - République du Cameroun', marge, 43);
-
-    doc.fontSize(10).fillColor(OR).font('Helvetica-Bold')
-      .text('RAPPORT DE VÉRIFICATION OFFICIEL', 0, 54, { align: 'right', width: width - marge });
+    // Textes à droite du logo
+    const xTexte = marge + logoW + 16;
+    const largeurTexte = width - xTexte - marge;
+    doc.fontSize(8).fillColor(BLANC).font('Helvetica')
+      .text('Plateforme Nationale de Certification', xTexte, 28, { width: largeurTexte });
+    doc.fontSize(8).fillColor(BLANC).font('Helvetica')
+      .text('République du Cameroun', xTexte, 40, { width: largeurTexte });
+    doc.fontSize(9).fillColor(OR).font('Helvetica-Bold')
+      .text('RAPPORT DE VÉRIFICATION OFFICIEL', xTexte, 56, { width: largeurTexte });
 
     // ── Résultat ────────────────────────────────────────────────────────
     const { couleur, libelle, icone } = this.stylesResultat(data.resultat);
-    const yResultat = 100;
+    const yResultat = 110;
 
     doc.rect(marge, yResultat, largeurContenu, 56).fill(this.couleurFond(data.resultat));
     doc.rect(marge, yResultat, 6, 56).fill(couleur);
