@@ -44,7 +44,7 @@ export class BlockchainService {
       this.wallet      = new ethers.Wallet(privateKey, this.provider);
       this.contrat     = new ethers.Contract(contractAddress, INUBIL_VERIFY_ABI, this.wallet);
       this.contratLire = new ethers.Contract(contractAddress, INUBIL_VERIFY_ABI, this.provider);
-      this.logger.log(`Blockchain connectée — contrat : ${contractAddress}`);
+      this.logger.log(`Blockchain connectée - contrat : ${contractAddress}`);
     } catch (err) {
       this.logger.error('Erreur initialisation blockchain :', err);
     }

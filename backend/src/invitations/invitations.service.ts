@@ -314,7 +314,7 @@ export class InvitationsService {
 
   // ─── Helpers ─────────────────────────────────────────────────────────
 
-  // Renvoie universite_id de l'acteur — null = super-admin (pas de restriction tenant).
+  // Renvoie universite_id de l'acteur - null = super-admin (pas de restriction tenant).
   private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
     const acteur = await this.prisma.utilisateurs.findFirst({
       where: { id: acteurId, deleted_at: null },

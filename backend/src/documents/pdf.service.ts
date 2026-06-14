@@ -10,7 +10,7 @@ export interface DiplomaPdfData {
   annee_academique?: string;
   numero_unique: string;
   universite_nom: string;
-  /** Buffer PNG du QR code pré-généré (optionnel — embarqué en bas à droite du diplôme). */
+  /** Buffer PNG du QR code pré-généré (optionnel - embarqué en bas à droite du diplôme). */
   qr_code_buffer?: Buffer;
 }
 
@@ -24,7 +24,7 @@ const GRIS_TEXTE = '#444444';
 export class PdfService {
   /**
    * Génère le PDF officiel d'un diplôme INUBIL et retourne un Buffer.
-   * Aucune écriture disque — le stockage (pdf_url, pdf_taille_ko) est géré par #24.
+   * Aucune écriture disque - le stockage (pdf_url, pdf_taille_ko) est géré par #24.
    */
   async generateDiplomaPdf(data: DiplomaPdfData): Promise<Buffer> {
     return new Promise((resolve, reject) => {
@@ -34,7 +34,7 @@ export class PdfService {
         layout: 'landscape',
         margins: { top: 40, bottom: 40, left: 50, right: 50 },
         info: {
-          Title: `Diplôme — ${data.prenom} ${data.nom}`,
+          Title: `Diplôme - ${data.prenom} ${data.nom}`,
           Author: data.universite_nom,
           Subject: data.filiere,
           Creator: 'INUBIL Verify',
@@ -150,7 +150,7 @@ export class PdfService {
         .text(`Mention : ${data.mention}`, 0, 262, { align: 'center' });
     }
 
-    // ── Pied de page — dates ──
+    // ── Pied de page - dates ──
     const dateFormatee = this.formaterDate(data.date_emission);
     const annee = data.annee_academique ?? String(data.date_emission.getFullYear());
 

@@ -18,7 +18,7 @@ export class PublicVerifyService {
 
   // ─── Points d'entrée publics ──────────────────────────────────────────
 
-  /** Vérifie par numéro unique (INUB-2026-0001) — type : lien_unique */
+  /** Vérifie par numéro unique (INUB-2026-0001) - type : lien_unique */
   async verifierParIdentifiant(
     identifiant: string,
     ip?: string,
@@ -30,7 +30,7 @@ export class PublicVerifyService {
     return this.construireReponse(resultat, doc, null, 'lien_unique', infoBlockchain, ip, userAgent);
   }
 
-  /** Vérifie par hash SHA-256 soumis directement — type : hash */
+  /** Vérifie par hash SHA-256 soumis directement - type : hash */
   async verifierParHash(
     hashSoumis: string,
     ip?: string,
@@ -42,7 +42,7 @@ export class PublicVerifyService {
     return this.construireReponse(resultat, doc, hashSoumis, 'hash', infoBlockchain, ip, userAgent);
   }
 
-  /** Vérifie par upload PDF — calcule le hash côté serveur — type : upload_pdf */
+  /** Vérifie par upload PDF - calcule le hash côté serveur - type : upload_pdf */
   async verifierParUpload(
     pdfBuffer: Buffer,
     ip?: string,
@@ -59,7 +59,7 @@ export class PublicVerifyService {
 
   /**
    * Génère un rapport PDF horodaté pour un document identifié par son numéro unique.
-   * Accessible publiquement — crée une entrée verifications avec rapport_genere:true.
+   * Accessible publiquement - crée une entrée verifications avec rapport_genere:true.
    */
   async genererRapport(
     identifiant: string,
@@ -144,7 +144,7 @@ export class PublicVerifyService {
       authentique: 'Ce document est authentique et certifié sur la blockchain INUBIL.',
       revoque:     'Ce document a été révoqué par l\'établissement émetteur.',
       non_trouve:  'Aucun document certifié ne correspond à cet identifiant.',
-      falsifie:    'Ce document ne correspond à aucun certificat enregistré — possible falsification.',
+      falsifie:    'Ce document ne correspond à aucun certificat enregistré - possible falsification.',
     };
     return messages[resultat];
   }

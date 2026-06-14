@@ -1,4 +1,4 @@
-# Guide pratique AWS S3 — Stockage privé des diplômes INUBIL-VERIFY
+# Guide pratique AWS S3 - Stockage privé des diplômes INUBIL-VERIFY
 
 > Guide pas-à-pas pour un développeur débutant sur AWS.
 > Objectif : stocker des PDF de diplômes de façon privée et sécurisée.
@@ -51,7 +51,7 @@ Clique sur **"Create a Free Account"**.
 | Requêtes PUT (upload) | **2 000 / mois** |
 | Transfert de données sortant | **100 GB / mois** |
 
-> Après 12 mois, S3 reste très bon marché — voir [Section 9](#9-prix-et-coûts-réels).
+> Après 12 mois, S3 reste très bon marché - voir [Section 9](#9-prix-et-coûts-réels).
 
 ---
 
@@ -79,7 +79,7 @@ Clique sur **"Create a Free Account"**.
 #### Object Ownership
 - Laisser sur **"ACLs disabled (recommended)"**
 
-#### Bloquer l'accès public — TRÈS IMPORTANT ⚠️
+#### Bloquer l'accès public - TRÈS IMPORTANT ⚠️
 
 Vérifier que les **4 cases sont cochées** (elles le sont par défaut) :
 
@@ -97,7 +97,7 @@ Vérifier que les **4 cases sont cochées** (elles le sont par défaut) :
 
 #### Chiffrement
 - Laisser sur **"Server-side encryption with Amazon S3 managed keys (SSE-S3)"**
-- Chiffre automatiquement tous les fichiers stockés — **gratuit**
+- Chiffre automatiquement tous les fichiers stockés - **gratuit**
 
 #### Finaliser
 - Cliquer **"Create bucket"** ✅
@@ -117,7 +117,7 @@ Le compte root (l'email + mot de passe que tu as utilisé pour créer le compte 
 
 On va créer un utilisateur IAM qui n'a accès qu'à **ton bucket S3 et rien d'autre**.
 
-### Étape 1 — Créer un utilisateur IAM
+### Étape 1 - Créer un utilisateur IAM
 
 1. Console AWS → recherche **"IAM"** → cliquer sur le service
 2. Menu gauche → **"Users"**
@@ -127,7 +127,7 @@ On va créer un utilisateur IAM qui n'a accès qu'à **ton bucket S3 et rien d'a
    (cet utilisateur est pour l'application, pas pour la console web)
 6. Cliquer **"Next"**
 
-### Étape 2 — Créer une politique IAM minimale
+### Étape 2 - Créer une politique IAM minimale
 
 Sur la page "Set permissions" :
 1. Choisir **"Attach policies directly"**
@@ -176,14 +176,14 @@ Cette politique **n'autorise QUE ce bucket**. Rien d'autre sur ton compte AWS n'
 6. **Policy name** : `InubilS3DiplomesPolicy`
 7. Cliquer **"Create policy"**
 
-### Étape 3 — Associer la politique à l'utilisateur
+### Étape 3 - Associer la politique à l'utilisateur
 
 1. Retourner sur l'onglet de création de l'utilisateur
 2. Rafraîchir la liste des politiques
 3. Rechercher **`InubilS3DiplomesPolicy`** → cocher
 4. Cliquer **"Next"** → **"Create user"** ✅
 
-### Étape 4 — Générer les Access Keys
+### Étape 4 - Générer les Access Keys
 
 1. IAM → Users → cliquer sur **`inubil-s3-app`**
 2. Onglet **"Security credentials"**
@@ -218,7 +218,7 @@ Cette politique **n'autorise QUE ce bucket**. Rien d'autre sur ton compte AWS n'
 
 ### Recommandation
 
-**`af-south-1` (Africa - Cape Town)** — seule région AWS sur le continent africain, meilleure latence pour les utilisateurs camerounais.
+**`af-south-1` (Africa - Cape Town)** - seule région AWS sur le continent africain, meilleure latence pour les utilisateurs camerounais.
 
 ### Activer la région af-south-1
 
@@ -228,7 +228,7 @@ Elle n'est pas activée par défaut. Pour l'activer :
 3. Trouver **"Africa (Cape Town)"** → cliquer **"Enable"**
 4. Attendre 5-10 minutes
 
-> Si tu veux démarrer vite sans activer af-south-1, utilise **`eu-west-3`** (Paris) — bonne latence et region complète disponible immédiatement.
+> Si tu veux démarrer vite sans activer af-south-1, utilise **`eu-west-3`** (Paris) - bonne latence et region complète disponible immédiatement.
 
 ---
 
@@ -349,7 +349,7 @@ aws s3 rm s3://inubil-diplomes-prod/diplomes/diplome-test.pdf
 Dans ton fichier `.env` à la racine du projet `INUBIL-VERIFY` :
 
 ```env
-# AWS S3 — stockage privé des PDF de diplômes
+# AWS S3 - stockage privé des PDF de diplômes
 AWS_ACCESS_KEY_ID=AKIAxxxxxxxxxxxxxxxxxxx
 AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 AWS_REGION=af-south-1
@@ -383,8 +383,8 @@ docker compose up -d backend
 | Téléchargement (requêtes GET) | **$0.0004 / 1 000 requêtes** |
 | Suppression (DELETE) | **Gratuit** |
 | Transfert entrant (upload) | **Gratuit** |
-| Transfert sortant — premiers 100 GB | **Gratuit** |
-| Transfert sortant — au-delà | $0.09 / GB |
+| Transfert sortant - premiers 100 GB | **Gratuit** |
+| Transfert sortant - au-delà | $0.09 / GB |
 
 > Pour la région `af-south-1`, le stockage est légèrement plus cher : ~$0.026 / GB / mois.
 > Vérifier les tarifs exacts sur https://aws.amazon.com/s3/pricing/
@@ -431,4 +431,4 @@ Pour un projet de diplômes à l'échelle du Cameroun :
 
 ---
 
-*Document rédigé pour le projet INUBIL-VERIFY — Plateforme de certification de diplômes ISTAMA INUBIL, Cameroun.*
+*Document rédigé pour le projet INUBIL-VERIFY - Plateforme de certification de diplômes ISTAMA INUBIL, Cameroun.*

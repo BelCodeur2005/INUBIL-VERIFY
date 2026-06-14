@@ -45,7 +45,7 @@ export class RapportVerificationPdfService {
         layout: 'portrait',
         margins: { top: 50, bottom: 50, left: 55, right: 55 },
         info: {
-          Title: `Rapport de vérification — ${data.numero_unique ?? data.verification_id}`,
+          Title: `Rapport de vérification - ${data.numero_unique ?? data.verification_id}`,
           Author: 'INUBIL Verify',
           Creator: 'INUBIL Verify',
         },
@@ -72,7 +72,7 @@ export class RapportVerificationPdfService {
       .text('INUBIL VERIFY', marge, 18, { align: 'left' });
 
     doc.fontSize(9).fillColor(BLANC).font('Helvetica')
-      .text('Plateforme Nationale de Certification — République du Cameroun', marge, 43);
+      .text('Plateforme Nationale de Certification - République du Cameroun', marge, 43);
 
     doc.fontSize(10).fillColor(OR).font('Helvetica-Bold')
       .text('RAPPORT DE VÉRIFICATION OFFICIEL', 0, 54, { align: 'right', width: width - marge });
@@ -98,13 +98,13 @@ export class RapportVerificationPdfService {
 
       const lignes: [string, string][] = [
         ['Numéro unique',   data.numero_unique],
-        ['Étudiant',        data.etudiant_nom ?? '—'],
-        ['Filière',         data.filiere ?? '—'],
-        ['Mention',         data.mention ?? '—'],
-        ['Université',      data.universite ?? '—'],
+        ['Étudiant',        data.etudiant_nom ?? '-'],
+        ['Filière',         data.filiere ?? '-'],
+        ['Mention',         data.mention ?? '-'],
+        ['Université',      data.universite ?? '-'],
         ['Date d\'émission', data.date_emission
           ? this.formaterDate(data.date_emission)
-          : '—'],
+          : '-'],
       ];
       y = this.tableau(doc, lignes, y, marge, largeurContenu);
     }
@@ -114,8 +114,8 @@ export class RapportVerificationPdfService {
 
     const hashAffiche = data.hash_sha256
       ? `${data.hash_sha256.slice(0, 32)}…${data.hash_sha256.slice(-8)}`
-      : '—';
-    const txAffiche = data.transaction_hash ?? 'En attente (#22 — intégration Polygon)';
+      : '-';
+    const txAffiche = data.transaction_hash ?? 'En attente (#22 - intégration Polygon)';
     const polygonscanUrl = data.transaction_hash
       ? `https://amoy.polygonscan.com/tx/${data.transaction_hash}`
       : 'Non disponible';
@@ -147,7 +147,7 @@ export class RapportVerificationPdfService {
       .text(
         'Ce rapport est généré automatiquement par la plateforme INUBIL Verify. ' +
         'Il atteste de la vérification effectuée à la date et heure indiquées ci-dessus.\n' +
-        'INUBIL Verify — https://verify.inubil.com',
+        'INUBIL Verify - https://verify.inubil.com',
         marge, piedY + 8,
         { width: largeurContenu, align: 'center' },
       );
@@ -218,7 +218,7 @@ export class RapportVerificationPdfService {
       authentique: 'Ce document est enregistré et certifié sur la blockchain INUBIL.',
       revoque:     'Ce document a été révoqué par l\'établissement émetteur.',
       non_trouve:  'Aucun document certifié ne correspond à cet identifiant.',
-      falsifie:    'Ce document ne correspond à aucun certificat enregistré — possible falsification.',
+      falsifie:    'Ce document ne correspond à aucun certificat enregistré - possible falsification.',
     };
     return map[resultat] ?? '';
   }

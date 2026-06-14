@@ -1,4 +1,4 @@
-# Guide complet — Blockchain, Polygon et INUBIL Verify
+# Guide complet - Blockchain, Polygon et INUBIL Verify
 
 > Ce guide s'adresse à quelqu'un qui ne connaît rien à la blockchain.
 > Il explique tout depuis le début : ce qu'est une blockchain, ce qu'est POL,
@@ -30,7 +30,7 @@
 Imagine un **registre chez un notaire** : chaque acte signé est écrit dans un grand livre,
 numéroté, daté, et impossible à modifier sans que tout le monde le remarque.
 
-Une blockchain, c'est exactement ça — mais au lieu d'un seul notaire, il y en a
+Une blockchain, c'est exactement ça - mais au lieu d'un seul notaire, il y en a
 **des milliers dans le monde entier** qui possèdent tous une copie identique du registre.
 
 ```
@@ -45,10 +45,10 @@ Blockchain :
 
 ### Ce qui est gravé sur une blockchain
 
-- **Ne peut pas être modifié** — une entrée écrite reste écrite pour toujours
-- **Ne peut pas être supprimé** — pas d'effacement possible
-- **Est visible par tout le monde** — n'importe qui peut lire le registre
-- **Est horodaté précisément** — chaque entrée a une date/heure certifiée
+- **Ne peut pas être modifié** - une entrée écrite reste écrite pour toujours
+- **Ne peut pas être supprimé** - pas d'effacement possible
+- **Est visible par tout le monde** - n'importe qui peut lire le registre
+- **Est horodaté précisément** - chaque entrée a une date/heure certifiée
 
 ### Dans INUBIL Verify, on grave quoi ?
 
@@ -74,7 +74,7 @@ sans avoir besoin de faire confiance à INUBIL.
 
 Une cryptomonnaie (POL, ETH, BTC...) a plusieurs rôles :
 
-**Rôle 1 — Payer les frais de transaction (le "gas")**
+**Rôle 1 - Payer les frais de transaction (le "gas")**
 
 Quand tu écris quelque chose sur la blockchain, des milliers d'ordinateurs dans le monde
 exécutent ton code et l'enregistrent. En échange de ce travail, tu leur paies des frais
@@ -85,7 +85,7 @@ Enregistrer un diplôme sur Polygon = ~0.001 POL = ~0.001 $ (une fraction de cen
 Déployer le contrat une fois      = ~0.01  POL = ~0.01 $  (quelques centimes)
 ```
 
-**Rôle 2 — Sécuriser le réseau**
+**Rôle 2 - Sécuriser le réseau**
 
 Les ordinateurs qui maintiennent la blockchain sont récompensés en POL.
 C'est ça qui les motive à rester honnêtes.
@@ -97,13 +97,13 @@ Tu as besoin de POL **uniquement** pour :
 - Enregistrer un diplôme on-chain (une fois par diplôme validé)
 - Révoquer un diplôme on-chain
 
-La **vérification** d'un diplôme (`verifierDiplome`) est **gratuite** — pas de POL nécessaire.
+La **vérification** d'un diplôme (`verifierDiplome`) est **gratuite** - pas de POL nécessaire.
 
 ---
 
 ## 3. C'est quoi Polygon et pourquoi pas Ethereum ?
 
-### Ethereum — la blockchain originale
+### Ethereum - la blockchain originale
 
 Ethereum est la blockchain la plus connue pour les smart contracts.
 **Problème : c'est devenu très cher et lent.**
@@ -116,7 +116,7 @@ Ethereum aujourd'hui :
 
 Pour une plateforme éducative en Afrique, c'est inutilisable.
 
-### Polygon — Ethereum, mais rapide et pas cher
+### Polygon - Ethereum, mais rapide et pas cher
 
 Polygon (anciennement Matic Network) est une **blockchain compatible Ethereum**
 conçue pour être rapide et bon marché. Elle est utilisée par de grandes entreprises
@@ -145,7 +145,7 @@ Polygon aujourd'hui :
 
 Polygon a deux réseaux distincts :
 
-### Polygon Amoy — le testnet (réseau de test)
+### Polygon Amoy - le testnet (réseau de test)
 
 ```
 Nom           : Polygon Amoy
@@ -153,14 +153,14 @@ Chain ID      : 80002
 RPC URL       : https://rpc-amoy.polygon.technology
 Explorateur   : https://amoy.polygonscan.com
 Monnaie       : POL de test (ne valent RIEN en vrai argent)
-Coût          : GRATUIT — les POL s'obtiennent via un faucet
+Coût          : GRATUIT - les POL s'obtiennent via un faucet
 ```
 
 **C'est ici qu'on développe et qu'on teste.** Tout ce que tu fais ici
 est réel techniquement (vrai réseau, vrais blocs, vrais transactions),
 mais les MATIC n'ont aucune valeur réelle. Tu peux tout casser sans risque.
 
-### Polygon Mainnet — la production
+### Polygon Mainnet - la production
 
 ```
 Nom           : Polygon Mainnet
@@ -188,20 +188,20 @@ Mainnet = environnement production → comme ton serveur de production
 Un **portefeuille** (wallet) blockchain, c'est l'équivalent d'un compte bancaire.
 Il contient ton adresse publique et ta clé privée.
 
-**MetaMask** est le portefeuille le plus utilisé — c'est une extension de navigateur.
+**MetaMask** est le portefeuille le plus utilisé - c'est une extension de navigateur.
 
-### Étape 1 — Installer MetaMask
+### Étape 1 - Installer MetaMask
 
 1. Va sur **https://metamask.io**
 2. Clique sur **"Download"**
 3. Installe l'extension pour Chrome, Firefox, ou Brave
 4. Ouvre l'extension et clique **"Create a new wallet"**
 
-### Étape 2 — Créer le portefeuille
+### Étape 2 - Créer le portefeuille
 
 1. Accepte les conditions
 2. Crée un **mot de passe** (pour déverrouiller MetaMask sur cet appareil)
-3. MetaMask génère une **phrase secrète de récupération** — 12 mots
+3. MetaMask génère une **phrase secrète de récupération** - 12 mots
 
 > ⚠️ **CRITIQUE : note ces 12 mots et garde-les en sécurité.**
 > Si tu perds ces mots, tu perds l'accès à ton portefeuille pour toujours.
@@ -210,17 +210,17 @@ Il contient ton adresse publique et ta clé privée.
 4. Confirme les 12 mots dans l'ordre demandé
 5. Ton portefeuille est créé
 
-### Étape 3 — Ton adresse publique
+### Étape 3 - Ton adresse publique
 
 Après la création, tu vois une adresse du type :
 ```
 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 ```
 
-**Cette adresse est publique** — tu peux la partager sans risque.
+**Cette adresse est publique** - tu peux la partager sans risque.
 C'est l'équivalent d'un numéro de compte bancaire (IBAN).
 
-### Étape 4 — Ajouter le réseau Polygon Amoy dans MetaMask
+### Étape 4 - Ajouter le réseau Polygon Amoy dans MetaMask
 
 1. Dans MetaMask, clique sur le menu déroulant en haut (qui dit "Ethereum Mainnet")
 2. Clique **"Add network"** → **"Add a network manually"**
@@ -264,7 +264,7 @@ Exemple de clé privée :
 
 > ⚠️ **Pour INUBIL Verify, crée un compte MetaMask DÉDIÉ.**
 > N'utilise pas ton compte personnel. Crée un nouveau compte spécialement
-> pour le backend INUBIL — comme ça si la clé fuite un jour, seul ce compte
+> pour le backend INUBIL - comme ça si la clé fuite un jour, seul ce compte
 > est compromis, pas ton argent personnel.
 
 ### Créer un compte dédié dans MetaMask
@@ -282,9 +282,9 @@ Exemple de clé privée :
 Un **faucet** (robinet) est un service qui distribue gratuitement des POL de test.
 
 > **Note :** Le token s'appelait MATIC jusqu'en septembre 2024. Polygon l'a rebaptisé **POL**.
-> Tu verras parfois encore "MATIC" sur certains vieux faucets — c'est le même token.
+> Tu verras parfois encore "MATIC" sur certains vieux faucets - c'est le même token.
 
-### Option 1 — Faucet officiel Polygon (recommandé)
+### Option 1 - Faucet officiel Polygon (recommandé)
 
 1. Va sur **https://faucet.polygon.technology**
 2. Sélectionne **"Polygon Amoy"**
@@ -292,14 +292,14 @@ Un **faucet** (robinet) est un service qui distribue gratuitement des POL de tes
 4. Clique **"Submit"**
 5. Tu reçois du POL de test en 1 à 2 minutes
 
-### Option 2 — Faucet Alchemy (si Polygon est en maintenance)
+### Option 2 - Faucet Alchemy (si Polygon est en maintenance)
 
 1. Va sur **https://www.alchemy.com/faucets/polygon-amoy**
 2. Connecte-toi avec un compte Google (obligatoire)
 3. Entre ton adresse MetaMask
 4. Clique **"Send Me POL"**
 
-### Option 3 — Faucet Chainlink
+### Option 3 - Faucet Chainlink
 
 1. Va sur **https://faucets.chain.link/polygon-amoy**
 2. Connecte MetaMask directement
@@ -318,9 +318,9 @@ Ou va sur **https://amoy.polygonscan.com** et colle ton adresse dans la barre de
 
 Il y a deux fichiers `.env` à configurer :
 
-### Fichier 1 — `blockchain/.env`
+### Fichier 1 - `blockchain/.env`
 
-Ce fichier n'existe pas encore — crée-le en copiant le modèle :
+Ce fichier n'existe pas encore - crée-le en copiant le modèle :
 
 ```bash
 cd blockchain
@@ -336,14 +336,14 @@ DEPLOYER_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf
 # RPC URL Polygon Amoy (réseau de test)
 AMOY_RPC_URL=https://rpc-amoy.polygon.technology
 
-# RPC URL Polygon Mainnet (production — laisser vide pour l'instant)
+# RPC URL Polygon Mainnet (production - laisser vide pour l'instant)
 POLYGON_RPC_URL=https://polygon-rpc.com
 
-# Adresse du contrat (rempli APRÈS le déploiement — étape 9)
+# Adresse du contrat (rempli APRÈS le déploiement - étape 9)
 CONTRACT_ADDRESS=
 ```
 
-### Fichier 2 — `.env` (racine du projet, celui du backend NestJS)
+### Fichier 2 - `.env` (racine du projet, celui du backend NestJS)
 
 Ajoute ces lignes à ton `.env` existant :
 
@@ -380,7 +380,7 @@ npm run deploy:amoy
 
 ```
 ═══════════════════════════════════════════════════
-  INUBIL Verify — Déploiement du contrat
+  INUBIL Verify - Déploiement du contrat
 ═══════════════════════════════════════════════════
   Réseau        : amoy
   Déployeur     : 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
@@ -426,12 +426,12 @@ CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
 docker compose up -d backend
 ```
 
-### Test 1 — Vérifier que la connexion blockchain fonctionne
+### Test 1 - Vérifier que la connexion blockchain fonctionne
 
 Dans les logs du backend, tu dois voir :
 
 ```
-[BlockchainService] Blockchain connectée — contrat : 0x5FbDB2315678afecb367f032d93F642f64180aa3
+[BlockchainService] Blockchain connectée - contrat : 0x5FbDB2315678afecb367f032d93F642f64180aa3
 ```
 
 Si tu vois le warning suivant, c'est que les variables ne sont pas chargées :
@@ -439,14 +439,14 @@ Si tu vois le warning suivant, c'est que les variables ne sont pas chargées :
 [BlockchainService] Blockchain non configurée (POLYGON_RPC_URL / DEPLOYER_PRIVATE_KEY / CONTRACT_ADDRESS manquants)
 ```
 
-### Test 2 — Valider un diplôme et observer l'enregistrement blockchain
+### Test 2 - Valider un diplôme et observer l'enregistrement blockchain
 
 1. Via Swagger (`http://localhost:3000/api`) ou Postman :
 2. Connecte-toi avec `admin@inubil.com / Admin123!`
 3. Crée un diplôme (`POST /documents`)
 4. Uploade un PDF pour le valider (`POST /documents/:id/valider`)
 5. Attends **5 à 15 secondes** (temps de confirmation Polygon)
-6. Consulte le diplôme (`GET /documents/:id`) — tu dois voir :
+6. Consulte le diplôme (`GET /documents/:id`) - tu dois voir :
 
 ```json
 {
@@ -459,7 +459,7 @@ Si tu vois le warning suivant, c'est que les variables ne sont pas chargées :
 }
 ```
 
-### Test 3 — Vérifier publiquement un diplôme
+### Test 3 - Vérifier publiquement un diplôme
 
 ```bash
 GET /verify/INUB-2026-0001
@@ -485,7 +485,7 @@ La réponse doit inclure le champ `blockchain` :
 
 ## 11. Vérifier sur Polygonscan
 
-**Polygonscan** est l'explorateur public de la blockchain Polygon —
+**Polygonscan** est l'explorateur public de la blockchain Polygon -
 c'est comme un moteur de recherche pour toutes les transactions Polygon.
 
 ### Voir les transactions de ton contrat
@@ -515,16 +515,16 @@ Tu vois tous les `DiplomeEnregistre` et `DiplomeRevoque` dans l'ordre chronologi
 
 > ⚠️ **Ne fais cette étape qu'une fois que tout est testé sur Amoy.**
 
-### Étape 1 — Acheter des vrais POL
+### Étape 1 - Acheter des vrais POL
 
 Tu as besoin d'environ **5 à 10 POL** pour commencer (couvre le déploiement + plusieurs centaines d'enregistrements).
 
 Options pour acheter des POL au Cameroun :
-- **Binance** (binance.com) — le plus accessible
+- **Binance** (binance.com) - le plus accessible
 - **Coinbase** (coinbase.com)
 - Envoie les MATIC vers l'adresse de ton compte MetaMask INUBIL Backend
 
-### Étape 2 — Configurer le .env pour le Mainnet
+### Étape 2 - Configurer le .env pour le Mainnet
 
 Dans `blockchain/.env` :
 ```env
@@ -532,28 +532,28 @@ POLYGON_RPC_URL=https://polygon-rpc.com
 DEPLOYER_PRIVATE_KEY=0x...  (même clé que pour Amoy)
 ```
 
-### Étape 3 — Déployer sur le Mainnet
+### Étape 3 - Déployer sur le Mainnet
 
 ```bash
 cd blockchain
 npm run deploy:polygon
 ```
 
-### Étape 4 — Mettre à jour le .env du backend
+### Étape 4 - Mettre à jour le .env du backend
 
 ```env
 POLYGON_RPC_URL=https://polygon-rpc.com
-CONTRACT_ADDRESS=0x...  (nouvelle adresse — celle du Mainnet)
+CONTRACT_ADDRESS=0x...  (nouvelle adresse - celle du Mainnet)
 POLYGON_NETWORK=polygon_mainnet
 ```
 
-### Étape 5 — Vérifier sur Polygonscan Mainnet
+### Étape 5 - Vérifier sur Polygonscan Mainnet
 
 Va sur **https://polygonscan.com** (sans "amoy.") et cherche ton contrat.
 
 ---
 
-## Résumé — Ordre à suivre la première fois
+## Résumé - Ordre à suivre la première fois
 
 ```
 1. Installer MetaMask                    → metamask.io

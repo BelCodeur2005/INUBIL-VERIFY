@@ -19,7 +19,7 @@ export class UpdateProfileDto {
 
   @ApiPropertyOptional({
     example: 'john.doe@inubil.com',
-    description: "Nouvel email — declenche une re-verification.",
+    description: "Nouvel email - declenche une re-verification.",
   })
   @IsOptional()
   @IsEmail({}, { message: 'Email invalide' })
@@ -27,7 +27,7 @@ export class UpdateProfileDto {
 
   @ApiPropertyOptional({
     description:
-      "Mot de passe actuel — OBLIGATOIRE pour changer l'email (re-authentification).",
+      "Mot de passe actuel - OBLIGATOIRE pour changer l'email (re-authentification).",
   })
   @IsOptional()
   @IsString()

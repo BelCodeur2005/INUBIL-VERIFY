@@ -164,7 +164,7 @@ describe('AuthService', () => {
   // ─── verifierEmail ────────────────────────────────────────────────────────
 
   describe('verifierEmail', () => {
-    it('active le compte (flux creation) — statut passe a actif', async () => {
+    it('active le compte (flux creation) - statut passe a actif', async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(
         makeUser({
           statut: 'en_attente_email',
@@ -287,7 +287,7 @@ describe('AuthService', () => {
 
   // ─── updateProfile (changement d'email) ──────────────────────────────────
 
-  describe('updateProfile — changement d\'email', () => {
+  describe('updateProfile - changement d\'email', () => {
     it('stocke le nouvel email dans email_en_attente et notifie les deux adresses', async () => {
       const user = makeUser({ email: 'old@inubil.com' });
       prisma.utilisateurs.findFirst

@@ -79,7 +79,7 @@ export class DocumentsController {
   @RequirePermissions(Permission.DOC_READ)
   @ApiOperation({
     summary: 'Obtenir un lien temporaire de téléchargement du PDF (permission doc:read)',
-    description: 'Génère un lien pré-signé AWS S3 valable 15 minutes. Le PDF est privé — jamais accessible directement.',
+    description: 'Génère un lien pré-signé AWS S3 valable 15 minutes. Le PDF est privé - jamais accessible directement.',
   })
   @ApiOkResponse({
     schema: {
@@ -143,7 +143,7 @@ export class DocumentsController {
     }),
   )
   @ApiOperation({
-    summary: 'Uploader le PDF officiel du document — agent de saisie (permission doc:create)',
+    summary: 'Uploader le PDF officiel du document - agent de saisie (permission doc:create)',
     description: 'Calcule le hash SHA-256 et stocke le PDF sur Cloudflare R2. À faire avant la validation par le directeur.',
   })
   @ApiConsumes('multipart/form-data')
@@ -173,11 +173,11 @@ export class DocumentsController {
   @Post(':id/valider')
   @RequirePermissions(Permission.DOC_VALIDATE)
   @ApiOperation({
-    summary: 'Valider un document — directeur pédagogique (permission doc:validate)',
+    summary: 'Valider un document - directeur pédagogique (permission doc:validate)',
     description: 'Approuve le document : génère le QR code, passe le statut à actif, enregistre sur la blockchain. Le PDF doit être uploadé au préalable via POST /documents/{id}/pdf.',
   })
   @ApiOkResponse({ description: 'Document validé et activé.' })
-  @ApiResponse({ status: 400, description: 'PDF manquant — utiliser POST /documents/{id}/pdf d\'abord.' })
+  @ApiResponse({ status: 400, description: 'PDF manquant - utiliser POST /documents/{id}/pdf d\'abord.' })
   @ApiResponse({ status: 403, description: 'Permission doc:validate requise.' })
   @ApiResponse({ status: 404, description: 'Document introuvable ou non en brouillon.' })
   valider(

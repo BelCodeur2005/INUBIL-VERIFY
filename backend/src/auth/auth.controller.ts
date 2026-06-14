@@ -49,7 +49,7 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
-  @ApiOperation({ summary: 'Inscription — cree un compte en attente de verification email' })
+  @ApiOperation({ summary: 'Inscription - cree un compte en attente de verification email' })
   @ApiCreatedResponse({ description: 'Compte cree. Email de verification envoye.' })
   @ApiResponse({ status: 409, description: 'Email deja utilise.' })
   @ApiResponse({ status: 429, description: 'Trop de tentatives, reessayez plus tard.' })
@@ -63,7 +63,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Confirme un email via le token recu — active le compte ou applique un changement d\'email',
+      'Confirme un email via le token recu - active le compte ou applique un changement d\'email',
   })
   @ApiOkResponse({ description: 'Email verifie avec succes.' })
   @ApiResponse({ status: 400, description: 'Token invalide ou expire.' })
@@ -85,7 +85,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Connexion — retourne les jetons JWT' })
+  @ApiOperation({ summary: 'Connexion - retourne les jetons JWT' })
   @ApiOkResponse({ description: 'Connexion reussie.', type: AuthTokensDto })
   @ApiResponse({ status: 401, description: 'Identifiants invalides.' })
   @ApiResponse({ status: 403, description: 'Compte desactive ou email non verifie.' })
@@ -113,7 +113,7 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Deconnexion — revoque la session du refresh token' })
+  @ApiOperation({ summary: 'Deconnexion - revoque la session du refresh token' })
   @ApiResponse({ status: 204, description: 'Session revoquee.' })
   logout(@Body() dto: RefreshTokenDto): Promise<void> {
     return this.auth.logout(dto.refresh_token);

@@ -15,7 +15,7 @@ const METHODES_IGNOREES = new Set(['GET', 'HEAD', 'OPTIONS']);
 /**
  * Intercepteur appliqué au module admin : logue automatiquement toutes les mutations
  * (POST/PATCH/PUT/DELETE) dans le journal_audit.
- * Utilisé comme UseInterceptors sur AdminController — pas global pour éviter le bruit.
+ * Utilisé comme UseInterceptors sur AdminController - pas global pour éviter le bruit.
  */
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {

@@ -253,7 +253,7 @@ export class DocumentsService {
     return updated;
   }
 
-  /** Upload du PDF par l'agent de saisie — calcule le hash et stocke sur R2. */
+  /** Upload du PDF par l'agent de saisie - calcule le hash et stocke sur R2. */
   async uploadPdf(
     id: string,
     fichierBuffer: Buffer,
@@ -315,7 +315,7 @@ export class DocumentsService {
     return updated;
   }
 
-  /** Validation par le directeur — approuve le document, génère le QR, déclenche la blockchain. */
+  /** Validation par le directeur - approuve le document, génère le QR, déclenche la blockchain. */
   async valider(id: string, acteurId: string, ip?: string, userAgent?: string) {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const doc = await this.trouverOuEchouer(id);
@@ -329,7 +329,7 @@ export class DocumentsService {
 
     if (!doc.pdf_url || !doc.hash_sha256) {
       throw new BadRequestException(
-        'Le PDF doit être uploadé avant la validation — utiliser POST /documents/{id}/pdf',
+        'Le PDF doit être uploadé avant la validation - utiliser POST /documents/{id}/pdf',
       );
     }
 
@@ -400,7 +400,7 @@ export class DocumentsService {
         revoque_par: acteurId,
         revoque_le: new Date(),
         raison_revocation: dto.raison,
-        // #22 — Blockchain : revokeDiploma(bytes32 hash) sera appelé ici une fois
+        // #22 - Blockchain : revokeDiploma(bytes32 hash) sera appelé ici une fois
         // le service Ethers.js + Polygon implémenté (transaction_hash mis à jour en retour).
       },
       include: { matieres_document: { orderBy: { ordre: 'asc' } } },
@@ -415,12 +415,12 @@ export class DocumentsService {
       ip,
     });
 
-    // Notification email étudiant en fire & forget — un échec mail ne fait pas échouer la révocation
+    // Notification email étudiant en fire & forget - un échec mail ne fait pas échouer la révocation
     this.notif.notifierRevocation(id).catch((err) =>
       this.logger.error(`Notification révocation échouée pour doc ${id} : ${err.message}`),
     );
 
-    // Blockchain fire & forget — révoque le diplôme on-chain sans bloquer la réponse
+    // Blockchain fire & forget - révoque le diplôme on-chain sans bloquer la réponse
     this.revoquerSurBlockchain(id, updated.numero_unique)
       .catch((err) =>
         this.logger.error(`Blockchain révocation échouée pour doc ${id} : ${err.message}`),
@@ -467,14 +467,14 @@ export class DocumentsService {
       data: { transaction_hash: txHash, adresse_contrat: contractAddress, reseau },
     });
 
-    this.logger.log(`Blockchain ✔ enregistrement doc ${docId} — tx: ${txHash}`);
+    this.logger.log(`Blockchain ✔ enregistrement doc ${docId} - tx: ${txHash}`);
   }
 
   private async revoquerSurBlockchain(docId: string, numeroUnique: string): Promise<void> {
     const txHash = await this.blockchain.revoquerDiplome(numeroUnique);
     if (!txHash) return; // blockchain non configurée ou erreur déjà loggée
 
-    this.logger.log(`Blockchain ✔ révocation doc ${docId} — tx: ${txHash}`);
+    this.logger.log(`Blockchain ✔ révocation doc ${docId} - tx: ${txHash}`);
   }
 
   async supprimer(id: string, acteurId: string, ip?: string) {
