@@ -20,6 +20,7 @@ import { PartagesModule } from './partages/partages.module';
 import { TypesDocumentModule } from './types-document/types-document.module';
 import { MentionsModule } from './mentions/mentions.module';
 import { EtudiantsAdminModule } from './etudiants-admin/etudiants-admin.module';
+import { BlockchainModule } from './blockchain/blockchain.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { EtudiantsAdminModule } from './etudiants-admin/etudiants-admin.module';
     TypesDocumentModule,
     MentionsModule,
     EtudiantsAdminModule,
+    BlockchainModule,
   ],
   controllers: [AppController],
   providers: [

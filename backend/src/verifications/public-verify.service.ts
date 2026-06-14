@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { HashService } from '../documents/hash.service';
 import { RapportVerificationPdfService, RapportVerificationData } from '../documents/rapport-verification-pdf.service';
-import { VerifyResponseDto, DocumentPublicDto, MatierePublicDto } from './dto/verify-response.dto';
+import { BlockchainService } from '../blockchain/blockchain.service';
+import { VerifyResponseDto, DocumentPublicDto, MatierePublicDto, BlockchainInfoDto } from './dto/verify-response.dto';
 
 @Injectable()
 export class PublicVerifyService {
@@ -10,6 +12,8 @@ export class PublicVerifyService {
     private readonly prisma: PrismaService,
     private readonly hash: HashService,
     private readonly rapportPdf: RapportVerificationPdfService,
+    private readonly blockchain: BlockchainService,
+    private readonly config: ConfigService,
   ) {}
 
   // ─── Points d'entrée publics ──────────────────────────────────────────
@@ -21,8 +25,9 @@ export class PublicVerifyService {
     userAgent?: string,
   ): Promise<VerifyResponseDto> {
     const doc = await this.chargerDocument({ numero_unique: identifiant });
-    const resultat = this.evaluerStatut(doc);
-    return this.construireReponse(resultat, doc, null, 'lien_unique', ip, userAgent);
+    const infoBlockchain = doc ? await this.lireBlockchain(doc.numero_unique) : null;
+    const resultat = this.evaluerStatut(doc, infoBlockchain);
+    return this.construireReponse(resultat, doc, null, 'lien_unique', infoBlockchain, ip, userAgent);
   }
 
   /** Vérifie par hash SHA-256 soumis directement — type : hash */
@@ -32,8 +37,9 @@ export class PublicVerifyService {
     userAgent?: string,
   ): Promise<VerifyResponseDto> {
     const doc = await this.chargerDocument({ hash_sha256: hashSoumis });
-    const resultat = this.evaluerStatut(doc);
-    return this.construireReponse(resultat, doc, hashSoumis, 'hash', ip, userAgent);
+    const infoBlockchain = doc ? await this.lireBlockchain(doc.numero_unique) : null;
+    const resultat = this.evaluerStatut(doc, infoBlockchain);
+    return this.construireReponse(resultat, doc, hashSoumis, 'hash', infoBlockchain, ip, userAgent);
   }
 
   /** Vérifie par upload PDF — calcule le hash côté serveur — type : upload_pdf */
@@ -44,8 +50,9 @@ export class PublicVerifyService {
   ): Promise<VerifyResponseDto> {
     const hashCalcule = this.hash.calculateHash(pdfBuffer);
     const doc = await this.chargerDocument({ hash_sha256: hashCalcule });
-    const resultat = this.evaluerStatut(doc);
-    return this.construireReponse(resultat, doc, hashCalcule, 'upload_pdf', ip, userAgent);
+    const infoBlockchain = doc ? await this.lireBlockchain(doc.numero_unique) : null;
+    const resultat = this.evaluerStatut(doc, infoBlockchain);
+    return this.construireReponse(resultat, doc, hashCalcule, 'upload_pdf', infoBlockchain, ip, userAgent);
   }
 
   // ─── Rapport PDF ─────────────────────────────────────────────────────
@@ -60,7 +67,8 @@ export class PublicVerifyService {
     userAgent?: string,
   ): Promise<{ buffer: Buffer; filename: string }> {
     const doc = await this.chargerDocument({ numero_unique: identifiant });
-    const resultat = this.evaluerStatut(doc);
+    const infoBlockchain = doc ? await this.lireBlockchain(doc.numero_unique) : null;
+    const resultat = this.evaluerStatut(doc, infoBlockchain);
     const maintenant = new Date();
 
     const verif = await this.prisma.verifications.create({
@@ -116,14 +124,17 @@ export class PublicVerifyService {
     });
   }
 
-  /**
-   * Détermine le résultat de vérification à partir du document trouvé.
-   * La vérification blockchain (Polygon) sera ajoutée ici quand #22 sera implémenté.
-   */
-  private evaluerStatut(doc: any): VerifyResponseDto['resultat'] {
+  private evaluerStatut(
+    doc: any,
+    infoBlockchain: BlockchainInfoDto | null,
+  ): VerifyResponseDto['resultat'] {
     if (!doc) return 'non_trouve';
+
+    // Si la blockchain dit révoqué, on le prend en compte même si la DB dit actif
+    if (infoBlockchain?.revoque) return 'revoque';
+
     if (doc.statut === 'revoque') return 'revoque';
-    if (doc.statut === 'actif') return 'authentique';
+    if (doc.statut === 'actif')   return 'authentique';
     // brouillon / en_validation / expire → non trouvable publiquement
     return 'non_trouve';
   }
@@ -178,6 +189,7 @@ export class PublicVerifyService {
     doc: any,
     hashSoumis: string | null,
     typeVerification: 'lien_unique' | 'hash' | 'upload_pdf',
+    infoBlockchain: BlockchainInfoDto | null,
     ip?: string,
     userAgent?: string,
   ): Promise<VerifyResponseDto> {
@@ -203,6 +215,24 @@ export class PublicVerifyService {
       document:              doc ? this.formaterDocumentPublic(doc) : null,
       verification_id:       verif.id,
       verifie_le:            maintenant,
+      blockchain:            infoBlockchain,
+    };
+  }
+
+  // ─── Blockchain ───────────────────────────────────────────────────────────
+
+  private async lireBlockchain(numeroUnique: string): Promise<BlockchainInfoDto | null> {
+    const data = await this.blockchain.verifierDiplome(numeroUnique);
+    if (!data) return null; // blockchain non configurée
+
+    const reseau = this.config.get<string>('POLYGON_NETWORK', 'polygon_amoy');
+
+    return {
+      enregistre:          data.existe,
+      revoque:             data.revoque,
+      transaction_hash:    null, // hash d'enregistrement stocké en base, pas retourné par le contrat
+      date_enregistrement: data.dateEmission,
+      reseau,
     };
   }
 }

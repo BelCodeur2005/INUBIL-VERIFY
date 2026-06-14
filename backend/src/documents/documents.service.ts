@@ -14,6 +14,7 @@ import { HashService } from './hash.service';
 import { QrCodeService } from './qr-code.service';
 import { NotificationEmissionService } from './notification-emission.service';
 import { StorageService } from '../storage/storage.service';
+import { BlockchainService } from '../blockchain/blockchain.service';
 import { CreerDocumentDto } from './dto/creer-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { RevoquerDocumentDto } from './dto/revoquer-document.dto';
@@ -31,6 +32,7 @@ export class DocumentsService {
     private readonly qr: QrCodeService,
     private readonly notif: NotificationEmissionService,
     private readonly storage: StorageService,
+    private readonly blockchain: BlockchainService,
   ) {}
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -349,6 +351,12 @@ export class DocumentsService {
       this.logger.error(`Notification émission échouée pour doc ${id} : ${err.message}`),
     );
 
+    // Blockchain fire & forget — n'attend pas la confirmation pour ne pas bloquer l'admin
+    this.enregistrerSurBlockchain(updated.id, hashSha256, updated.universite_id, updated.numero_unique)
+      .catch((err) =>
+        this.logger.error(`Blockchain enregistrement échoué pour doc ${id} : ${err.message}`),
+      );
+
     return updated;
   }
 
@@ -388,6 +396,12 @@ export class DocumentsService {
       this.logger.error(`Notification révocation échouée pour doc ${id} : ${err.message}`),
     );
 
+    // Blockchain fire & forget — révoque le diplôme on-chain sans bloquer la réponse
+    this.revoquerSurBlockchain(id, updated.numero_unique)
+      .catch((err) =>
+        this.logger.error(`Blockchain révocation échouée pour doc ${id} : ${err.message}`),
+      );
+
     return updated;
   }
 
@@ -408,6 +422,35 @@ export class DocumentsService {
     if (!url) throw new BadRequestException('Stockage S3 non configuré');
 
     return { url, expires_in_seconds: EXPIRES };
+  }
+
+  // ─── Blockchain (fire & forget) ──────────────────────────────────────────
+
+  private async enregistrerSurBlockchain(
+    docId: string,
+    hashSha256: string,
+    universiteId: string,
+    numeroUnique: string,
+  ): Promise<void> {
+    const txHash = await this.blockchain.enregistrerDiplome(numeroUnique, hashSha256, universiteId);
+    if (!txHash) return; // blockchain non configurée ou erreur déjà loggée
+
+    const contractAddress = this.config.get<string>('CONTRACT_ADDRESS') ?? '';
+    const reseau = (this.config.get<string>('POLYGON_NETWORK') ?? 'polygon_amoy') as 'polygon_amoy' | 'polygon_mainnet';
+
+    await this.prisma.documents.update({
+      where: { id: docId },
+      data: { transaction_hash: txHash, adresse_contrat: contractAddress, reseau },
+    });
+
+    this.logger.log(`Blockchain ✔ enregistrement doc ${docId} — tx: ${txHash}`);
+  }
+
+  private async revoquerSurBlockchain(docId: string, numeroUnique: string): Promise<void> {
+    const txHash = await this.blockchain.revoquerDiplome(numeroUnique);
+    if (!txHash) return; // blockchain non configurée ou erreur déjà loggée
+
+    this.logger.log(`Blockchain ✔ révocation doc ${docId} — tx: ${txHash}`);
   }
 
   async supprimer(id: string, acteurId: string, ip?: string) {
