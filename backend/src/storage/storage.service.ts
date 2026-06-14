@@ -19,19 +19,35 @@ export class StorageService {
   private readonly bucket: string;
   readonly configured: boolean;
 
+  private readonly useR2: boolean;
+
   constructor(private readonly config: ConfigService) {
     const accessKeyId     = config.get<string>('AWS_ACCESS_KEY_ID', '');
     const secretAccessKey = config.get<string>('AWS_SECRET_ACCESS_KEY', '');
-    const region          = config.get<string>('AWS_REGION', 'eu-west-1');
+    const region          = config.get<string>('AWS_REGION', 'auto');
+    const accountId       = config.get<string>('CLOUDFLARE_ACCOUNT_ID', '');
     this.bucket           = config.get<string>('AWS_S3_BUCKET', '');
 
     this.configured = !!(accessKeyId && secretAccessKey && this.bucket);
+    this.useR2      = !!accountId;
 
     if (this.configured) {
-      this.client = new S3Client({ region, credentials: { accessKeyId, secretAccessKey } });
+      this.client = new S3Client({
+        region,
+        credentials: { accessKeyId, secretAccessKey },
+        // Si CLOUDFLARE_ACCOUNT_ID est renseigné → Cloudflare R2, sinon → AWS S3
+        ...(this.useR2 && {
+          endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        }),
+      });
+      this.logger.log(
+        this.useR2
+          ? `Stockage Cloudflare R2 configuré — bucket : ${this.bucket}`
+          : `Stockage AWS S3 configuré — bucket : ${this.bucket}`,
+      );
     } else {
       this.logger.warn(
-        'AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_S3_BUCKET non configurés — stockage S3 désactivé',
+        'AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_S3_BUCKET non configurés — stockage désactivé',
       );
     }
   }
@@ -79,8 +95,9 @@ export class StorageService {
         Key: key,
         Body: buffer,
         ContentType: mimeType,
-        // Accès strictement privé — pas d'URL publique possible
-        ACL: 'private',
+        // R2 : les buckets sont privés par défaut, ACL non supporté
+        // AWS S3 : ACL 'private' ajouté uniquement si pas R2
+        ...(!this.useR2 && { ACL: 'private' }),
       }),
     );
     return { key };
