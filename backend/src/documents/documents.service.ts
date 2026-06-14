@@ -437,6 +437,10 @@ export class DocumentsService {
     const doc = await this.trouverOuEchouer(id);
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
 
+    if (doc.statut === 'revoque') {
+      throw new ForbiddenException('Ce document a été révoqué');
+    }
+
     if (!doc.pdf_url) {
       throw new BadRequestException('Aucun PDF associé à ce document');
     }
