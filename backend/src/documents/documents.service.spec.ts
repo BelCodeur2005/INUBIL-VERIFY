@@ -7,7 +7,8 @@ import { AuditService } from '../audit/audit.service';
 import { HashService } from './hash.service';
 import { QrCodeService } from './qr-code.service';
 import { NotificationEmissionService } from './notification-emission.service';
-import { IpfsService } from '../ipfs/ipfs.service';
+import { StorageService } from '../storage/storage.service';
+import { BlockchainService } from '../blockchain/blockchain.service';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────
 
@@ -16,7 +17,8 @@ const UNIV_ID     = 'bbb-univ-0000-0000-000000000002';
 const DOC_ID      = 'ccc-doc-0000-0000-000000000003';
 const ETUDIANT_ID = 'ddd-etu-0000-0000-000000000004';
 const TYPE_ID     = 'eee-type-0000-0000-000000000005';
-const FAKE_CID    = 'QmFakeCid123';
+const FAKE_HASH   = 'a'.repeat(64);
+const FAKE_PDF_KEY = 'universites/bbb-univ-0000-0000-000000000002/diplomes/2026/INUB-2026-0001.pdf';
 
 const makePrisma = () => ({
   utilisateurs:       { findFirst: jest.fn() },
@@ -26,22 +28,26 @@ const makePrisma = () => ({
   matieres_document:  {},
 });
 
-const makeAudit  = () => ({ log: jest.fn() });
-const makeHash   = () => ({ calculateHash: jest.fn().mockReturnValue('a'.repeat(64)) });
-const makeQr     = () => ({ generateQr: jest.fn().mockResolvedValue(Buffer.from('PNG')) });
-const makeNotif  = () => ({
+const makeAudit    = () => ({ log: jest.fn() });
+const makeHash     = () => ({ calculateHash: jest.fn().mockReturnValue(FAKE_HASH) });
+const makeQr       = () => ({ generateQr: jest.fn().mockResolvedValue(Buffer.from('PNG')) });
+const makeNotif    = () => ({
   notifierEtudiant:   jest.fn().mockResolvedValue(undefined),
   notifierRevocation: jest.fn().mockResolvedValue(undefined),
 });
-const makeIpfs   = () => ({
+const makeStorage  = () => ({
   configured: true,
-  uploadFile: jest.fn().mockResolvedValue({ cid: FAKE_CID, url: `https://gateway.pinata.cloud/ipfs/${FAKE_CID}` }),
+  uploadFile: jest.fn().mockResolvedValue({ key: FAKE_PDF_KEY }),
+  getPresignedUrl: jest.fn().mockResolvedValue('https://r2.example.com/signed-url'),
 });
-const makeConfig = () => ({ get: jest.fn().mockReturnValue('https://verify.inubil.com') });
+const makeBlockchain = () => ({
+  enregistrerDiplome: jest.fn().mockResolvedValue('0xabc123'),
+  revoquerDiplome:    jest.fn().mockResolvedValue('0xdef456'),
+  verifierDiplome:    jest.fn().mockResolvedValue(null),
+});
+const makeConfig   = () => ({ get: jest.fn().mockReturnValue('https://verify.inubil.com') });
 
-const makeActeur = (univId: string | null = UNIV_ID) => ({
-  universite_id: univId,
-});
+const makeActeur   = (univId: string | null = UNIV_ID) => ({ universite_id: univId });
 
 const makeDocument = (overrides: any = {}) => ({
   id: DOC_ID,
@@ -49,8 +55,11 @@ const makeDocument = (overrides: any = {}) => ({
   universite_id: UNIV_ID,
   etudiant_id: ETUDIANT_ID,
   type_document_id: TYPE_ID,
+  date_emission: new Date('2026-06-14'),
   statut: 'brouillon',
   deleted_at: null,
+  pdf_url: null,
+  hash_sha256: null,
   matieres_document: [],
   ...overrides,
 });
@@ -64,28 +73,31 @@ describe('DocumentsService', () => {
   let hash: ReturnType<typeof makeHash>;
   let qr: ReturnType<typeof makeQr>;
   let notif: ReturnType<typeof makeNotif>;
-  let ipfs: ReturnType<typeof makeIpfs>;
+  let storage: ReturnType<typeof makeStorage>;
+  let blockchain: ReturnType<typeof makeBlockchain>;
   let config: ReturnType<typeof makeConfig>;
 
   beforeEach(async () => {
-    prisma  = makePrisma();
-    audit   = makeAudit();
-    hash    = makeHash();
-    qr      = makeQr();
-    notif   = makeNotif();
-    ipfs    = makeIpfs();
-    config  = makeConfig();
+    prisma     = makePrisma();
+    audit      = makeAudit();
+    hash       = makeHash();
+    qr         = makeQr();
+    notif      = makeNotif();
+    storage    = makeStorage();
+    blockchain = makeBlockchain();
+    config     = makeConfig();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DocumentsService,
-        { provide: PrismaService,               useValue: prisma  },
-        { provide: ConfigService,               useValue: config  },
-        { provide: AuditService,                useValue: audit   },
-        { provide: HashService,                 useValue: hash    },
-        { provide: QrCodeService,               useValue: qr      },
-        { provide: NotificationEmissionService, useValue: notif   },
-        { provide: IpfsService,                 useValue: ipfs    },
+        { provide: PrismaService,               useValue: prisma     },
+        { provide: ConfigService,               useValue: config     },
+        { provide: AuditService,                useValue: audit      },
+        { provide: HashService,                 useValue: hash       },
+        { provide: QrCodeService,               useValue: qr         },
+        { provide: NotificationEmissionService, useValue: notif      },
+        { provide: StorageService,              useValue: storage    },
+        { provide: BlockchainService,           useValue: blockchain },
       ],
     }).compile();
 
@@ -106,7 +118,7 @@ describe('DocumentsService', () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
       prisma.etudiants.findFirst.mockResolvedValue({ universite_id: UNIV_ID });
       prisma.types_document.findFirst.mockResolvedValue({ id: TYPE_ID });
-      prisma.documents.findFirst.mockResolvedValue(null); // no existing for numero_unique
+      prisma.documents.findFirst.mockResolvedValue(null);
       prisma.documents.create.mockResolvedValue(makeDocument());
 
       const result = await service.creer(dto, ACTEUR_ID);
@@ -197,26 +209,26 @@ describe('DocumentsService', () => {
     });
   });
 
-  // ── valider ────────────────────────────────────────────────────────────
+  // ── uploadPdf ──────────────────────────────────────────────────────────
 
-  describe('valider', () => {
+  describe('uploadPdf', () => {
     const fakePdf = Buffer.from('%PDF-1.4 fake content');
 
-    it('calcule le hash, passe le document en actif', async () => {
+    it('calcule le hash SHA-256 et uploade le PDF sur R2', async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
       prisma.documents.findFirst
         .mockResolvedValueOnce(makeDocument({ statut: 'brouillon' }))
         .mockResolvedValueOnce(null); // pas de doublon
-      prisma.documents.update.mockResolvedValue(makeDocument({ statut: 'actif', hash_sha256: 'a'.repeat(64) }));
+      prisma.documents.update.mockResolvedValue(makeDocument({ hash_sha256: FAKE_HASH, pdf_url: FAKE_PDF_KEY }));
 
-      const result = await service.valider(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID);
+      await service.uploadPdf(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID);
 
       expect(hash.calculateHash).toHaveBeenCalledWith(fakePdf);
-      expect(qr.generateQr).toHaveBeenCalled();
+      expect(storage.uploadFile).toHaveBeenCalledWith(fakePdf, expect.stringContaining('INUB-2026-0001.pdf'), 'application/pdf');
       expect(prisma.documents.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ statut: 'actif' }) }),
+        expect.objectContaining({ data: expect.objectContaining({ hash_sha256: FAKE_HASH }) }),
       );
-      expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'DOCUMENT_VALIDER' }));
+      expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'DOCUMENT_UPLOAD_PDF' }));
     });
 
     it('lève ConflictException si le hash existe déjà', async () => {
@@ -225,57 +237,86 @@ describe('DocumentsService', () => {
         .mockResolvedValueOnce(makeDocument({ statut: 'brouillon' }))
         .mockResolvedValueOnce(makeDocument({ id: 'autre-id' })); // doublon trouvé
 
-      await expect(service.valider(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID)).rejects.toThrow(ConflictException);
+      await expect(service.uploadPdf(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID)).rejects.toThrow(ConflictException);
+    });
+
+    it('lève BadRequestException si le document est déjà actif', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'actif' }));
+
+      await expect(service.uploadPdf(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID)).rejects.toThrow(BadRequestException);
+    });
+
+    it('enregistre pdf_url=null si l\'upload R2 échoue mais ne fait pas échouer la requête', async () => {
+      storage.uploadFile.mockRejectedValue(new Error('R2 down'));
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst
+        .mockResolvedValueOnce(makeDocument({ statut: 'brouillon' }))
+        .mockResolvedValueOnce(null);
+      prisma.documents.update.mockResolvedValue(makeDocument({ hash_sha256: FAKE_HASH, pdf_url: null }));
+
+      await expect(service.uploadPdf(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID)).resolves.toBeDefined();
+      const updateData = (prisma.documents.update as jest.Mock).mock.calls[0][0].data;
+      expect(updateData.pdf_url).toBeNull();
+    });
+  });
+
+  // ── valider ────────────────────────────────────────────────────────────
+
+  describe('valider', () => {
+    it('génère le QR code, passe le document en actif et déclenche la blockchain', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({ statut: 'brouillon', pdf_url: FAKE_PDF_KEY, hash_sha256: FAKE_HASH }),
+      );
+      prisma.documents.update.mockResolvedValue(makeDocument({ statut: 'actif' }));
+
+      await service.valider(DOC_ID, ACTEUR_ID);
+
+      expect(qr.generateQr).toHaveBeenCalled();
+      expect(storage.uploadFile).toHaveBeenCalledWith(expect.any(Buffer), expect.stringContaining('qr'), 'image/png');
+      expect(prisma.documents.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ statut: 'actif' }) }),
+      );
+      expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'DOCUMENT_VALIDER' }));
+    });
+
+    it('lève BadRequestException si le PDF n\'a pas été uploadé', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({ statut: 'brouillon', pdf_url: null, hash_sha256: null }),
+      );
+
+      await expect(service.valider(DOC_ID, ACTEUR_ID)).rejects.toThrow(BadRequestException);
     });
 
     it('lève BadRequestException si le statut n\'est pas brouillon ou en_validation', async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
       prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'revoque' }));
 
-      await expect(service.valider(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID)).rejects.toThrow(BadRequestException);
+      await expect(service.valider(DOC_ID, ACTEUR_ID)).rejects.toThrow(BadRequestException);
     });
 
     it('accepte un document en_validation', async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
-      prisma.documents.findFirst
-        .mockResolvedValueOnce(makeDocument({ statut: 'en_validation' }))
-        .mockResolvedValueOnce(null);
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({ statut: 'en_validation', pdf_url: FAKE_PDF_KEY, hash_sha256: FAKE_HASH }),
+      );
       prisma.documents.update.mockResolvedValue(makeDocument({ statut: 'actif' }));
 
-      await expect(service.valider(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID)).resolves.toBeDefined();
+      await expect(service.valider(DOC_ID, ACTEUR_ID)).resolves.toBeDefined();
     });
 
-    it('upload le PDF et le QR sur IPFS et stocke cid_ipfs + pdf_url + qr_code_url', async () => {
+    it('déclenche notifierEtudiant en fire & forget', async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
-      prisma.documents.findFirst
-        .mockResolvedValueOnce(makeDocument({ statut: 'brouillon' }))
-        .mockResolvedValueOnce(null);
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({ statut: 'brouillon', pdf_url: FAKE_PDF_KEY, hash_sha256: FAKE_HASH }),
+      );
       prisma.documents.update.mockResolvedValue(makeDocument({ statut: 'actif' }));
 
-      await service.valider(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID);
+      await service.valider(DOC_ID, ACTEUR_ID);
 
-      expect(ipfs.uploadFile).toHaveBeenCalledTimes(2);
-      expect(ipfs.uploadFile).toHaveBeenCalledWith(fakePdf, 'INUB-2026-0001.pdf', 'application/pdf');
-      expect(ipfs.uploadFile).toHaveBeenCalledWith(expect.any(Buffer), 'qr-INUB-2026-0001.png', 'image/png');
-      const updateData = (prisma.documents.update as jest.Mock).mock.calls[0][0].data;
-      expect(updateData.cid_ipfs).toBe(FAKE_CID);
-      expect(updateData.pdf_url).toContain(FAKE_CID);
-      expect(updateData.qr_code_url).toContain(FAKE_CID);
-    });
-
-    it('continue la validation même si l\'upload IPFS échoue', async () => {
-      ipfs.uploadFile.mockRejectedValue(new Error('Pinata down'));
-      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
-      prisma.documents.findFirst
-        .mockResolvedValueOnce(makeDocument({ statut: 'brouillon' }))
-        .mockResolvedValueOnce(null);
-      prisma.documents.update.mockResolvedValue(makeDocument({ statut: 'actif' }));
-
-      await expect(service.valider(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID)).resolves.toBeDefined();
-      const updateData = (prisma.documents.update as jest.Mock).mock.calls[0][0].data;
-      expect(updateData.statut).toBe('actif');
-      expect(updateData.cid_ipfs).toBeNull();
-      expect(updateData.pdf_url).toBeNull();
+      expect(notif.notifierEtudiant).toHaveBeenCalledWith(DOC_ID);
     });
   });
 
@@ -287,7 +328,7 @@ describe('DocumentsService', () => {
       prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'actif' }));
       prisma.documents.update.mockResolvedValue(makeDocument({ statut: 'revoque' }));
 
-      const result = await service.revoquer(DOC_ID, { raison: 'Erreur sur le nom de l\'étudiant' }, ACTEUR_ID);
+      await service.revoquer(DOC_ID, { raison: 'Erreur sur le nom de l\'étudiant' }, ACTEUR_ID);
 
       expect(prisma.documents.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ statut: 'revoque' }) }),
