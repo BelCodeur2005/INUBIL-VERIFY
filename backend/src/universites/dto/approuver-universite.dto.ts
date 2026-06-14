@@ -4,7 +4,7 @@ import { IsOptional, IsString, MinLength } from 'class-validator';
 export class ApprouverUniversiteDto {
   @ApiPropertyOptional({
     description: 'Raison du rejet (obligatoire uniquement pour POST /rejeter).',
-    example: 'Documents incomplets — merci de fournir le decret ministeriel.',
+    example: 'Documents incomplets - merci de fournir le decret ministeriel.',
   })
   @IsOptional()
   @IsString()

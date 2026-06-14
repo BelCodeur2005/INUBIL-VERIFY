@@ -42,12 +42,12 @@ export class StorageService {
       });
       this.logger.log(
         this.useR2
-          ? `Stockage Cloudflare R2 configuré — bucket : ${this.bucket}`
-          : `Stockage AWS S3 configuré — bucket : ${this.bucket}`,
+          ? `Stockage Cloudflare R2 configuré - bucket : ${this.bucket}`
+          : `Stockage AWS S3 configuré - bucket : ${this.bucket}`,
       );
     } else {
       this.logger.warn(
-        'AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_S3_BUCKET non configurés — stockage désactivé',
+        'AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_S3_BUCKET non configurés - stockage désactivé',
       );
     }
   }

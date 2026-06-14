@@ -121,7 +121,7 @@ export class EtudiantsAdminController {
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   @ApiResponse({ status: 403, description: 'Permission doc:create requise ou accès refusé.' })
   @ApiResponse({ status: 404, description: 'Étudiant introuvable.' })
-  @ApiResponse({ status: 409, description: 'Étudiant possède des documents — suppression impossible.' })
+  @ApiResponse({ status: 409, description: 'Étudiant possède des documents - suppression impossible.' })
   supprimer(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') acteurId: string,

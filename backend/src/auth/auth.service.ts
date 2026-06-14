@@ -423,7 +423,7 @@ export class AuthService {
       }
 
       verifToken = randomBytes(32).toString('hex');
-      // Le nouvel email est stocke en attente — l'email actuel reste actif
+      // Le nouvel email est stocke en attente - l'email actuel reste actif
       // jusqu'a la confirmation via le lien de verification.
       data.email_en_attente = nouvelEmail;
       data.token_verification_email = this.hash(verifToken);

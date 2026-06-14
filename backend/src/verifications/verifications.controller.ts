@@ -50,7 +50,7 @@ export class VerificationsController {
   @UseGuards(PermissionsGuard)
   @RequirePermissions(Permission.AUDIT_READ)
   @ApiOperation({
-    summary: 'Toutes les vérifications — admin uniquement (permission audit:read)',
+    summary: 'Toutes les vérifications - admin uniquement (permission audit:read)',
   })
   @ApiOkResponse({ type: VerificationAdminListResponseDto })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })

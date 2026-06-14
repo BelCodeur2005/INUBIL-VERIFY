@@ -110,7 +110,7 @@ describe('RolesService', () => {
   });
 
   describe('modifier', () => {
-    it('modifie un rôle système (est_systeme=true) — autorisé', async () => {
+    it('modifie un rôle système (est_systeme=true) - autorisé', async () => {
       const roleSysteme = makeRole({ est_systeme: true });
       prisma.roles.findUnique
         .mockResolvedValueOnce(roleSysteme)

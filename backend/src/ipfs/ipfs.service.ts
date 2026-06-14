@@ -22,7 +22,7 @@ export class IpfsService {
 
     if (!this.configured) {
       this.logger.warn(
-        'PINATA_API_KEY / PINATA_SECRET_KEY non configurés — uploads IPFS désactivés',
+        'PINATA_API_KEY / PINATA_SECRET_KEY non configurés - uploads IPFS désactivés',
       );
     }
   }

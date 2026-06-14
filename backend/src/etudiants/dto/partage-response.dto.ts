@@ -7,10 +7,10 @@ export class PartageResponseDto {
   @ApiProperty({ format: 'uuid', example: 'doc-0000-0000-0000-000000000001' })
   document_id: string;
 
-  @ApiProperty({ example: 'Licence en Informatique — INUB-2026-0001' })
+  @ApiProperty({ example: 'Licence en Informatique - INUB-2026-0001' })
   document_titre: string;
 
-  @ApiProperty({ example: 'a3f9c2d1e8b74f560ab12c3d4e5f6789a3f9c2d1e8b74f560ab12c3d4e5f6789', description: 'Token hex 64 chars — à inclure dans l\'URL de partage' })
+  @ApiProperty({ example: 'a3f9c2d1e8b74f560ab12c3d4e5f6789a3f9c2d1e8b74f560ab12c3d4e5f6789', description: 'Token hex 64 chars - à inclure dans l\'URL de partage' })
   token_acces: string;
 
   @ApiPropertyOptional({ example: 'recruteur@entreprise.cm' })

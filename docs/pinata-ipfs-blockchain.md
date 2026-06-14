@@ -1,4 +1,4 @@
-# Pinata, IPFS et Blockchain — Guide complet pour INUBIL-VERIFY
+# Pinata, IPFS et Blockchain - Guide complet pour INUBIL-VERIFY
 
 > Document de référence technique et pédagogique sur le stockage décentralisé
 > et son rôle dans la vérification de diplômes.
@@ -10,12 +10,12 @@
 1. [C'est quoi IPFS ?](#1-cest-quoi-ipfs-)
 2. [C'est quoi le CID ?](#2-cest-quoi-le-cid-)
 3. [C'est quoi Pinata ?](#3-cest-quoi-pinata-)
-4. [Pinata vs AWS S3 — Pourquoi pas AWS ?](#4-pinata-vs-aws-s3--pourquoi-pas-aws-)
+4. [Pinata vs AWS S3 - Pourquoi pas AWS ?](#4-pinata-vs-aws-s3--pourquoi-pas-aws-)
 5. [Les concurrents de Pinata](#5-les-concurrents-de-pinata)
 6. [Avantages et inconvénients de Pinata](#6-avantages-et-inconvénients-de-pinata)
 7. [Le lien entre Pinata et la Blockchain](#7-le-lien-entre-pinata-et-la-blockchain)
 8. [Comment tout ça s'articule dans INUBIL-VERIFY](#8-comment-tout-ça-sarticule-dans-inubil-verify)
-9. [Conclusion — Pourquoi Pinata est le bon choix](#9-conclusion--pourquoi-pinata-est-le-bon-choix)
+9. [Conclusion - Pourquoi Pinata est le bon choix](#9-conclusion--pourquoi-pinata-est-le-bon-choix)
 
 ---
 
@@ -23,7 +23,7 @@
 
 ### Origine et nom
 
-IPFS (InterPlanetary File System) a été créé en **2013** par **Juan Benet**, fondateur de Protocol Labs. L'idée originale était de créer un système de fichiers distribué capable de fonctionner même dans l'espace, pour la communication entre planètes — d'où le nom ambitieux. Le whitepaper a été publié en juillet 2014 (arXiv:1407.3561). Protocol Labs a ensuite levé **205,8 millions de dollars** en 2017 pour développer l'écosystème.
+IPFS (InterPlanetary File System) a été créé en **2013** par **Juan Benet**, fondateur de Protocol Labs. L'idée originale était de créer un système de fichiers distribué capable de fonctionner même dans l'espace, pour la communication entre planètes - d'où le nom ambitieux. Le whitepaper a été publié en juillet 2014 (arXiv:1407.3561). Protocol Labs a ensuite levé **205,8 millions de dollars** en 2017 pour développer l'écosystème.
 
 ### Le problème qu'IPFS résout
 
@@ -35,7 +35,7 @@ https://monserveur.com/fichiers/diplome.pdf
     adresse physique du serveur
 ```
 
-Problème : si le serveur tombe, l'URL est morte. Et rien ne prouve que le fichier derrière cette URL est le même qu'hier — quelqu'un peut l'avoir remplacé sans que tu le saches.
+Problème : si le serveur tombe, l'URL est morte. Et rien ne prouve que le fichier derrière cette URL est le même qu'hier - quelqu'un peut l'avoir remplacé sans que tu le saches.
 
 IPFS résout ça en identifiant les fichiers **par leur contenu**, pas par leur emplacement. C'est ce qu'on appelle le **content addressing**.
 
@@ -46,7 +46,7 @@ Quand tu ajoutes un fichier sur IPFS :
 1. Le fichier est découpé en blocs
 2. Chaque bloc est haché cryptographiquement (SHA-256)
 3. Les hashes forment un arbre de Merkle
-4. Le hash de la racine de cet arbre devient l'**identifiant unique du fichier** — le CID
+4. Le hash de la racine de cet arbre devient l'**identifiant unique du fichier** - le CID
 
 ```
 Fichier PDF
@@ -106,7 +106,7 @@ C'est la différence fondamentale avec une URL classique.
 
 ### En une phrase
 
-Pinata est un **service d'hébergement compatible IPFS** — il stocke tes fichiers sur ses serveurs et les publie sur le réseau IPFS, te retournant un CID.
+Pinata est un **service d'hébergement compatible IPFS** - il stocke tes fichiers sur ses serveurs et les publie sur le réseau IPFS, te retournant un CID.
 
 ### Histoire et chiffres
 
@@ -114,12 +114,12 @@ Pinata est un **service d'hébergement compatible IPFS** — il stocke tes fichi
 |------|--------|
 | Fondation | 2019 par Kyle Tautenhan et Matt Ober |
 | Siège | États-Unis |
-| Financement | 21,5 M$ (Série A, 2022) — Coinbase Ventures parmi les investisseurs |
+| Financement | 21,5 M$ (Série A, 2022) - Coinbase Ventures parmi les investisseurs |
 | Revenus annuels | 8,8 M$ (2024) |
 | Uploads IPFS | Plus de **40 millions par mois** |
 | Clients actifs | ~600 entreprises |
 
-### Architecture technique — Elastic IPFS
+### Architecture technique - Elastic IPFS
 
 Pinata n'utilise pas un simple nœud IPFS classique. Ils ont développé leur propre technologie : **Elastic IPFS**, une implémentation cloud-native qui scale automatiquement.
 
@@ -138,7 +138,7 @@ Pinata n'utilise pas un simple nœud IPFS classique. Ils ont développé leur pr
 
 Pinata n'est **pas vraiment décentralisé**. Tes fichiers sont sur les serveurs de Pinata, une entreprise privée américaine. Si Pinata ferme, tes URLs `gateway.pinata.cloud/...` ne fonctionnent plus.
 
-**Mais** — et c'est crucial — le **CID reste valide à vie**. Tu peux re-uploader le même PDF sur n'importe quel autre service IPFS et obtenir exactement le même CID. Tu n'es pas prisonnier de Pinata.
+**Mais** - et c'est crucial - le **CID reste valide à vie**. Tu peux re-uploader le même PDF sur n'importe quel autre service IPFS et obtenir exactement le même CID. Tu n'es pas prisonnier de Pinata.
 
 ### Plans tarifaires (2026)
 
@@ -164,7 +164,7 @@ Pinata n'est **pas vraiment décentralisé**. Tes fichiers sont sur les serveurs
 
 ---
 
-## 4. Pinata vs AWS S3 — Pourquoi pas AWS ?
+## 4. Pinata vs AWS S3 - Pourquoi pas AWS ?
 
 ### Ce qu'AWS S3 ne peut PAS faire
 
@@ -213,7 +213,7 @@ AWS est soumis aux lois américaines. Un gouvernement peut demander à Amazon de
 
 ### Verdict pour INUBIL-VERIFY
 
-Pour un système de **vérification de diplômes**, le critère décisif est l'**intégrité prouvable**. Une URL S3 ne peut pas être ancrée dans un smart contract comme preuve d'authenticité — techniquement, ça ne tient pas. Un CID IPFS, oui. Ce n'est pas une question de préférence, c'est une contrainte technique.
+Pour un système de **vérification de diplômes**, le critère décisif est l'**intégrité prouvable**. Une URL S3 ne peut pas être ancrée dans un smart contract comme preuve d'authenticité - techniquement, ça ne tient pas. Un CID IPFS, oui. Ce n'est pas une question de préférence, c'est une contrainte technique.
 
 ---
 
@@ -227,7 +227,7 @@ Web3.Storage est déprécié depuis 2024 et a migré vers **Storacha** (storacha
 
 ### NFT.Storage
 
-**Statut : en démantèlement — À NE PAS UTILISER**
+**Statut : en démantèlement - À NE PAS UTILISER**
 
 - Arrêt des nouveaux uploads depuis le **30 juin 2024**
 - NFT.Storage redirige lui-même ses utilisateurs vers **Pinata et Lighthouse**
@@ -243,7 +243,7 @@ Infura (dans l'écosystème ConsenSys/Ethereum) a limité l'accès à son servic
 
 **Statut : actif, alternative sérieuse**
 
-Filebase se différencie avec une **redondance géographique native 3x** — chaque fichier est automatiquement répliqué sur 3 localisations géographiques distinctes. API compatible S3 (drop-in replacement).
+Filebase se différencie avec une **redondance géographique native 3x** - chaque fichier est automatiquement répliqué sur 3 localisations géographiques distinctes. API compatible S3 (drop-in replacement).
 
 | Plan | Stockage | Egress | Prix |
 |------|----------|--------|------|
@@ -294,9 +294,9 @@ Arweave est intéressant conceptuellement pour les diplômes (permanence à vie)
 | Avantage | Détail |
 |----------|--------|
 | **CID IPFS natif** | Chaque fichier reçoit un CID universel, ancrable sur blockchain |
-| **Plan gratuit généreux** | 1 GB / 10 GB bande passante — suffisant pour un MVP |
+| **Plan gratuit généreux** | 1 GB / 10 GB bande passante - suffisant pour un MVP |
 | **Elastic IPFS** | Infrastructure qui scale automatiquement, pas de gestion de nœuds |
-| **Fiabilité prouvée** | OpenSea, Ledger, Yuga Labs en production — 40M uploads/mois |
+| **Fiabilité prouvée** | OpenSea, Ledger, Yuga Labs en production - 40M uploads/mois |
 | **API simple** | Upload en quelques lignes de code, bien documenté |
 | **Gateway dédiée** | CDN intégré pour des téléchargements rapides |
 | **Portabilité** | Si tu quittes Pinata, le même fichier sur un autre service IPFS donne le même CID |
@@ -309,17 +309,17 @@ Arweave est intéressant conceptuellement pour les diplômes (permanence à vie)
 | **Centralisé** | Tes fichiers sont sur les serveurs de Pinata, pas vraiment décentralisés |
 | **Entreprise américaine** | Soumise aux lois US, potentiellement à des injonctions judiciaires |
 | **SLA non publié** | Pas de SLA contractuel garanti sur les plans publics |
-| **Prix variable** | Modèle usage-based — si tes fichiers sont très consultés, la facture augmente |
+| **Prix variable** | Modèle usage-based - si tes fichiers sont très consultés, la facture augmente |
 | **Dépendance** | Si Pinata ferme, les URLs `gateway.pinata.cloud/...` tombent |
 | **Pas vraiment décentralisé** | Le nom "IPFS" suggère la décentralisation, mais avec Pinata c'est centralisé |
 | **Conformité limitée** | Moins de certifications (HIPAA, ISO 27001) qu'AWS pour les données sensibles |
 
 ### Comment mitiger les risques
 
-1. **Toujours stocker le CID en base de données** — pas juste l'URL. Si Pinata tombe, le CID reste valide.
-2. **Ancrer le CID sur blockchain** — preuve immuable indépendante de Pinata.
-3. **Garder une copie locale du PDF** — le serveur INUBIL garde le fichier original.
-4. **Prévoir une migration** — si Pinata devient trop cher, Filebase accepte les mêmes CIDs.
+1. **Toujours stocker le CID en base de données** - pas juste l'URL. Si Pinata tombe, le CID reste valide.
+2. **Ancrer le CID sur blockchain** - preuve immuable indépendante de Pinata.
+3. **Garder une copie locale du PDF** - le serveur INUBIL garde le fichier original.
+4. **Prévoir une migration** - si Pinata devient trop cher, Filebase accepte les mêmes CIDs.
 
 ---
 
@@ -345,16 +345,16 @@ La blockchain résout ça en étant un **registre public immuable** où le CID e
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  COUCHE 3 — BLOCKCHAIN                                      │
+│  COUCHE 3 - BLOCKCHAIN                                      │
 │  "Le CID QmSvgz... a été certifié par ISTAMA INUBIL        │
 │   le 13/06/2026 à 18h00"                                   │
 │   → Gravé à jamais, personne ne peut modifier ça           │
 ├─────────────────────────────────────────────────────────────┤
-│  COUCHE 2 — BASE DE DONNÉES INUBIL                         │
+│  COUCHE 2 - BASE DE DONNÉES INUBIL                         │
 │  Stocke : CID, etudiant_id, universite_id, hash_sha256...   │
 │  → Modifiable par un admin ou un pirate (risque)            │
 ├─────────────────────────────────────────────────────────────┤
-│  COUCHE 1 — PINATA / IPFS                                  │
+│  COUCHE 1 - PINATA / IPFS                                  │
 │  Stocke le PDF du diplôme                                   │
 │  → CID prouve que le fichier n'a pas été modifié            │
 └─────────────────────────────────────────────────────────────┘
@@ -368,7 +368,7 @@ La blockchain résout ça en étant un **registre public immuable** où le CID e
 
 ### Le flux technique complet (blockchain intégrée)
 
-**Étape 1 — L'université valide le diplôme**
+**Étape 1 - L'université valide le diplôme**
 ```
 PDF généré
   → Hash SHA-256 calculé
@@ -379,14 +379,14 @@ PDF généré
   → transaction_hash gravé sur la blockchain
 ```
 
-**Étape 2 — L'étudiant reçoit son diplôme papier**
+**Étape 2 - L'étudiant reçoit son diplôme papier**
 ```
 Sur le diplôme imprimé :
   - Numéro unique : INUB-2026-0003
   - QR code → https://verify.inubil.com/d/INUB-2026-0003
 ```
 
-**Étape 3 — Un employeur vérifie**
+**Étape 3 - Un employeur vérifie**
 ```
 Scan du QR code
   → INUBIL retourne les infos + CID
@@ -399,10 +399,10 @@ Scan du QR code
 
 | Si on ancre une URL S3 | Si on ancre un CID IPFS |
 |-----------------------|------------------------|
-| L'URL peut pointer vers un fichier remplacé | Le CID EST le fichier — impossible de remplacer |
+| L'URL peut pointer vers un fichier remplacé | Le CID EST le fichier - impossible de remplacer |
 | Nécessite de faire confiance à Amazon | Vérifiabilité mathématique, zéro confiance requise |
 | Censurable (Amazon peut supprimer) | Difficile à censurer si répliqué |
-| Preuve nulle — Amazon peut avoir modifié | Preuve cryptographique absolue |
+| Preuve nulle - Amazon peut avoir modifié | Preuve cryptographique absolue |
 
 ### Smart contract Solidity (exemple simplifié)
 
@@ -488,7 +488,7 @@ Après l'étape 4 :
 6. transaction_hash + bloc_numero + reseau → enregistrés en base
 ```
 
-Les champs `transaction_hash`, `bloc_numero`, `adresse_contrat`, `reseau` dans ta réponse API sont prêts — ils attendent juste l'intégration blockchain.
+Les champs `transaction_hash`, `bloc_numero`, `adresse_contrat`, `reseau` dans ta réponse API sont prêts - ils attendent juste l'intégration blockchain.
 
 ### La chaîne de confiance complète
 
@@ -507,21 +507,21 @@ PDF diplôme
 
 ---
 
-## 9. Conclusion — Pourquoi Pinata est le bon choix
+## 9. Conclusion - Pourquoi Pinata est le bon choix
 
 ### Récapitulatif des raisons
 
-1. **Seule option stable et accessible** — NFT.Storage est fermé, Web3.Storage en migration, Infura restreint.
+1. **Seule option stable et accessible** - NFT.Storage est fermé, Web3.Storage en migration, Infura restreint.
 
-2. **Plan gratuit suffisant pour démarrer** — 1 GB / 10 GB bande passante, largement assez pour un MVP avec des diplômes PDF.
+2. **Plan gratuit suffisant pour démarrer** - 1 GB / 10 GB bande passante, largement assez pour un MVP avec des diplômes PDF.
 
-3. **CID IPFS indispensable** — C'est le seul moyen de créer un lien cryptographique entre le document et la blockchain. AWS ne peut pas faire ça.
+3. **CID IPFS indispensable** - C'est le seul moyen de créer un lien cryptographique entre le document et la blockchain. AWS ne peut pas faire ça.
 
-4. **Fiabilité prouvée à grande échelle** — OpenSea, Ledger, Protocol Labs lui-même. 40 millions d'uploads par mois.
+4. **Fiabilité prouvée à grande échelle** - OpenSea, Ledger, Protocol Labs lui-même. 40 millions d'uploads par mois.
 
-5. **Portabilité totale** — Si Pinata ferme demain, tu prends tes PDFs, tu les uploades sur Filebase, tu obtiens exactement les mêmes CIDs. Rien ne change côté blockchain ni côté base de données.
+5. **Portabilité totale** - Si Pinata ferme demain, tu prends tes PDFs, tu les uploades sur Filebase, tu obtiens exactement les mêmes CIDs. Rien ne change côté blockchain ni côté base de données.
 
-6. **Elastic IPFS** — Infrastructure répliquée, pas un serveur unique. Haute disponibilité.
+6. **Elastic IPFS** - Infrastructure répliquée, pas un serveur unique. Haute disponibilité.
 
 ### Ce que Pinata est vraiment pour INUBIL-VERIFY
 
@@ -529,5 +529,5 @@ PDF diplôme
 
 ---
 
-*Document rédigé pour le projet INUBIL-VERIFY — Plateforme de certification de diplômes ISTAMA INUBIL, Cameroun.*
+*Document rédigé pour le projet INUBIL-VERIFY - Plateforme de certification de diplômes ISTAMA INUBIL, Cameroun.*
 *Sources : Pinata Blog, IPFS Docs, arXiv:1407.3561, Crunchbase, CredChain (ICCCES 2024), EBSI.*

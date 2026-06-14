@@ -27,7 +27,7 @@ export class MailService {
     }
 
     this.logger.warn(
-      `[DEV-ONLY] Email simule — lien de reset pour ${destinataire} : ${resetUrl}`,
+      `[DEV-ONLY] Email simule - lien de reset pour ${destinataire} : ${resetUrl}`,
     );
   }
 
@@ -44,7 +44,7 @@ export class MailService {
     }
 
     this.logger.warn(
-      `[DEV-ONLY] Email simule — lien de verification pour ${destinataire} : ${verifyUrl}`,
+      `[DEV-ONLY] Email simule - lien de verification pour ${destinataire} : ${verifyUrl}`,
     );
   }
 
@@ -61,7 +61,7 @@ export class MailService {
     }
 
     this.logger.warn(
-      `[DEV-ONLY] Email simule — lien d'activation invitation pour ${destinataire} : ${activerUrl}`,
+      `[DEV-ONLY] Email simule - lien d'activation invitation pour ${destinataire} : ${activerUrl}`,
     );
   }
 
@@ -84,13 +84,13 @@ export class MailService {
 
     if (estProdOuStaging) {
       this.logger.log(
-        `Email d'émission de document à envoyer à ${destinataire} — doc ${data.numeroUnique}`,
+        `Email d'émission de document à envoyer à ${destinataire} - doc ${data.numeroUnique}`,
       );
       return;
     }
 
     this.logger.warn(
-      `[DEV-ONLY] Email simule — document émis pour ${destinataire}\n` +
+      `[DEV-ONLY] Email simule - document émis pour ${destinataire}\n` +
       `  Étudiant : ${data.prenomNom}\n` +
       `  Filière  : ${data.filiere}\n` +
       `  Numéro   : ${data.numeroUnique}\n` +
@@ -117,13 +117,13 @@ export class MailService {
 
     if (estProdOuStaging) {
       this.logger.log(
-        `Email de révocation à envoyer à ${destinataire} — doc ${data.numeroUnique}`,
+        `Email de révocation à envoyer à ${destinataire} - doc ${data.numeroUnique}`,
       );
       return;
     }
 
     this.logger.warn(
-      `[DEV-ONLY] Email simulé — document révoqué pour ${destinataire}\n` +
+      `[DEV-ONLY] Email simulé - document révoqué pour ${destinataire}\n` +
       `  Étudiant : ${data.prenomNom}\n` +
       `  Numéro   : ${data.numeroUnique}\n` +
       `  Type     : ${data.typeDocument}\n` +
@@ -154,15 +154,15 @@ export class MailService {
 
     if (estProdOuStaging) {
       this.logger.log(
-        `Email de partage à envoyer à ${destinataire} — doc de ${data.prenomNomEtudiant}`,
+        `Email de partage à envoyer à ${destinataire} - doc de ${data.prenomNomEtudiant}`,
       );
       return;
     }
 
     this.logger.warn(
-      `[DEV-ONLY] Email simulé — partage document pour ${destinataire}\n` +
+      `[DEV-ONLY] Email simulé - partage document pour ${destinataire}\n` +
       `  Étudiant   : ${data.prenomNomEtudiant}\n` +
-      `  Document   : ${data.typeDocument} — ${data.nomUniversite}\n` +
+      `  Document   : ${data.typeDocument} - ${data.nomUniversite}\n` +
       `  Lien       : ${data.urlPartage}\n` +
       `  Expiration : ${expInfo}`,
     );
@@ -187,7 +187,7 @@ export class MailService {
     }
 
     this.logger.warn(
-      `[DEV-ONLY] Email simule — notification changement d'adresse pour ${ancienEmail} vers ${nouvelEmail}`,
+      `[DEV-ONLY] Email simule - notification changement d'adresse pour ${ancienEmail} vers ${nouvelEmail}`,
     );
   }
 }

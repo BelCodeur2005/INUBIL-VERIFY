@@ -153,7 +153,7 @@ describe('NotificationEmissionService', () => {
   describe('notifierRevocation', () => {
     const makeDocRévoqué = (overrides: any = {}) => ({
       ...makeDoc(),
-      raison_revocation: 'Diplôme émis par erreur — dossier étudiant incorrect',
+      raison_revocation: 'Diplôme émis par erreur - dossier étudiant incorrect',
       ...overrides,
     });
 

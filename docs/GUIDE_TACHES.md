@@ -1,4 +1,4 @@
-# Ordre d'exécution des tâches — INUBIL Verify
+# Ordre d'exécution des tâches - INUBIL Verify
 
 > Chaque numéro correspond au numéro de l'issue GitHub.  
 > Ne pas démarrer une phase avant d'avoir terminé les dépendances indiquées.  
@@ -6,15 +6,15 @@
 
 ---
 
-## Dev 2 — Backend (Flanc Bel / `BelCodeur2005`)
+## Dev 2 - Backend (Flanc Bel / `BelCodeur2005`)
 
-### Phase 0 — Setup & Architecture
+### Phase 0 - Setup & Architecture
 > Première chose à faire. Tout le reste dépend de cette phase.
 > **Docker est requis.** Installer Docker Desktop avant de commencer.
 
 | # | Issue | Dépend de |
 |---|---|---|
-| #50 | `[SETUP]` **Docker — docker-compose.yml + Dockerfiles** | — |
+| #50 | `[SETUP]` **Docker - docker-compose.yml + Dockerfiles** | - |
 | #8 | `[SETUP]` Configurer variables d'environnement (.env) | #50 |
 | #4 | `[SETUP]` Initialiser le projet NestJS backend | #50 |
 | #5 | `[SETUP]` Configurer PostgreSQL + Prisma ORM | #50, #4, #8 |
@@ -24,22 +24,22 @@
 
 ---
 
-### Phase 1 — Authentification
+### Phase 1 - Authentification
 > Démarrer après Phase 0 complète.
 
 | # | Issue | Dépend de |
 |---|---|---|
-| #9 | `[AUTH-BACK]` Module Auth — login / logout / refresh | #5, #8 |
+| #9 | `[AUTH-BACK]` Module Auth - login / logout / refresh | #5, #8 |
 | #10 | `[AUTH-BACK]` Guards JWT et Permissions (RBAC) | #9 |
 | #11 | `[AUTH-BACK]` Gestion sessions et historique connexions | #9, #10 |
 | #69 | `[AUTH-BACK]` Vérification email à la création de compte | #9, #8 |
-| #68 | `[AUTH-BACK]` API profil utilisateur — GET /auth/me + PATCH /profil | #9 |
+| #68 | `[AUTH-BACK]` API profil utilisateur - GET /auth/me + PATCH /profil | #9 |
 
 **Livrable :** `POST /auth/login` retourne un JWT valide. Les routes protégées renvoient 401 sans token, 403 sans permission. Email de vérification envoyé à la création de compte. `GET /auth/me` retourne le profil complet.
 
 ---
 
-### Phase 2 — Universités & Rôles
+### Phase 2 - Universités & Rôles
 > Démarrer après Phase 1 complète. Peut se faire en parallèle avec Front Phase 1.
 
 | # | Issue | Dépend de |
@@ -52,7 +52,7 @@
 
 ---
 
-### Phase 3 — Émission de Diplômes
+### Phase 3 - Émission de Diplômes
 > La phase la plus longue et la plus importante. Suivre cet ordre précis.
 
 | # | Issue | Dépend de |
@@ -62,7 +62,7 @@
 | #19 | `[DOC-BACK]` Service génération PDF diplôme | #20 |
 | #21 | `[DOC-BACK]` Service upload IPFS via Pinata | #20, #8 |
 | #22 | `[DOC-BACK]` Service Blockchain Ethers.js + Polygon | #20, #21, #8 |
-| #24 | `[DOC-BACK]` Workflow émission — CRUD documents complet | #19, #21, #22, #23 |
+| #24 | `[DOC-BACK]` Workflow émission - CRUD documents complet | #19, #21, #22, #23 |
 | #51 | `[DOC-BACK]` Endpoint révocation de diplôme | #22, #24 |
 | #25 | `[DOC-BACK]` Notification email étudiant après émission | #24, #8 |
 
@@ -72,7 +72,7 @@
 
 ---
 
-### Phase 4 — Vérification Publique
+### Phase 4 - Vérification Publique
 > Démarrer après #24. Peut se faire en parallèle avec Phase 5.
 
 | # | Issue | Dépend de |
@@ -85,7 +85,7 @@
 
 ---
 
-### Phase 5 — Espace Étudiant
+### Phase 5 - Espace Étudiant
 > Démarrer après Phase 4.
 
 | # | Issue | Dépend de |
@@ -97,20 +97,20 @@
 
 ---
 
-### Phase 6 — Smart Contract
+### Phase 6 - Smart Contract
 > Peut se faire en parallèle avec Phase 3-5 (développement séparé). Finaliser avant la mise en production.
 
 | # | Issue | Dépend de |
 |---|---|---|
-| #37 | `[BLOCKCHAIN]` Écrire DiplomaRegistry.sol (Solidity 0.8+) | — |
+| #37 | `[BLOCKCHAIN]` Écrire DiplomaRegistry.sol (Solidity 0.8+) | - |
 | #38 | `[BLOCKCHAIN]` Tests Smart Contract avec Hardhat | #37 |
 | #39 | `[BLOCKCHAIN]` Déployer smart contract sur Polygon Amoy Testnet | #38 |
 
 **Fonctions à implémenter dans le contrat :**
-- `registerDiploma(bytes32 hash, string ipfsCid)` — enregistre un diplôme
-- `verifyDiploma(bytes32 hash)` — retourne les infos d'un diplôme
-- `revokeDiploma(bytes32 hash)` — révoque un diplôme
-- `authorizeUniversity(address univ)` — autorise une université
+- `registerDiploma(bytes32 hash, string ipfsCid)` - enregistre un diplôme
+- `verifyDiploma(bytes32 hash)` - retourne les infos d'un diplôme
+- `revokeDiploma(bytes32 hash)` - révoque un diplôme
+- `authorizeUniversity(address univ)` - autorise une université
 
 **Livrable :** contrat déployé sur Polygon Amoy Testnet (chain ID 80002), adresse du contrat à renseigner dans `.env` → `CONTRACT_ADDRESS`.
 
@@ -128,13 +128,13 @@
 
 ---
 
-## Dev 1 — Frontend (Belvie Scindie / `NGANGUE-conception`)
+## Dev 1 - Frontend (Belvie Scindie / `NGANGUE-conception`)
 
 > **Important :** le frontend dépend des APIs backend. Pour chaque phase, commencer les maquettes et les composants Angular pendant que le backend développe ses endpoints. Utiliser des données fictives (`mock`) jusqu'à ce que l'API soit prête.
 
 ---
 
-### Phase 0 — Setup Angular
+### Phase 0 - Setup Angular
 > Démarrer en parallèle avec Phase 0 backend.
 > Le `docker-compose.yml` (issue #50) doit exister avant de commencer.
 
@@ -153,14 +153,14 @@
 | # | Issue | Dépend de |
 |---|---|---|
 | #42 | `[MAQUETTE]` Landing page et page d'accueil INUBIL Verify | #7 |
-| #43 | `[MAQUETTE]` Maquettes backoffice — admin, saisie, validation | #42 |
+| #43 | `[MAQUETTE]` Maquettes backoffice - admin, saisie, validation | #42 |
 | #44 | `[MAQUETTE]` Maquettes espace étudiant et vérification publique | #42 |
 
 **Outil :** Stitch. Couleurs officielles : primaire `#1F3864`, accent `#2E75B6`.
 
 ---
 
-### Phase 1 — Authentification
+### Phase 1 - Authentification
 > Démarrer après #7. Peut se faire avec mocks en attendant `POST /auth/login` backend (#9).
 
 | # | Issue | Dépend de |
@@ -176,7 +176,7 @@
 
 ---
 
-### Phase 2 — Universités & Rôles
+### Phase 2 - Universités & Rôles
 > Démarrer après Phase 1. Dépend des APIs backend #15 et #16.
 
 | # | Issue | Dépend de |
@@ -188,21 +188,21 @@
 
 ---
 
-### Phase 3 — Émission de Diplômes
+### Phase 3 - Émission de Diplômes
 > Démarrer après Phase 2. Dépend du workflow backend #24.
 
 | # | Issue | Dépend de |
 |---|---|---|
 | #26 | `[DOC-FRONT]` Formulaire saisie diplôme (stepper 3 étapes) | #13, API #24 |
 | #27 | `[DOC-FRONT]` Page liste et gestion des diplômes | #26 |
-| #28 | `[DOC-FRONT]` Page détail diplôme — QR code et blockchain info | #27 |
+| #28 | `[DOC-FRONT]` Page détail diplôme - QR code et blockchain info | #27 |
 | #52 | `[DOC-FRONT]` Interface révocation de diplôme | #28, API #51 |
 
 **Livrable :** formulaire stepper 3 étapes, liste filtrée, page détail avec QR code, modal révocation avec confirmation obligatoire.
 
 ---
 
-### Phase 4 — Vérification Publique
+### Phase 4 - Vérification Publique
 > Peut démarrer en parallèle avec Phase 3. Dépend de l'API backend #29.
 
 | # | Issue | Dépend de |
@@ -215,13 +215,13 @@
 
 ---
 
-### Phase 5 — Espace Étudiant
+### Phase 5 - Espace Étudiant
 > Démarrer après Phase 4. Dépend des APIs backend #33 et #34.
 
 | # | Issue | Dépend de |
 |---|---|---|
 | #35 | `[ETU-FRONT]` Dashboard étudiant | #13, API #33 |
-| #36 | `[ETU-FRONT]` Page partage diplôme — lien unique et QR | #35, API #34 |
+| #36 | `[ETU-FRONT]` Page partage diplôme - lien unique et QR | #35, API #34 |
 | #55 | `[ETU-FRONT]` Page visualisation document partagé (destinataire) | API #34 |
 
 **Livrable :** espace étudiant complet, génération lien de partage, page publique `/partage/:token` pour l'employeur/autre université.
@@ -233,7 +233,7 @@
 
 | # | Issue | Dépend de |
 |---|---|---|
-| #56 | `[FRONT]` Landing page — composant Angular | #7 |
+| #56 | `[FRONT]` Landing page - composant Angular | #7 |
 | #65 | `[FRONT]` Pages d'erreur 404 et 403 | #13 |
 | #67 | `[FRONT]` Centre de notifications | #13, API #9 |
 | #58 | `[ADMIN-FRONT]` Pages gestion des utilisateurs | #13, API #40 |
@@ -241,20 +241,20 @@
 | #60 | `[UNIV-FRONT]` Dashboard université | #13, API #15 |
 | #61 | `[UNIV-FRONT]` Page validation des diplômes (directeur pédagogique) | #13, API #24 |
 | #62 | `[UNIV-FRONT]` Page paramètres université | #13, API #15 |
-| #41 | `[ADMIN-FRONT]` Dashboard admin — KPIs et graphiques | #13, API #40 |
+| #41 | `[ADMIN-FRONT]` Dashboard admin - KPIs et graphiques | #13, API #40 |
 | #46 | `[TEST-FRONT]` Tests composants Angular | Phases 1-5 |
 | #48 | `[DEPLOY]` Déploiement frontend sur Vercel | #46 |
 
 ---
 
-## Vue d'ensemble — Planning suggéré
+## Vue d'ensemble - Planning suggéré
 
 ```
-Semaine 1     #50 Docker setup (docker-compose + Dockerfiles) — FLANC SEUL
+Semaine 1     #50 Docker setup (docker-compose + Dockerfiles) - FLANC SEUL
 Semaine 1-2   Phase 0 (NestJS + Angular + .env) + Maquettes
 Semaine 3-4   Phase 1 (auth back + front)
 Semaine 5-6   Phase 2 (universités + rôles) + Smart Contract (en parallèle)
-Semaine 7-9   Phase 3 (émission diplômes — la plus longue)
+Semaine 7-9   Phase 3 (émission diplômes - la plus longue)
 Semaine 10    Phase 4 (vérification publique)
 Semaine 11    Phase 5 (espace étudiant)
 Semaine 12    Admin dashboard + finaliser Smart Contract
@@ -267,14 +267,14 @@ Semaine 14    Déploiement Railway + Vercel + README
 ## Dépendances critiques à respecter
 
 ```
-#50 (Docker — docker-compose.yml + Dockerfiles)  ← POINT DE DÉPART
+#50 (Docker - docker-compose.yml + Dockerfiles)  ← POINT DE DÉPART
   ├── #4 (NestJS init)
   │     └── #5 (Prisma + PostgreSQL via Docker) ──► #9 (Auth) ──► #10 (Guards) ──► #15, #16, #24...
   │     └── #6 (Swagger)
   │
   ├── #7 (Angular init) ──► #12 (Login) ──► #13 (AuthGuard) ──► #17, #26, #35...
   │
-  └── #8 (.env — partagé entre les deux devs)
+  └── #8 (.env - partagé entre les deux devs)
 
 #9 (Auth) ──► #69 (Email vérification) ──► #57, #54
            ──► #68 (API profil) ──► #64 (Pages profil/sessions front)

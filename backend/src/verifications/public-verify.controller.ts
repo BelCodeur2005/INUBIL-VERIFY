@@ -52,7 +52,7 @@ export class PublicVerifyController {
     // Validation stricte : seul le format INUB-YYYY-XXXX est accepté.
     // Protège contre l'injection de header via Content-Disposition.
     if (!/^INUB-\d{4}-\d{4,}$/.test(identifiant)) {
-      throw new BadRequestException('Identifiant invalide — format attendu : INUB-YYYY-XXXX');
+      throw new BadRequestException('Identifiant invalide - format attendu : INUB-YYYY-XXXX');
     }
 
     const { buffer, filename } = await this.service.genererRapport(
@@ -75,7 +75,7 @@ export class PublicVerifyController {
   @Get(':identifiant')
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiOperation({
-    summary: 'Vérifier un document par numéro unique — endpoint QR code (30 req/min par IP)',
+    summary: 'Vérifier un document par numéro unique - endpoint QR code (30 req/min par IP)',
     description: 'Scanné par le QR code imprimé sur le diplôme physique.',
   })
   @ApiParam({ name: 'identifiant', example: 'INUB-2026-0001' })
@@ -94,7 +94,7 @@ export class PublicVerifyController {
 
   @Post('hash')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Vérifier par hash SHA-256 (64 hex chars) — 10 req/min par IP' })
+  @ApiOperation({ summary: 'Vérifier par hash SHA-256 (64 hex chars) - 10 req/min par IP' })
   @ApiOkResponse({ type: VerifyResponseDto })
   @ApiResponse({ status: 400, description: 'Hash invalide (format attendu : 64 hex chars).' })
   @ApiResponse({ status: 404, description: 'Aucun document avec ce hash.' })
@@ -112,7 +112,7 @@ export class PublicVerifyController {
   @Post('upload')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({
-    summary: 'Vérifier en uploadant le PDF — hash calculé côté serveur (5 req/min par IP)',
+    summary: 'Vérifier en uploadant le PDF - hash calculé côté serveur (5 req/min par IP)',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({

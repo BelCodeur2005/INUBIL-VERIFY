@@ -165,7 +165,7 @@ export class EtudiantsService {
     });
 
     return partages.map((p) => {
-      const titrDoc = (p as any).documents?.types_document?.nom ?? '—';
+      const titrDoc = (p as any).documents?.types_document?.nom ?? '-';
       return this.formaterPartage(p, titrDoc);
     });
   }

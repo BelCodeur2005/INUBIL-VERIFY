@@ -1,4 +1,4 @@
-# Guide complet — Cloudflare R2 pour INUBIL Verify
+# Guide complet - Cloudflare R2 pour INUBIL Verify
 
 > Ce guide explique ce qu'est Cloudflare R2, pourquoi on l'a choisi
 > pour la phase de développement, et comment le configurer de A à Z.
@@ -16,7 +16,7 @@
 7. [Récupérer l'Account ID](#7-récupérer-laccount-id)
 8. [Configurer le projet INUBIL Verify](#8-configurer-le-projet-inubil-verify)
 9. [Tester que le stockage fonctionne](#9-tester-que-le-stockage-fonctionne)
-10. [Plan gratuit — limites et coûts](#10-plan-gratuit--limites-et-coûts)
+10. [Plan gratuit - limites et coûts](#10-plan-gratuit--limites-et-coûts)
 11. [Migration vers AWS S3 en production](#11-migration-vers-aws-s3-en-production)
 
 ---
@@ -29,7 +29,7 @@
 Leur réseau protège et accélère environ **20% de tout le trafic internet mondial**.
 Leurs clients incluent Discord, Canva, Shopify, DoorDash, et des milliers d'autres.
 
-Ce n'est pas une startup — c'est une entreprise cotée en bourse, fondée en 2009,
+Ce n'est pas une startup - c'est une entreprise cotée en bourse, fondée en 2009,
 avec des datacenters dans plus de 300 villes dans le monde.
 
 ### R2, c'est quoi exactement ?
@@ -74,7 +74,7 @@ Cloudflare R2 → frais de sortie : 0 $
 3. StorageService envoie le fichier vers Cloudflare R2
    (clé S3 : universites/{id}/diplomes/{année}/{numero}.pdf)
             ↓
-4. R2 stocke le fichier en privé — personne ne peut y accéder directement
+4. R2 stocke le fichier en privé - personne ne peut y accéder directement
             ↓
 5. NestJS enregistre la clé S3 en base de données (colonne pdf_url)
             ↓
@@ -117,7 +117,7 @@ bucket : inubil-diplomes
 ```
 
 Cette structure permet de savoir immédiatement quel fichier appartient
-à quelle université et quelle année — sans lire la base de données.
+à quelle université et quelle année - sans lire la base de données.
 
 ---
 
@@ -141,13 +141,13 @@ Cette structure permet de savoir immédiatement quel fichier appartient
 > Cloudflare R2 pour trois raisons principales :*
 >
 > *Premièrement, son plan gratuit permanent de 10 GB mensuels sans frais de sortie
-> est parfaitement adapté à une phase de test — contrairement à AWS S3 dont
+> est parfaitement adapté à une phase de test - contrairement à AWS S3 dont
 > le plan gratuit expire après 12 mois.*
 >
 > *Deuxièmement, R2 utilise exactement la même API que AWS S3 (protocole S3 standard),
 > ce qui signifie que notre code NestJS est identique dans les deux cas.
 > La migration vers AWS S3 en production ne nécessite que de changer
-> trois variables d'environnement — sans toucher au code.*
+> trois variables d'environnement - sans toucher au code.*
 >
 > *Troisièmement, Cloudflare dispose d'un réseau de 300+ datacenters mondiaux
 > incluant l'Afrique, ce qui garantit de bonnes performances pour nos utilisateurs
@@ -157,7 +157,7 @@ Cette structure permet de savoir immédiatement quel fichier appartient
 
 ## 4. Créer un compte Cloudflare
 
-### Étape 1 — S'inscrire
+### Étape 1 - S'inscrire
 
 1. Va sur **https://cloudflare.com**
 2. Clique sur **"Sign Up"** (en haut à droite)
@@ -166,11 +166,11 @@ Cette structure permet de savoir immédiatement quel fichier appartient
 
 > Pas de carte bancaire requise pour créer le compte.
 
-### Étape 2 — Vérifier ton email
+### Étape 2 - Vérifier ton email
 
 Cloudflare envoie un email de confirmation. Clique le lien de vérification.
 
-### Étape 3 — Activer R2
+### Étape 3 - Activer R2
 
 Quand tu te connectes pour la première fois au dashboard :
 
@@ -231,11 +231,11 @@ avec R2. C'est comme un mot de passe pour les programmes.
 
    **Specify bucket :**
    Sélectionne **"inubil-diplomes"**
-   (limite ce token à ton bucket uniquement — bonne pratique de sécurité)
+   (limite ce token à ton bucket uniquement - bonne pratique de sécurité)
 
 5. Clique **"Create API Token"**
 
-### ⚠️ IMPORTANT — Copie ces valeurs immédiatement
+### ⚠️ IMPORTANT - Copie ces valeurs immédiatement
 
 Cloudflare affiche les clés **une seule fois**. Après avoir fermé cette page,
 tu ne pourras plus voir le Secret Access Key.
@@ -322,7 +322,7 @@ docker compose logs backend | grep -i storage
 
 Tu dois voir :
 ```
-[StorageService] Stockage Cloudflare R2 configuré — bucket : inubil-diplomes
+[StorageService] Stockage Cloudflare R2 configuré - bucket : inubil-diplomes
 ```
 
 Si tu vois :
@@ -335,7 +335,7 @@ Si tu vois :
 
 ## 9. Tester que le stockage fonctionne
 
-### Test 1 — Valider un diplôme et vérifier l'upload
+### Test 1 - Valider un diplôme et vérifier l'upload
 
 1. Connecte-toi sur Swagger : `http://localhost:3000/api`
 2. Authentifie-toi avec `admin@inubil.com / Admin123!`
@@ -349,12 +349,12 @@ Si tu vois :
    }
    ```
 
-### Test 2 — Vérifier le fichier dans R2
+### Test 2 - Vérifier le fichier dans R2
 
 1. Va dans le dashboard Cloudflare → **R2** → **inubil-diplomes**
 2. Tu vois le fichier dans la structure `universites/.../diplomes/2026/`
 
-### Test 3 — Récupérer l'URL présignée
+### Test 3 - Récupérer l'URL présignée
 
 ```bash
 GET /documents/{id}/pdf
@@ -372,7 +372,7 @@ Cette URL fonctionne pendant 15 minutes puis expire automatiquement.
 
 ---
 
-## 10. Plan gratuit — limites et coûts
+## 10. Plan gratuit - limites et coûts
 
 ### Ce que tu as gratuitement chaque mois
 
@@ -432,7 +432,7 @@ C'est tout. Le reste du code est identique.
 
 ---
 
-## Résumé — Ordre à suivre
+## Résumé - Ordre à suivre
 
 ```
 1. Créer un compte Cloudflare       → cloudflare.com
