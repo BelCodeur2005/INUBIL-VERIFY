@@ -44,11 +44,14 @@ export const envValidationSchema = Joi.object({
   MAIL_PASS: Joi.string().optional().allow(''),
   MAIL_FROM: Joi.string().optional().allow(''),
 
-  // ─── AWS S3 — stockage privé des PDF de diplômes ──────────────
-  AWS_ACCESS_KEY_ID: Joi.string().optional().allow(''),
-  AWS_SECRET_ACCESS_KEY: Joi.string().optional().allow(''),
-  AWS_REGION: Joi.string().optional().default('eu-west-1'),
-  AWS_S3_BUCKET: Joi.string().optional().allow(''),
+  // ─── Stockage fichiers — AWS S3 ou Cloudflare R2 (compatible S3) ─
+  // Si CLOUDFLARE_ACCOUNT_ID est renseigné → Cloudflare R2
+  // Sinon → AWS S3 (region eu-west-1 par défaut)
+  AWS_ACCESS_KEY_ID:      Joi.string().optional().allow(''),
+  AWS_SECRET_ACCESS_KEY:  Joi.string().optional().allow(''),
+  AWS_REGION:             Joi.string().optional().default('auto'),
+  AWS_S3_BUCKET:          Joi.string().optional().allow(''),
+  CLOUDFLARE_ACCOUNT_ID:  Joi.string().optional().allow(''),
 
   // ─── IPFS Pinata — conservé pour compatibilité (optionnel) ────
   PINATA_API_KEY: Joi.string().optional().allow(''),
