@@ -1,7 +1,7 @@
 # Guide complet — Blockchain, Polygon et INUBIL Verify
 
 > Ce guide s'adresse à quelqu'un qui ne connaît rien à la blockchain.
-> Il explique tout depuis le début : ce qu'est une blockchain, ce qu'est MATIC,
+> Il explique tout depuis le début : ce qu'est une blockchain, ce qu'est POL,
 > pourquoi on a choisi Polygon, et comment tester le projet de A à Z.
 
 ---
@@ -14,7 +14,7 @@
 4. [Les deux réseaux : Amoy (test) et Mainnet (production)](#4-les-deux-réseaux--amoy-test-et-mainnet-production)
 5. [Créer un portefeuille avec MetaMask](#5-créer-un-portefeuille-avec-metamask)
 6. [Exporter ta clé privée](#6-exporter-ta-clé-privée)
-7. [Obtenir des MATIC de test (faucet)](#7-obtenir-des-matic-de-test-faucet)
+7. [Obtenir des POL de test (faucet)](#7-obtenir-des-pol-de-test-faucet)
 8. [Configurer les fichiers .env du projet](#8-configurer-les-fichiers-env-du-projet)
 9. [Déployer le contrat sur Polygon Amoy](#9-déployer-le-contrat-sur-polygon-amoy)
 10. [Tester l'intégration dans le backend NestJS](#10-tester-lintégration-dans-le-backend-nestjs)
@@ -72,7 +72,7 @@ sans avoir besoin de faire confiance à INUBIL.
 
 ### Ce n'est pas juste de l'argent virtuel
 
-Une cryptomonnaie (MATIC, ETH, BTC...) a plusieurs rôles :
+Une cryptomonnaie (POL, ETH, BTC...) a plusieurs rôles :
 
 **Rôle 1 — Payer les frais de transaction (le "gas")**
 
@@ -81,23 +81,23 @@ exécutent ton code et l'enregistrent. En échange de ce travail, tu leur paies 
 en cryptomonnaie. On appelle ça le **gas**.
 
 ```
-Enregistrer un diplôme sur Polygon = ~0.001 MATIC = ~0.001 $ (une fraction de centime)
-Déployer le contrat une fois      = ~0.01  MATIC = ~0.01 $  (quelques centimes)
+Enregistrer un diplôme sur Polygon = ~0.001 POL = ~0.001 $ (une fraction de centime)
+Déployer le contrat une fois      = ~0.01  POL = ~0.01 $  (quelques centimes)
 ```
 
 **Rôle 2 — Sécuriser le réseau**
 
-Les ordinateurs qui maintiennent la blockchain sont récompensés en MATIC.
+Les ordinateurs qui maintiennent la blockchain sont récompensés en POL.
 C'est ça qui les motive à rester honnêtes.
 
 ### Dans INUBIL Verify
 
-Tu as besoin de MATIC **uniquement** pour :
+Tu as besoin de POL **uniquement** pour :
 - Déployer le contrat (une seule fois)
 - Enregistrer un diplôme on-chain (une fois par diplôme validé)
 - Révoquer un diplôme on-chain
 
-La **vérification** d'un diplôme (`verifierDiplome`) est **gratuite** — pas de MATIC nécessaire.
+La **vérification** d'un diplôme (`verifierDiplome`) est **gratuite** — pas de POL nécessaire.
 
 ---
 
@@ -152,8 +152,8 @@ Nom           : Polygon Amoy
 Chain ID      : 80002
 RPC URL       : https://rpc-amoy.polygon.technology
 Explorateur   : https://amoy.polygonscan.com
-Monnaie       : MATIC de test (ne valent RIEN en vrai argent)
-Coût          : GRATUIT — les MATIC s'obtiennent via un faucet
+Monnaie       : POL de test (ne valent RIEN en vrai argent)
+Coût          : GRATUIT — les POL s'obtiennent via un faucet
 ```
 
 **C'est ici qu'on développe et qu'on teste.** Tout ce que tu fais ici
@@ -167,7 +167,7 @@ Nom           : Polygon Mainnet
 Chain ID      : 137
 RPC URL       : https://polygon-rpc.com
 Explorateur   : https://polygonscan.com
-Monnaie       : MATIC réel (a une valeur en dollars)
+Monnaie       : POL réel (a une valeur en dollars)
 Coût          : Quelques centimes par transaction en vrai argent
 ```
 
@@ -230,7 +230,7 @@ C'est l'équivalent d'un numéro de compte bancaire (IBAN).
 Network name        : Polygon Amoy Testnet
 New RPC URL         : https://rpc-amoy.polygon.technology
 Chain ID            : 80002
-Currency symbol     : MATIC
+Currency symbol     : POL
 Block explorer URL  : https://amoy.polygonscan.com
 ```
 
@@ -277,9 +277,12 @@ Exemple de clé privée :
 
 ---
 
-## 7. Obtenir des MATIC de test (faucet)
+## 7. Obtenir des POL de test (faucet)
 
-Un **faucet** (robinet) est un service qui distribue gratuitement des MATIC de test.
+Un **faucet** (robinet) est un service qui distribue gratuitement des POL de test.
+
+> **Note :** Le token s'appelait MATIC jusqu'en septembre 2024. Polygon l'a rebaptisé **POL**.
+> Tu verras parfois encore "MATIC" sur certains vieux faucets — c'est le même token.
 
 ### Option 1 — Faucet officiel Polygon (recommandé)
 
@@ -287,25 +290,25 @@ Un **faucet** (robinet) est un service qui distribue gratuitement des MATIC de t
 2. Sélectionne **"Polygon Amoy"**
 3. Colle ton adresse MetaMask (`0xf39Fd6...`)
 4. Clique **"Submit"**
-5. Tu reçois du MATIC de test en 1 à 2 minutes
+5. Tu reçois du POL de test en 1 à 2 minutes
 
 ### Option 2 — Faucet Alchemy (si Polygon est en maintenance)
 
 1. Va sur **https://www.alchemy.com/faucets/polygon-amoy**
 2. Connecte-toi avec un compte Google (obligatoire)
 3. Entre ton adresse MetaMask
-4. Clique **"Send Me MATIC"**
+4. Clique **"Send Me POL"**
 
 ### Option 3 — Faucet Chainlink
 
 1. Va sur **https://faucets.chain.link/polygon-amoy**
 2. Connecte MetaMask directement
-3. Clique **"Request 0.5 LINK and 0.1 MATIC"**
+3. Clique **"Request"** pour recevoir du POL de test
 
-### Vérifier que tu as reçu les MATIC
+### Vérifier que tu as reçu les POL
 
 1. Ouvre MetaMask sur le réseau **Polygon Amoy Testnet**
-2. Tu devrais voir un solde > 0 MATIC
+2. Tu devrais voir un solde > 0 POL
 
 Ou va sur **https://amoy.polygonscan.com** et colle ton adresse dans la barre de recherche.
 
@@ -362,7 +365,7 @@ POLYGON_NETWORK=polygon_amoy
 ### Pré-requis
 
 - ✅ MetaMask installé avec un compte dédié INUBIL
-- ✅ MATIC de test sur ce compte (au moins 0.1 MATIC)
+- ✅ POL de test sur ce compte (au moins 0.1 POL)
 - ✅ `blockchain/.env` rempli avec ta clé privée
 - ✅ Le contrat compilé (`npm run compile` dans `blockchain/`)
 
@@ -381,7 +384,7 @@ npm run deploy:amoy
 ═══════════════════════════════════════════════════
   Réseau        : amoy
   Déployeur     : 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-  Solde MATIC   : 0.5 MATIC
+  Solde POL     : 0.5 POL
 ───────────────────────────────────────────────────
   Déploiement en cours...
 ───────────────────────────────────────────────────
@@ -499,7 +502,7 @@ Tu vois :
 - La date et l'heure exacte
 - Le compte qui a envoyé la transaction (ton backend)
 - Les données enregistrées (le numéro du diplôme, le hash PDF)
-- Les frais payés en MATIC
+- Les frais payés en POL
 
 ### Voir les événements émis
 
@@ -512,11 +515,11 @@ Tu vois tous les `DiplomeEnregistre` et `DiplomeRevoque` dans l'ordre chronologi
 
 > ⚠️ **Ne fais cette étape qu'une fois que tout est testé sur Amoy.**
 
-### Étape 1 — Acheter des vrais MATIC
+### Étape 1 — Acheter des vrais POL
 
-Tu as besoin d'environ **5 à 10 MATIC** pour commencer (couvre le déploiement + plusieurs centaines d'enregistrements).
+Tu as besoin d'environ **5 à 10 POL** pour commencer (couvre le déploiement + plusieurs centaines d'enregistrements).
 
-Options pour acheter des MATIC au Cameroun :
+Options pour acheter des POL au Cameroun :
 - **Binance** (binance.com) — le plus accessible
 - **Coinbase** (coinbase.com)
 - Envoie les MATIC vers l'adresse de ton compte MetaMask INUBIL Backend
@@ -557,7 +560,7 @@ Va sur **https://polygonscan.com** (sans "amoy.") et cherche ton contrat.
 2. Créer un compte dédié "INUBIL Backend"
 3. Exporter la clé privée de ce compte
 4. Ajouter le réseau Polygon Amoy dans MetaMask
-5. Obtenir des MATIC de test             → faucet.polygon.technology
+5. Obtenir des POL de test               → faucet.polygon.technology
 6. Remplir blockchain/.env
 7. cd blockchain && npm run compile      → compiler le contrat
 8. cd blockchain && npm run test         → 22 tests doivent passer
