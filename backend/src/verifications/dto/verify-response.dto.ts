@@ -1,5 +1,22 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class BlockchainInfoDto {
+  @ApiProperty({ example: true, description: 'Diplôme trouvé sur la blockchain' })
+  enregistre: boolean;
+
+  @ApiProperty({ example: false, description: 'Diplôme révoqué on-chain' })
+  revoque: boolean;
+
+  @ApiPropertyOptional({ example: '0xabc123...', description: 'Hash de la transaction d\'enregistrement' })
+  transaction_hash: string | null;
+
+  @ApiPropertyOptional({ example: '2026-06-14T10:00:00.000Z', description: 'Date d\'enregistrement sur la blockchain' })
+  date_enregistrement: Date | null;
+
+  @ApiProperty({ example: 'polygon_amoy', enum: ['polygon_amoy', 'polygon_mainnet'] })
+  reseau: string;
+}
+
 export class MatierePublicDto {
   @ApiProperty({ example: 'Algorithmique et Structures de Données' })
   nom_matiere: string;
@@ -79,4 +96,7 @@ export class VerifyResponseDto {
 
   @ApiProperty({ example: '2026-06-12T10:30:00.000Z' })
   verifie_le: Date;
+
+  @ApiPropertyOptional({ type: BlockchainInfoDto, description: 'Données on-chain Polygon. Null si blockchain non configurée.' })
+  blockchain: BlockchainInfoDto | null;
 }

@@ -1,0 +1,23 @@
+{
+  "name": "inubil-verify-blockchain",
+  "version": "1.0.0",
+  "description": "Smart contracts INUBIL Verify — certification de diplômes sur Polygon",
+  "license": "MIT",
+  "scripts": {
+    "compile":        "hardhat compile",
+    "test":           "hardhat test",
+    "test:coverage":  "hardhat coverage",
+    "deploy:amoy":    "hardhat run scripts/deploy.ts --network amoy",
+    "deploy:polygon": "hardhat run scripts/deploy.ts --network polygon",
+    "node":           "hardhat node"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "hh2",
+    "@types/node":                      "^20.0.0",
+    "dotenv":                           "^16.0.0",
+    "ethers":                           "^6.0.0",
+    "hardhat":                          "^2.22.0",
+    "ts-node":                          "^10.9.0",
+    "typescript":                       "^5.0.0"
+  }
+}
