@@ -39,6 +39,7 @@ import { DocumentsService } from './documents.service';
 import { CreerDocumentDto } from './dto/creer-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { RevoquerDocumentDto } from './dto/revoquer-document.dto';
+import { RejeterDocumentDto } from './dto/rejeter-document.dto';
 import { DocumentQueryDto } from './dto/document-query.dto';
 
 const PDF_MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 Mo
@@ -186,6 +187,28 @@ export class DocumentsController {
     @Req() req: Request,
   ) {
     return this.service.valider(id, acteurId, req.ip, req.headers['user-agent']);
+  }
+
+  @Post(':id/rejeter')
+  @RequirePermissions(Permission.DOC_VALIDATE)
+  @ApiOperation({
+    summary: 'Rejeter un document - directeur pédagogique (permission doc:validate)',
+    description:
+      'Refuse le document avec un motif obligatoire. Statut → rejete. ' +
+      'Le PDF reste sur R2 — l\'agent peut corriger les métadonnées ou re-uploader un nouveau PDF ' +
+      '(ce qui remet automatiquement le document en brouillon) avant une nouvelle validation.',
+  })
+  @ApiOkResponse({ description: 'Document rejeté.' })
+  @ApiResponse({ status: 400, description: 'Le document ne peut pas être rejeté dans son statut actuel.' })
+  @ApiResponse({ status: 403, description: 'Permission doc:validate requise.' })
+  @ApiResponse({ status: 404, description: 'Document introuvable.' })
+  rejeter(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RejeterDocumentDto,
+    @CurrentUser('id') acteurId: string,
+    @Req() req: Request,
+  ) {
+    return this.service.rejeter(id, dto, acteurId, req.ip);
   }
 
   @Post(':id/revoquer')
