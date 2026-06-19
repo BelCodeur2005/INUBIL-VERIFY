@@ -78,6 +78,9 @@ model documents {
   revoque_par                                      String?                   @db.Uuid
   raison_revocation                                String?
   revoque_le                                       DateTime?                 @db.Timestamptz(6)
+  motif_rejet                                      String?
+  rejete_par                                       String?                   @db.Uuid
+  rejete_le                                        DateTime?                 @db.Timestamptz(6)
   metadata                                         Json                      @default("{}")
   deleted_at                                       DateTime?                 @db.Timestamptz(6)
   created_at                                       DateTime                  @default(now()) @db.Timestamptz(6)
@@ -85,6 +88,7 @@ model documents {
   etudiants                                        etudiants                 @relation(fields: [etudiant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   mentions_document                                mentions_document?        @relation(fields: [mention_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   utilisateurs_documents_revoque_parToutilisateurs utilisateurs?             @relation("documents_revoque_parToutilisateurs", fields: [revoque_par], references: [id], onUpdate: NoAction)
+  utilisateurs_documents_rejete_parToutilisateurs  utilisateurs?             @relation("documents_rejete_parToutilisateurs", fields: [rejete_par], references: [id], onUpdate: NoAction)
   utilisateurs_documents_saisi_parToutilisateurs   utilisateurs?             @relation("documents_saisi_parToutilisateurs", fields: [saisi_par], references: [id], onUpdate: NoAction)
   types_document                                   types_document            @relation(fields: [type_document_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   universites                                      universites               @relation(fields: [universite_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -502,6 +506,7 @@ model utilisateurs {
   cles_api                                            cles_api[]
   configurations                                      configurations[]
   documents_documents_revoque_parToutilisateurs       documents[]               @relation("documents_revoque_parToutilisateurs")
+  documents_documents_rejete_parToutilisateurs        documents[]               @relation("documents_rejete_parToutilisateurs")
   documents_documents_saisi_parToutilisateurs         documents[]               @relation("documents_saisi_parToutilisateurs")
   documents_documents_valide_parToutilisateurs        documents[]               @relation("documents_valide_parToutilisateurs")
   emails_log                                          emails_log[]
@@ -637,6 +642,7 @@ enum statut_document {
   en_validation
   actif
   revoque
+  rejete
   expire
 }
 

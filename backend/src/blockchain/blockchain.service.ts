@@ -67,7 +67,7 @@ export class BlockchainService {
     numeroUnique: string,
     hashPdfHex:   string,
     universiteId: string,
-  ): Promise<string | null> {
+  ): Promise<{ txHash: string; blocNumero: bigint } | null> {
     if (!this.contrat) return null;
 
     try {
@@ -77,9 +77,10 @@ export class BlockchainService {
         hashBytes32,
         universiteId,
       );
-      await tx.wait(); // attend la confirmation (1 bloc)
-      this.logger.log(`Diplôme enregistré on-chain : ${numeroUnique} (tx: ${tx.hash})`);
-      return tx.hash;
+      const receipt = await tx.wait(); // attend la confirmation (1 bloc)
+      const blocNumero = BigInt(receipt?.blockNumber ?? 0);
+      this.logger.log(`Diplôme enregistré on-chain : ${numeroUnique} (tx: ${tx.hash}, bloc: ${blocNumero})`);
+      return { txHash: tx.hash, blocNumero };
     } catch (err) {
       this.logger.error(`Erreur enregistrerDiplome (${numeroUnique}) :`, err);
       return null;

@@ -18,6 +18,7 @@ import { BlockchainService } from '../blockchain/blockchain.service';
 import { CreerDocumentDto } from './dto/creer-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { RevoquerDocumentDto } from './dto/revoquer-document.dto';
+import { RejeterDocumentDto } from './dto/rejeter-document.dto';
 import { DocumentQueryDto } from './dto/document-query.dto';
 
 @Injectable()
@@ -201,8 +202,8 @@ export class DocumentsService {
     const doc = await this.trouverOuEchouer(id);
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
 
-    if (doc.statut !== 'brouillon') {
-      throw new BadRequestException('Seul un brouillon peut être modifié');
+    if (!['brouillon', 'rejete'].includes(doc.statut)) {
+      throw new BadRequestException('Seul un brouillon ou un document rejeté peut être modifié');
     }
 
     const { matieres, ...champs } = dto;
@@ -265,7 +266,7 @@ export class DocumentsService {
     const doc = await this.trouverOuEchouer(id);
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
 
-    if (!['brouillon', 'en_validation'].includes(doc.statut)) {
+    if (!['brouillon', 'en_validation', 'rejete'].includes(doc.statut)) {
       throw new BadRequestException(
         `Impossible d'uploader un PDF pour un document en statut "${doc.statut}"`,
       );
@@ -282,16 +283,25 @@ export class DocumentsService {
       );
     }
 
-    const annee  = new Date(doc.date_emission).getFullYear();
-    const pdfKey = `universites/${doc.universite_id}/diplomes/${annee}/${doc.numero_unique}.pdf`;
+    const dateEmission = new Date(doc.date_emission);
+    const annee  = dateEmission.getFullYear();
+    const mois   = String(dateEmission.getMonth() + 1).padStart(2, '0');
+    const pdfKey = `universites/${doc.universite_id}/diplomes/${annee}/${mois}/${doc.numero_unique}.pdf`;
     const s3Pdf  = await this.storage
       .uploadFile(fichierBuffer, pdfKey, 'application/pdf')
-      .catch((err: Error) => {
-        this.logger.error(`Upload R2 PDF échoué pour doc ${id} : ${err.message}`);
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        const code = (err as Record<string, unknown>)?.Code ?? (err as Record<string, unknown>)?.name ?? '';
+        this.logger.error(`Upload R2 PDF échoué pour doc ${id} : [${code}] ${msg}`);
         return null;
       });
 
     const tailleKo = Math.ceil(fichierTailleOctets / 1024);
+
+    // Si le document était rejeté, le re-upload le remet en brouillon et efface le rejet
+    const resetRejet = doc.statut === 'rejete'
+      ? { statut: 'brouillon' as const, motif_rejet: null, rejete_par: null, rejete_le: null }
+      : {};
 
     const updated = await this.prisma.documents.update({
       where: { id },
@@ -299,6 +309,7 @@ export class DocumentsService {
         hash_sha256: hashSha256,
         pdf_taille_ko: tailleKo,
         pdf_url: s3Pdf?.key ?? null,
+        ...resetRejet,
       },
       include: { matieres_document: { orderBy: { ordre: 'asc' } } },
     });
@@ -322,8 +333,11 @@ export class DocumentsService {
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
 
     if (!['brouillon', 'en_validation'].includes(doc.statut)) {
+      const hint = doc.statut === 'rejete'
+        ? ' Un document rejeté doit d\'abord être corrigé (PDF re-uploadé via POST /documents/{id}/pdf) avant d\'être validé.'
+        : '';
       throw new BadRequestException(
-        `Impossible de valider un document en statut "${doc.statut}"`,
+        `Impossible de valider un document en statut "${doc.statut}".${hint}`,
       );
     }
 
@@ -336,9 +350,11 @@ export class DocumentsService {
     const publicVerifyUrl = this.config.get<string>('PUBLIC_VERIFY_URL', 'https://verify.inubil.com');
     const urlVerification = `${publicVerifyUrl}/d/${doc.numero_unique}`;
 
-    const annee  = new Date(doc.date_emission).getFullYear();
+    const dateVal  = new Date(doc.date_emission);
+    const annee   = dateVal.getFullYear();
+    const mois    = String(dateVal.getMonth() + 1).padStart(2, '0');
     const qrBuffer = await this.qr.generateQr(urlVerification);
-    const qrKey = `universites/${doc.universite_id}/qrcodes/${annee}/${doc.numero_unique}-qr.png`;
+    const qrKey = `universites/${doc.universite_id}/qrcodes/${annee}/${mois}/${doc.numero_unique}-qr.png`;
     let qrCodeUrl: string | null = null;
     const s3Qr = await this.storage
       .uploadFile(qrBuffer, qrKey, 'image/png')
@@ -429,6 +445,42 @@ export class DocumentsService {
     return updated;
   }
 
+  /** Rejet par le directeur pédagogique - le PDF reste sur R2, le statut passe à 'rejete'. */
+  async rejeter(id: string, dto: RejeterDocumentDto, acteurId: string, ip?: string) {
+    const acteurUnivId = await this.getActeurUniversiteId(acteurId);
+    const doc = await this.trouverOuEchouer(id);
+    this.assertMemeUniversite(doc.universite_id, acteurUnivId);
+
+    if (!['brouillon', 'en_validation'].includes(doc.statut)) {
+      throw new BadRequestException(
+        `Impossible de rejeter un document en statut "${doc.statut}" - seul un brouillon ou document en validation peut être rejeté`,
+      );
+    }
+
+    const updated = await this.prisma.documents.update({
+      where: { id },
+      data: {
+        statut: 'rejete',
+        motif_rejet: dto.motif,
+        rejete_par: acteurId,
+        rejete_le: new Date(),
+      },
+      include: { matieres_document: { orderBy: { ordre: 'asc' } } },
+    });
+
+    await this.audit.log({
+      utilisateurId: acteurId,
+      action: 'DOCUMENT_REJETER',
+      module: 'documents',
+      enregistrementId: id,
+      tableConcernee: 'documents',
+      ip,
+    });
+
+    return updated;
+  }
+
+
   async getPdfUrl(
     id: string,
     acteurId: string,
@@ -460,18 +512,24 @@ export class DocumentsService {
     universiteId: string,
     numeroUnique: string,
   ): Promise<void> {
-    const txHash = await this.blockchain.enregistrerDiplome(numeroUnique, hashSha256, universiteId);
-    if (!txHash) return; // blockchain non configurée ou erreur déjà loggée
+    const result = await this.blockchain.enregistrerDiplome(numeroUnique, hashSha256, universiteId);
+    if (!result) return; // blockchain non configurée ou erreur déjà loggée
 
+    const { txHash, blocNumero } = result;
     const contractAddress = this.config.get<string>('CONTRACT_ADDRESS') ?? '';
     const reseau = (this.config.get<string>('POLYGON_NETWORK') ?? 'polygon_amoy') as 'polygon_amoy' | 'polygon_mainnet';
 
     await this.prisma.documents.update({
       where: { id: docId },
-      data: { transaction_hash: txHash, adresse_contrat: contractAddress, reseau },
+      data: {
+        transaction_hash: txHash,
+        adresse_contrat: contractAddress,
+        reseau,
+        bloc_numero: blocNumero,
+      },
     });
 
-    this.logger.log(`Blockchain ✔ enregistrement doc ${docId} - tx: ${txHash}`);
+    this.logger.log(`Blockchain ✔ enregistrement doc ${docId} - tx: ${txHash}, bloc: ${blocNumero}`);
   }
 
   private async revoquerSurBlockchain(docId: string, numeroUnique: string): Promise<void> {
