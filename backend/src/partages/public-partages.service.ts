@@ -13,7 +13,7 @@ export class PublicPartagesService {
   /**
    * Accès public à un document partagé via son token.
    * Vérifie le statut et l'expiration, incrémente nb_consultations.
-   * Aucune authentification requise — le token 64-chars hex est la preuve d'accès.
+   * Aucune authentification requise - le token 64-chars hex est la preuve d'accès.
    */
   async accederParToken(token: string): Promise<PartagePublicResponseDto> {
     const partage = await this.prisma.partages_document.findFirst({

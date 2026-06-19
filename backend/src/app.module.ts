@@ -17,12 +17,16 @@ import { DocumentsModule } from './documents/documents.module';
 import { EtudiantsModule } from './etudiants/etudiants.module';
 import { AdminModule } from './admin/admin.module';
 import { PartagesModule } from './partages/partages.module';
+import { TypesDocumentModule } from './types-document/types-document.module';
+import { MentionsModule } from './mentions/mentions.module';
+import { EtudiantsAdminModule } from './etudiants-admin/etudiants-admin.module';
+import { BlockchainModule } from './blockchain/blockchain.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env'],
+      envFilePath: ['.env', '../.env'],
       validationSchema: envValidationSchema,
       validationOptions: { abortEarly: false, allowUnknown: true },
     }),
@@ -42,6 +46,10 @@ import { PartagesModule } from './partages/partages.module';
     EtudiantsModule,
     AdminModule,
     PartagesModule,
+    TypesDocumentModule,
+    MentionsModule,
+    EtudiantsAdminModule,
+    BlockchainModule,
   ],
   controllers: [AppController],
   providers: [

@@ -239,7 +239,7 @@ describe('EtudiantsService', () => {
         email_destinataire: 'recruteur@entreprise.cm',
       });
 
-      // fire & forget — on vérifie juste que sendPartageCreé a été appelé
+      // fire & forget - on vérifie juste que sendPartageCreé a été appelé
       expect(mail.sendPartageCreé).toHaveBeenCalledWith(
         'recruteur@entreprise.cm',
         expect.objectContaining({ prenomNomEtudiant: 'Bertrand KAMGA' }),

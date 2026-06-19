@@ -96,7 +96,7 @@ export class UtilisateursService {
     });
     if (!u) throw new NotFoundException('Utilisateur introuvable');
 
-    // Le statut en_attente_email est geré par le flux email — pas modifiable manuellement.
+    // Le statut en_attente_email est geré par le flux email - pas modifiable manuellement.
     if (u.statut === 'en_attente_email') {
       throw new BadRequestException(
         'Le statut "en_attente_email" ne peut pas etre modifie manuellement',

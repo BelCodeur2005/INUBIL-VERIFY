@@ -37,20 +37,30 @@ export const envValidationSchema = Joi.object({
   SESSION_IDLE_MINUTES: Joi.number().min(1).default(30),
   ENCRYPTION_MASTER_KEY: Joi.string().length(64).required(), // 32 octets en hex
 
-  // ─── Email — optionnel jusqu'a #25 ─────────────────────────────
+  // ─── Email - optionnel jusqu'a #25 ─────────────────────────────
   MAIL_HOST: Joi.string().optional(),
   MAIL_PORT: Joi.number().optional(),
   MAIL_USER: Joi.string().optional().allow(''),
   MAIL_PASS: Joi.string().optional().allow(''),
   MAIL_FROM: Joi.string().optional().allow(''),
 
-  // ─── IPFS Pinata — optionnel jusqu'a #21 ───────────────────────
+  // ─── Stockage fichiers - AWS S3 ou Cloudflare R2 (compatible S3) ─
+  // Si CLOUDFLARE_ACCOUNT_ID est renseigné → Cloudflare R2
+  // Sinon → AWS S3 (region eu-west-1 par défaut)
+  AWS_ACCESS_KEY_ID:      Joi.string().optional().allow(''),
+  AWS_SECRET_ACCESS_KEY:  Joi.string().optional().allow(''),
+  AWS_REGION:             Joi.string().optional().default('auto'),
+  AWS_S3_BUCKET:          Joi.string().optional().allow(''),
+  CLOUDFLARE_ACCOUNT_ID:  Joi.string().optional().allow(''),
+
+  // ─── IPFS Pinata - conservé pour compatibilité (optionnel) ────
   PINATA_API_KEY: Joi.string().optional().allow(''),
   PINATA_SECRET_KEY: Joi.string().optional().allow(''),
   PINATA_GATEWAY: Joi.string().uri().optional(),
 
-  // ─── Blockchain Polygon — optionnel jusqu'a #22/#39 ────────────
-  POLYGON_RPC_URL: Joi.string().uri().optional(),
-  PRIVATE_KEY: Joi.string().optional().allow(''),
-  CONTRACT_ADDRESS: Joi.string().optional().allow(''),
+  // ─── Blockchain Polygon - optionnel jusqu'a #22/#39 ────────────
+  POLYGON_RPC_URL:      Joi.string().uri().optional(),
+  DEPLOYER_PRIVATE_KEY: Joi.string().optional().allow(''),
+  CONTRACT_ADDRESS:     Joi.string().optional().allow(''),
+  POLYGON_NETWORK:      Joi.string().valid('polygon_amoy', 'polygon_mainnet').default('polygon_amoy'),
 });

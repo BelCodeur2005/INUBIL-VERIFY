@@ -45,7 +45,7 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // Arret propre (fermeture des connexions — utile des #5 Prisma)
+  // Arret propre (fermeture des connexions - utile des #5 Prisma)
   app.enableShutdownHooks();
 
   // Documentation OpenAPI / Swagger, exposee sur /api/docs.

@@ -1,5 +1,5 @@
 /**
- * Permissions RBAC granulaires — notation namespace:action.
+ * Permissions RBAC granulaires - notation namespace:action.
  *
  * Convention : <module>:<action>
  *   univ    → universités

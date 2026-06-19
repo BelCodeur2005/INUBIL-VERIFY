@@ -8,10 +8,11 @@ import { DocumentsController } from './documents.controller';
 import { NotificationEmissionService } from './notification-emission.service';
 import { AuditModule } from '../audit/audit.module';
 import { MailModule } from '../mail/mail.module';
-import { IpfsModule } from '../ipfs/ipfs.module';
+import { StorageModule } from '../storage/storage.module';
+import { BlockchainModule } from '../blockchain/blockchain.module';
 
 @Module({
-  imports: [AuditModule, MailModule, IpfsModule],
+  imports: [AuditModule, MailModule, StorageModule, BlockchainModule],
   controllers: [DocumentsController],
   providers: [DocumentsService, NotificationEmissionService, HashService, PdfService, QrCodeService, RapportVerificationPdfService],
   exports: [DocumentsService, NotificationEmissionService, HashService, PdfService, QrCodeService, RapportVerificationPdfService],

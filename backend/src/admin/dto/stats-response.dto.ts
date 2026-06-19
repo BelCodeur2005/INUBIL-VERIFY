@@ -1,21 +1,56 @@
+import { ApiProperty } from '@nestjs/swagger';
+
+class StatsUniversitesDto {
+  @ApiProperty({ example: 3 })
+  actives: number;
+
+  @ApiProperty({ example: 4 })
+  total: number;
+}
+
+class StatsDocumentsDto {
+  @ApiProperty({ example: 120 })
+  total: number;
+
+  @ApiProperty({ example: 95 })
+  actifs: number;
+
+  @ApiProperty({ example: 8 })
+  en_validation: number;
+
+  @ApiProperty({ example: 5 })
+  revoques: number;
+}
+
+class StatsVerificationsDto {
+  @ApiProperty({ example: 342 })
+  total: number;
+
+  @ApiProperty({ example: 27 })
+  ce_mois: number;
+}
+
+class StatsPartagesDto {
+  @ApiProperty({ example: 14 })
+  actifs: number;
+}
+
 export class StatistiquesGlobalesDto {
-  universites: {
-    actives: number;
-    total: number;
-  };
-  documents: {
-    total: number;
-    actifs: number;
-    en_validation: number;
-    revoques: number;
-  };
-  verifications: {
-    total: number;
-    ce_mois: number;
-  };
+  @ApiProperty({ type: StatsUniversitesDto })
+  universites: StatsUniversitesDto;
+
+  @ApiProperty({ type: StatsDocumentsDto })
+  documents: StatsDocumentsDto;
+
+  @ApiProperty({ type: StatsVerificationsDto })
+  verifications: StatsVerificationsDto;
+
+  @ApiProperty({ example: 87 })
   etudiants: number;
+
+  @ApiProperty({ example: 12 })
   utilisateurs: number;
-  partages: {
-    actifs: number;
-  };
+
+  @ApiProperty({ type: StatsPartagesDto })
+  partages: StatsPartagesDto;
 }

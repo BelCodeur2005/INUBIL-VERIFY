@@ -16,7 +16,7 @@ Dans le projet INUBIL Verify, Pinata sert à stocker les PDFs de diplômes et le
 
 ---
 
-## Étape 1 — Créer un compte Pinata
+## Étape 1 - Créer un compte Pinata
 
 1. Aller sur **https://app.pinata.cloud/register**
 
@@ -43,7 +43,7 @@ Dans le projet INUBIL Verify, Pinata sert à stocker les PDFs de diplômes et le
 
 ---
 
-## Étape 2 — Naviguer vers la section API Keys
+## Étape 2 - Naviguer vers la section API Keys
 
 Une fois connecté au dashboard :
 
@@ -54,7 +54,7 @@ Ou accéder directement via : **https://app.pinata.cloud/developers/api-keys**
 
 ---
 
-## Étape 3 — Créer une nouvelle clé API
+## Étape 3 - Créer une nouvelle clé API
 
 1. Cliquer sur le bouton **"+ New Key"** (en haut à droite de la page)
 
@@ -79,7 +79,7 @@ Ou accéder directement via : **https://app.pinata.cloud/developers/api-keys**
 
 ---
 
-## Étape 4 — Copier les clés immédiatement
+## Étape 4 - Copier les clés immédiatement
 
 > **ATTENTION** : Pinata affiche les clés **une seule fois**. Après fermeture de cette fenêtre, il sera impossible de les récupérer. Il faudra en créer de nouvelles.
 
@@ -99,12 +99,12 @@ JWT            : eyJhbGci...        ← non utilisé dans ce projet
 
 ---
 
-## Étape 5 — Remplir le `.env` du projet
+## Étape 5 - Remplir le `.env` du projet
 
 Ouvrir le fichier **`INUBIL-VERIFY/.env`** et remplir les 3 variables IPFS :
 
 ```env
-# ─── IPFS — Pinata ────────────────────────────────────────────────────────────
+# ─── IPFS - Pinata ────────────────────────────────────────────────────────────
 PINATA_API_KEY=<coller ta valeur "API Key" ici>
 PINATA_SECRET_KEY=<coller ta valeur "API Secret" ici>
 PINATA_GATEWAY=https://gateway.pinata.cloud
@@ -118,11 +118,11 @@ PINATA_SECRET_KEY=abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567890abcdef
 PINATA_GATEWAY=https://gateway.pinata.cloud
 ```
 
-> **Ne jamais commiter le `.env`** — il est déjà dans `.gitignore`.
+> **Ne jamais commiter le `.env`** - il est déjà dans `.gitignore`.
 
 ---
 
-## Étape 6 — Redémarrer le backend
+## Étape 6 - Redémarrer le backend
 
 Après avoir modifié le `.env`, redémarrer le conteneur backend pour que les nouvelles variables soient prises en compte :
 
@@ -132,19 +132,19 @@ docker-compose restart backend
 
 ---
 
-## Étape 7 — Vérifier que les clés sont reconnues
+## Étape 7 - Vérifier que les clés sont reconnues
 
 Dans les logs du backend (`docker-compose logs -f backend`), tu dois **ne plus voir** ce message :
 
 ```
-WARN [IpfsService] PINATA_API_KEY / PINATA_SECRET_KEY non configurés — uploads IPFS désactivés
+WARN [IpfsService] PINATA_API_KEY / PINATA_SECRET_KEY non configurés - uploads IPFS désactivés
 ```
 
 Si ce message a disparu, les clés sont correctement chargées.
 
 ---
 
-## Étape 8 — Tester l'upload IPFS
+## Étape 8 - Tester l'upload IPFS
 
 1. Ouvrir Swagger : **http://localhost:3000/api/docs**
 2. Se connecter et s'authentifier (Bearer token)
@@ -165,7 +165,7 @@ Si `cid_ipfs` est `null`, vérifier les logs du backend pour identifier l'erreur
 
 ---
 
-## Étape 9 — Vérifier les fichiers dans le dashboard Pinata
+## Étape 9 - Vérifier les fichiers dans le dashboard Pinata
 
 1. Retourner sur **https://app.pinata.cloud**
 2. Cliquer sur **"Files"** dans le menu gauche

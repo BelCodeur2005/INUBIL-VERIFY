@@ -159,7 +159,7 @@ export class UniversitesController {
   @Post(':id/rejeter')
   @UseGuards(PermissionsGuard)
   @RequirePermissions(Permission.UNIV_REJECT)
-  @ApiOperation({ summary: 'Rejeter une université (en_attente → rejetee) — raison obligatoire' })
+  @ApiOperation({ summary: 'Rejeter une université (en_attente → rejetee) - raison obligatoire' })
   @ApiOkResponse({ type: UniversiteResponseDto })
   @ApiResponse({ status: 400, description: 'Raison manquante.' })
   @ApiResponse({ status: 403, description: 'Permission univ:reject requise.' })

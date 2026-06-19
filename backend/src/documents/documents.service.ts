@@ -13,7 +13,8 @@ import { AuditService } from '../audit/audit.service';
 import { HashService } from './hash.service';
 import { QrCodeService } from './qr-code.service';
 import { NotificationEmissionService } from './notification-emission.service';
-import { IpfsService } from '../ipfs/ipfs.service';
+import { StorageService } from '../storage/storage.service';
+import { BlockchainService } from '../blockchain/blockchain.service';
 import { CreerDocumentDto } from './dto/creer-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { RevoquerDocumentDto } from './dto/revoquer-document.dto';
@@ -30,7 +31,8 @@ export class DocumentsService {
     private readonly hash: HashService,
     private readonly qr: QrCodeService,
     private readonly notif: NotificationEmissionService,
-    private readonly ipfs: IpfsService,
+    private readonly storage: StorageService,
+    private readonly blockchain: BlockchainService,
   ) {}
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -251,19 +253,70 @@ export class DocumentsService {
     return updated;
   }
 
-  /**
-   * Valide un document : reçoit le PDF uploadé par l'université, calcule le
-   * hash SHA-256, génère le QR de vérification, passe le document en `actif`.
-   * IPFS (#21) et Blockchain (#22) sont des stubs — intégrés dans les sprints suivants.
-   */
-  async valider(
+  /** Upload du PDF par l'agent de saisie - calcule le hash et stocke sur R2. */
+  async uploadPdf(
     id: string,
     fichierBuffer: Buffer,
     fichierTailleOctets: number,
     acteurId: string,
     ip?: string,
-    userAgent?: string,
   ) {
+    const acteurUnivId = await this.getActeurUniversiteId(acteurId);
+    const doc = await this.trouverOuEchouer(id);
+    this.assertMemeUniversite(doc.universite_id, acteurUnivId);
+
+    if (!['brouillon', 'en_validation'].includes(doc.statut)) {
+      throw new BadRequestException(
+        `Impossible d'uploader un PDF pour un document en statut "${doc.statut}"`,
+      );
+    }
+
+    const hashSha256 = this.hash.calculateHash(fichierBuffer);
+
+    const doublon = await this.prisma.documents.findFirst({
+      where: { hash_sha256: hashSha256, id: { not: id } },
+    });
+    if (doublon) {
+      throw new ConflictException(
+        'Ce fichier est déjà enregistré sur la plateforme (hash identique)',
+      );
+    }
+
+    const annee  = new Date(doc.date_emission).getFullYear();
+    const pdfKey = `universites/${doc.universite_id}/diplomes/${annee}/${doc.numero_unique}.pdf`;
+    const s3Pdf  = await this.storage
+      .uploadFile(fichierBuffer, pdfKey, 'application/pdf')
+      .catch((err: Error) => {
+        this.logger.error(`Upload R2 PDF échoué pour doc ${id} : ${err.message}`);
+        return null;
+      });
+
+    const tailleKo = Math.ceil(fichierTailleOctets / 1024);
+
+    const updated = await this.prisma.documents.update({
+      where: { id },
+      data: {
+        hash_sha256: hashSha256,
+        pdf_taille_ko: tailleKo,
+        pdf_url: s3Pdf?.key ?? null,
+      },
+      include: { matieres_document: { orderBy: { ordre: 'asc' } } },
+    });
+
+    await this.audit.log({
+      utilisateurId: acteurId,
+      action: 'DOCUMENT_UPLOAD_PDF',
+      module: 'documents',
+      enregistrementId: id,
+      tableConcernee: 'documents',
+      ip,
+    });
+
+    return updated;
+  }
+
+  /** Validation par le directeur - approuve le document, génère le QR, déclenche la blockchain. */
+  async valider(id: string, acteurId: string, ip?: string, userAgent?: string) {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const doc = await this.trouverOuEchouer(id);
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
@@ -274,56 +327,33 @@ export class DocumentsService {
       );
     }
 
-    // Hash SHA-256 du PDF original uploadé par l'université
-    const hashSha256 = this.hash.calculateHash(fichierBuffer);
-
-    // Vérification unicité du hash (anti-doublon)
-    const doublon = await this.prisma.documents.findFirst({
-      where: { hash_sha256: hashSha256, id: { not: id } },
-    });
-    if (doublon) {
-      throw new ConflictException(
-        'Ce fichier est déjà enregistré sur la plateforme (hash identique)',
+    if (!doc.pdf_url || !doc.hash_sha256) {
+      throw new BadRequestException(
+        'Le PDF doit être uploadé avant la validation - utiliser POST /documents/{id}/pdf',
       );
     }
 
     const publicVerifyUrl = this.config.get<string>('PUBLIC_VERIFY_URL', 'https://verify.inubil.com');
     const urlVerification = `${publicVerifyUrl}/d/${doc.numero_unique}`;
 
-    // Upload PDF sur IPFS — fire & forget : un échec n'empêche pas la validation
-    let pdfUrl: string | null = null;
-    let cidIpfs: string | null = null;
-    const ipfsPdf = await this.ipfs
-      .uploadFile(fichierBuffer, `${doc.numero_unique}.pdf`, 'application/pdf')
-      .catch((err: Error) => {
-        this.logger.error(`Upload IPFS PDF échoué pour doc ${id} : ${err.message}`);
-        return null;
-      });
-    if (ipfsPdf) { pdfUrl = ipfsPdf.url; cidIpfs = ipfsPdf.cid; }
-
-    // Générer QR code PNG et uploader sur IPFS
+    const annee  = new Date(doc.date_emission).getFullYear();
     const qrBuffer = await this.qr.generateQr(urlVerification);
+    const qrKey = `universites/${doc.universite_id}/qrcodes/${annee}/${doc.numero_unique}-qr.png`;
     let qrCodeUrl: string | null = null;
-    const ipfsQr = await this.ipfs
-      .uploadFile(qrBuffer, `qr-${doc.numero_unique}.png`, 'image/png')
+    const s3Qr = await this.storage
+      .uploadFile(qrBuffer, qrKey, 'image/png')
       .catch((err: Error) => {
-        this.logger.error(`Upload IPFS QR échoué pour doc ${id} : ${err.message}`);
+        this.logger.error(`Upload R2 QR échoué pour doc ${id} : ${err.message}`);
         return null;
       });
-    if (ipfsQr) { qrCodeUrl = ipfsQr.url; }
+    if (s3Qr) { qrCodeUrl = s3Qr.key; }
 
     const maintenant = new Date();
-    const tailleKo = Math.ceil(fichierTailleOctets / 1024);
 
     const updated = await this.prisma.documents.update({
       where: { id },
       data: {
-        hash_sha256: hashSha256,
-        pdf_taille_ko: tailleKo,
-        pdf_url: pdfUrl,
-        cid_ipfs: cidIpfs,
         qr_code_url: qrCodeUrl,
-        // transaction_hash / bloc_numero / reseau → seront renseignés par #22
         statut: 'actif',
         valide_par: acteurId,
         valide_le: maintenant,
@@ -342,10 +372,14 @@ export class DocumentsService {
       userAgent,
     });
 
-    // Notification email étudiant en fire & forget — un échec mail ne fait pas échouer la validation
     this.notif.notifierEtudiant(id).catch((err) =>
       this.logger.error(`Notification émission échouée pour doc ${id} : ${err.message}`),
     );
+
+    this.enregistrerSurBlockchain(updated.id, doc.hash_sha256, updated.universite_id, updated.numero_unique)
+      .catch((err) =>
+        this.logger.error(`Blockchain enregistrement échoué pour doc ${id} : ${err.message}`),
+      );
 
     return updated;
   }
@@ -366,7 +400,7 @@ export class DocumentsService {
         revoque_par: acteurId,
         revoque_le: new Date(),
         raison_revocation: dto.raison,
-        // #22 — Blockchain : revokeDiploma(bytes32 hash) sera appelé ici une fois
+        // #22 - Blockchain : revokeDiploma(bytes32 hash) sera appelé ici une fois
         // le service Ethers.js + Polygon implémenté (transaction_hash mis à jour en retour).
       },
       include: { matieres_document: { orderBy: { ordre: 'asc' } } },
@@ -381,12 +415,70 @@ export class DocumentsService {
       ip,
     });
 
-    // Notification email étudiant en fire & forget — un échec mail ne fait pas échouer la révocation
+    // Notification email étudiant en fire & forget - un échec mail ne fait pas échouer la révocation
     this.notif.notifierRevocation(id).catch((err) =>
       this.logger.error(`Notification révocation échouée pour doc ${id} : ${err.message}`),
     );
 
+    // Blockchain fire & forget - révoque le diplôme on-chain sans bloquer la réponse
+    this.revoquerSurBlockchain(id, updated.numero_unique)
+      .catch((err) =>
+        this.logger.error(`Blockchain révocation échouée pour doc ${id} : ${err.message}`),
+      );
+
     return updated;
+  }
+
+  async getPdfUrl(
+    id: string,
+    acteurId: string,
+  ): Promise<{ url: string; expires_in_seconds: number }> {
+    const acteurUnivId = await this.getActeurUniversiteId(acteurId);
+    const doc = await this.trouverOuEchouer(id);
+    this.assertMemeUniversite(doc.universite_id, acteurUnivId);
+
+    if (doc.statut === 'revoque') {
+      throw new ForbiddenException('Ce document a été révoqué');
+    }
+
+    if (!doc.pdf_url) {
+      throw new BadRequestException('Aucun PDF associé à ce document');
+    }
+
+    const EXPIRES = 900; // 15 minutes
+    const url = await this.storage.getPresignedUrl(doc.pdf_url, EXPIRES);
+    if (!url) throw new BadRequestException('Stockage S3 non configuré');
+
+    return { url, expires_in_seconds: EXPIRES };
+  }
+
+  // ─── Blockchain (fire & forget) ──────────────────────────────────────────
+
+  private async enregistrerSurBlockchain(
+    docId: string,
+    hashSha256: string,
+    universiteId: string,
+    numeroUnique: string,
+  ): Promise<void> {
+    const txHash = await this.blockchain.enregistrerDiplome(numeroUnique, hashSha256, universiteId);
+    if (!txHash) return; // blockchain non configurée ou erreur déjà loggée
+
+    const contractAddress = this.config.get<string>('CONTRACT_ADDRESS') ?? '';
+    const reseau = (this.config.get<string>('POLYGON_NETWORK') ?? 'polygon_amoy') as 'polygon_amoy' | 'polygon_mainnet';
+
+    await this.prisma.documents.update({
+      where: { id: docId },
+      data: { transaction_hash: txHash, adresse_contrat: contractAddress, reseau },
+    });
+
+    this.logger.log(`Blockchain ✔ enregistrement doc ${docId} - tx: ${txHash}`);
+  }
+
+  private async revoquerSurBlockchain(docId: string, numeroUnique: string): Promise<void> {
+    const txHash = await this.blockchain.revoquerDiplome(numeroUnique);
+    if (!txHash) return; // blockchain non configurée ou erreur déjà loggée
+
+    this.logger.log(`Blockchain ✔ révocation doc ${docId} - tx: ${txHash}`);
   }
 
   async supprimer(id: string, acteurId: string, ip?: string) {

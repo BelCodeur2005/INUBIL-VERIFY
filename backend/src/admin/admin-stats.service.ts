@@ -64,7 +64,7 @@ export class AdminStatsService {
       ? new Date(query.debut)
       : new Date(fin.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // Les deux requêtes en parallèle — pgUnit est validé ('day' | 'month'), sans injection possible
+    // Les deux requêtes en parallèle - pgUnit est validé ('day' | 'month'), sans injection possible
     const [verifsRows, docsRows] = await Promise.all([
       this.prisma.$queryRawUnsafe<Array<{ date: Date; nb: bigint }>>(
         `SELECT DATE_TRUNC('${pgUnit}', created_at::timestamptz) AS date,

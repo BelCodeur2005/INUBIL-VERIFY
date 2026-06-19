@@ -44,7 +44,7 @@ export class NotificationEmissionService {
 
     if (!destinataire) {
       this.logger.warn(
-        `notifierRevocation : aucun email pour l'étudiant ${doc.etudiants.id} — notification ignorée`,
+        `notifierRevocation : aucun email pour l'étudiant ${doc.etudiants.id} - notification ignorée`,
       );
       return;
     }
@@ -61,7 +61,7 @@ export class NotificationEmissionService {
     const logEntry = await this.prisma.emails_log.create({
       data: {
         destinataire,
-        sujet:         `Votre document a été révoqué — ${doc.numero_unique}`,
+        sujet:         `Votre document a été révoqué - ${doc.numero_unique}`,
         template:      'document_revoque',
         parametres,
         statut:        'en_attente',
@@ -127,7 +127,7 @@ export class NotificationEmissionService {
 
     if (!destinataire) {
       this.logger.warn(
-        `notifierEtudiant : aucun email pour l'étudiant ${doc.etudiants.id} — notification ignorée`,
+        `notifierEtudiant : aucun email pour l'étudiant ${doc.etudiants.id} - notification ignorée`,
       );
       return;
     }
@@ -146,7 +146,7 @@ export class NotificationEmissionService {
           ? undefined // sera résolu via la relation si besoin
           : undefined,
         destinataire,
-        sujet: `Votre document officiel a été émis — ${doc.numero_unique}`,
+        sujet: `Votre document officiel a été émis - ${doc.numero_unique}`,
         template: 'document_emis',
         parametres,
         statut: 'en_attente',

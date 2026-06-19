@@ -1,4 +1,4 @@
-# Guide de Travail — INUBIL Verify
+# Guide de Travail - INUBIL Verify
 
 **Équipe :** Flanc Bel (`BelCodeur2005`) · Backend | Belvie Scindie (`NGANGUE-conception`) · Frontend  
 **Dépôt :** https://github.com/BelCodeur2005/INUBIL-VERIFY  
@@ -10,11 +10,11 @@
 
 | Colonne | Signification | Qui agit |
 |---|---|---|
-| **Backlog** | Issue planifiée, pas encore démarrée | — |
+| **Backlog** | Issue planifiée, pas encore démarrée | - |
 | **Sprint actuel** | Sélectionnée pour la semaine en cours | Dev qui la prend |
 | **En cours** | Développement actif | Dev assigné |
 | **En review** | Code poussé, PR ouverte, en attente de validation | L'autre dev (ou les deux) |
-| **Terminé** | PR mergée sur `main`, fonctionnalité validée | — |
+| **Terminé** | PR mergée sur `main`, fonctionnalité validée | - |
 
 > **Règle :** une issue = une branche = une PR. On ne merge jamais directement sur `main`.
 
@@ -47,10 +47,10 @@ Un **sprint** est une période de 2 semaines pendant laquelle chaque dev s'engag
 ```
 
 **Types :**
-- `feature/` — nouvelle fonctionnalité
-- `fix/` — correction de bug
-- `chore/` — configuration, setup, dépendances
-- `docs/` — documentation uniquement
+- `feature/` - nouvelle fonctionnalité
+- `fix/` - correction de bug
+- `chore/` - configuration, setup, dépendances
+- `docs/` - documentation uniquement
 
 **Exemples :**
 ```bash
@@ -127,8 +127,8 @@ Déplacer manuellement au fil du travail (Backlog → Sprint actuel → En cours
 Déjà défini sur chaque issue. Permet de filtrer par module (Auth, Blockchain, Documents, etc.) pour voir l'avancement d'une fonctionnalité précise.
 
 ### Champ `Développeur`
-- `Dev 1 — Frontend` → Belvie (NGANGUE-conception)
-- `Dev 2 — Backend` → Flanc (BelCodeur2005)
+- `Dev 1 - Frontend` → Belvie (NGANGUE-conception)
+- `Dev 2 - Backend` → Flanc (BelCodeur2005)
 - `Les deux` → Issues communes (ex : variables d'environnement)
 
 ### Champ `Milestone`
@@ -145,7 +145,7 @@ Dans GitHub Projects, utiliser la barre de filtre :
 | Mes issues uniquement | `assignee:BelCodeur2005` |
 | Issues frontend | `label:frontend` |
 | Issues blockchain | `label:blockchain` |
-| Phase en cours | `milestone:"Phase 1 — Authentification"` |
+| Phase en cours | `milestone:"Phase 1 - Authentification"` |
 | Issues haute priorité | `field:Priorité=Haute` |
 
 ---
@@ -204,8 +204,8 @@ MAIL_PASS=...
 |---|---|---|
 | **Développement local** | `localhost:3000` (back) / `localhost:4200` (front) | toute branche |
 | **Production** | `verify.inubil.com` | `main` |
-| **Blockchain dev** | Polygon Amoy Testnet (chain ID 80002) | — |
-| **Blockchain prod** | Polygon Mainnet | — |
+| **Blockchain dev** | Polygon Amoy Testnet (chain ID 80002) | - |
+| **Blockchain prod** | Polygon Mainnet | - |
 
 ---
 
