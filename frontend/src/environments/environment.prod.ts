@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.inubil-verify.com',
+  apiUrl: 'https://api.inubil-verify.com', // URL finale sécurisée de production
 };
