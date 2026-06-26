@@ -59,6 +59,30 @@ const PERMISSIONS: Array<{ nom: string; module: string; description: string }> =
   // ── Statistiques & Audit ─────────────────────────────────────────────────
   { nom: 'stats:read', module: 'statistiques', description: 'Consulter les statistiques de la plateforme' },
   { nom: 'audit:read', module: 'audit',        description: "Consulter le journal d'audit" },
+
+  // ── Notifications ─────────────────────────────────────────────────────────
+  { nom: 'notif:read', module: 'notifications', description: 'Consulter ses propres notifications' },
+
+  // ── Configurations ────────────────────────────────────────────────────────
+  { nom: 'config:read', module: 'configurations', description: 'Consulter les configurations de la plateforme' },
+  { nom: 'config:edit', module: 'configurations', description: 'Modifier les configurations de la plateforme' },
+
+  // ── Clés API ──────────────────────────────────────────────────────────────
+  { nom: 'api:read',   module: 'cles_api', description: "Consulter les clés API de l'université" },
+  { nom: 'api:create', module: 'cles_api', description: "Créer une clé API pour l'université" },
+  { nom: 'api:delete', module: 'cles_api', description: "Révoquer une clé API de l'université" },
+
+  // ── Webhooks ──────────────────────────────────────────────────────────────
+  { nom: 'webhook:read',   module: 'webhooks', description: 'Consulter les webhooks et leurs livraisons' },
+  { nom: 'webhook:create', module: 'webhooks', description: 'Créer un webhook' },
+  { nom: 'webhook:edit',   module: 'webhooks', description: 'Modifier un webhook' },
+  { nom: 'webhook:delete', module: 'webhooks', description: 'Supprimer un webhook' },
+
+  // ── Partenariats ──────────────────────────────────────────────────────────
+  { nom: 'partner:read',   module: 'partenariats', description: "Consulter les partenariats de l'université" },
+  { nom: 'partner:create', module: 'partenariats', description: "Créer un partenariat inter-universités" },
+  { nom: 'partner:edit',   module: 'partenariats', description: "Modifier un partenariat" },
+  { nom: 'partner:delete', module: 'partenariats', description: "Supprimer un partenariat" },
 ];
 
 const ANCIENNES_PERMISSIONS = [

@@ -21,6 +21,11 @@ import { TypesDocumentModule } from './types-document/types-document.module';
 import { MentionsModule } from './mentions/mentions.module';
 import { EtudiantsAdminModule } from './etudiants-admin/etudiants-admin.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { ConfigurationsModule } from './configurations/configurations.module';
+import { ClesApiModule } from './cles-api/cles-api.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
+import { PartenariatsModule } from './partenariats/partenariats.module';
 
 @Module({
   imports: [
@@ -50,6 +55,11 @@ import { BlockchainModule } from './blockchain/blockchain.module';
     MentionsModule,
     EtudiantsAdminModule,
     BlockchainModule,
+    NotificationsModule,
+    ConfigurationsModule,
+    ClesApiModule,
+    WebhooksModule,
+    PartenariatsModule,
   ],
   controllers: [AppController],
   providers: [
