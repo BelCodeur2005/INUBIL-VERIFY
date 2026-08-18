@@ -5,7 +5,7 @@ import * as QRCode from 'qrcode';
 export class QrCodeService {
   /**
    * Génère un QR code PNG pointant vers l'URL de vérification publique du diplôme.
-   * Retourne un Buffer PNG prêt à être embarqué dans le PDF ou uploadé sur IPFS (#21).
+   * Retourne un Buffer PNG prêt à être embarqué dans le PDF ou uploadé sur le stockage S3/R2.
    * Format URL attendu : https://verify.inubil.com/d/{numero_unique}
    */
   async generateQr(url: string): Promise<Buffer> {

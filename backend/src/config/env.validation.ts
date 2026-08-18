@@ -6,9 +6,9 @@ import * as Joi from 'joi';
  * Les variables COEUR (base de donnees, JWT, chiffrement) sont requises :
  * l'app refuse de demarrer si elles manquent (echec rapide et explicite).
  *
- * Les cles d'INTEGRATIONS EXTERNES (Pinata, Polygon, Mail) restent
+ * Les cles d'INTEGRATIONS EXTERNES (Polygon, Mail, S3/R2) restent
  * optionnelles tant que les modules correspondants ne sont pas developpes
- * (respectivement taches #21, #22/#39, #25).
+ * (respectivement taches #22/#39, #25, #21).
  */
 export const envValidationSchema = Joi.object({
   // ─── Application ───────────────────────────────────────────────
@@ -52,11 +52,6 @@ export const envValidationSchema = Joi.object({
   AWS_REGION:             Joi.string().optional().default('auto'),
   AWS_S3_BUCKET:          Joi.string().optional().allow(''),
   CLOUDFLARE_ACCOUNT_ID:  Joi.string().optional().allow(''),
-
-  // ─── IPFS Pinata - conservé pour compatibilité (optionnel) ────
-  PINATA_API_KEY: Joi.string().optional().allow(''),
-  PINATA_SECRET_KEY: Joi.string().optional().allow(''),
-  PINATA_GATEWAY: Joi.string().uri().optional(),
 
   // ─── Blockchain Polygon - optionnel jusqu'a #22/#39 ────────────
   POLYGON_RPC_URL:      Joi.string().uri().optional(),
