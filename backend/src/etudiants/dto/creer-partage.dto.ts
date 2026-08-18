@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsEmail,
   IsDateString,
+  IsBoolean,
   ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -22,9 +23,23 @@ export class CreerPartageDto {
   @IsUUID()
   universite_destinataire_id?: string;
 
-  @ApiPropertyOptional({ example: '2026-12-31T23:59:59Z', description: 'Date d\'expiration du lien. Absent = illimité.' })
+  @ApiPropertyOptional({
+    example: '2026-12-31T23:59:59Z',
+    description:
+      'Date d\'expiration explicite du lien. Absent et permanent=false (defaut) : ' +
+      'expiration calculee automatiquement a partir du parametre systeme partage_duree_jours ' +
+      '(configurations, cle "partage_duree_jours", 30 jours par defaut si non configure).',
+  })
   @IsOptional()
   @IsDateString()
   @ValidateIf((o) => o.date_expiration !== undefined)
   date_expiration?: string;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'true = lien permanent, sans expiration. Ignore par date_expiration si les deux sont fournis.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  permanent?: boolean;
 }

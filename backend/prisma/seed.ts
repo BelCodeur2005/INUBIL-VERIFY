@@ -280,7 +280,23 @@ async function main(): Promise<void> {
   }
   console.log(`${mentions.length} mentions upserted pour ${universite.nom_court}.`);
 
-  // ── 8. Étudiant de test ─────────────────────────────────────────────────────
+  // ── 8. Configurations système ───────────────────────────────────────────────
+  await prisma.configurations.upsert({
+    where: { cle: 'partage_duree_jours' },
+    update: {},
+    create: {
+      cle: 'partage_duree_jours',
+      valeur: '30',
+      type: 'number',
+      description:
+        "Duree par defaut (en jours) d'un lien de partage de document quand l'etudiant " +
+        'ne choisit ni date precise ni option "permanent".',
+      modifiable_par: 'super_admin',
+    },
+  });
+  console.log('Configuration "partage_duree_jours" upserted (30 jours par defaut).');
+
+  // ── 9. Étudiant de test ─────────────────────────────────────────────────────
   const numeroEtudiant = 'ISTAMA-2023-0001';
   const etudiantExistant = await prisma.etudiants.findFirst({
     where: { numero_etudiant: numeroEtudiant, deleted_at: null },

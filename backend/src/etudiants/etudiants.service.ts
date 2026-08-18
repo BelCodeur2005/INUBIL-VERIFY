@@ -8,6 +8,7 @@ import {
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { ConfigurationsService } from '../configurations/configurations.service';
 import { ProfilEtudiantDto } from './dto/profil-etudiant.dto';
 import {
   DocumentEtudiantDto,
@@ -23,10 +24,29 @@ import { StatistiquesEtudiantDto } from './dto/statistiques-etudiant.dto';
 export class EtudiantsService {
   private readonly logger = new Logger(EtudiantsService.name);
 
+  private static readonly DUREE_PARTAGE_DEFAUT_JOURS = 30;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
+    private readonly configurations: ConfigurationsService,
   ) {}
+
+  /**
+   * Duree par defaut (en jours) d'un lien de partage quand ni date_expiration
+   * ni permanent ne sont fournis. Pilotable via configurations["partage_duree_jours"] ;
+   * retombe sur DUREE_PARTAGE_DEFAUT_JOURS si le parametre n'est pas configure ou invalide.
+   */
+  private async dureePartageParDefautJours(): Promise<number> {
+    const brut = await this.configurations.get(
+      'partage_duree_jours',
+      String(EtudiantsService.DUREE_PARTAGE_DEFAUT_JOURS),
+    );
+    const jours = Number(brut);
+    return Number.isFinite(jours) && jours > 0
+      ? jours
+      : EtudiantsService.DUREE_PARTAGE_DEFAUT_JOURS;
+  }
 
   // ─── Profil ────────────────────────────────────────────────────────────────
 
@@ -113,7 +133,16 @@ export class EtudiantsService {
     }
 
     const tokenAcces = randomBytes(32).toString('hex');
-    const expiration = dto.date_expiration ? new Date(dto.date_expiration) : null;
+    let expiration: Date | null;
+    if (dto.date_expiration) {
+      expiration = new Date(dto.date_expiration);
+    } else if (dto.permanent) {
+      expiration = null;
+    } else {
+      const jours = await this.dureePartageParDefautJours();
+      expiration = new Date();
+      expiration.setDate(expiration.getDate() + jours);
+    }
 
     const partage = await this.prisma.partages_document.create({
       data: {
