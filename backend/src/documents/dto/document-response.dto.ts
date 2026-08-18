@@ -84,7 +84,7 @@ export class DocumentResponseDto {
   @ApiPropertyOptional({ example: 'universites/.../qrcodes/2026/06/INUB-2026-0001-qr.png', description: 'Cle de stockage S3/R2 du QR code' })
   qr_code_url: string | null;
 
-  @ApiPropertyOptional({ example: 'https://gateway.pinata.cloud/ipfs/QmAbc...' })
+  @ApiPropertyOptional({ example: 'universites/.../documents/2026/06/INUB-2026-0001.pdf', description: 'Cle de stockage S3/R2 du PDF' })
   pdf_url: string | null;
 
   @ApiPropertyOptional({ example: 245 })
