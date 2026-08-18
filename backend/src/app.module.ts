@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -21,6 +22,12 @@ import { TypesDocumentModule } from './types-document/types-document.module';
 import { MentionsModule } from './mentions/mentions.module';
 import { EtudiantsAdminModule } from './etudiants-admin/etudiants-admin.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { ConfigurationsModule } from './configurations/configurations.module';
+import { ClesApiModule } from './cles-api/cles-api.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
+import { PartenariatsModule } from './partenariats/partenariats.module';
+import { BackupModule } from './backup/backup.module';
 
 @Module({
   imports: [
@@ -33,6 +40,7 @@ import { BlockchainModule } from './blockchain/blockchain.module';
     // Rate limiting global : 100 requetes / minute par IP.
     // Les endpoints sensibles (register, forgot-password, renvoyer-verif)
     // appliquent leurs propres limites plus strictes via @Throttle().
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     PrismaModule,
     AuthModule,
@@ -50,6 +58,12 @@ import { BlockchainModule } from './blockchain/blockchain.module';
     MentionsModule,
     EtudiantsAdminModule,
     BlockchainModule,
+    NotificationsModule,
+    ConfigurationsModule,
+    ClesApiModule,
+    WebhooksModule,
+    PartenariatsModule,
+    BackupModule,
   ],
   controllers: [AppController],
   providers: [

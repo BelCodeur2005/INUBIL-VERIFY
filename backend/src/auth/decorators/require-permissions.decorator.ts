@@ -10,7 +10,7 @@ export const PERMISSIONS_KEY = 'required_permissions';
  *
  * @example
  * @UseGuards(JwtAuthGuard, PermissionsGuard)
- * @RequirePermissions(Permission.GERER_UTILISATEURS)
+ * @RequirePermissions(Permission.USER_EDIT)
  */
 export const RequirePermissions = (...permissions: Permission[]) =>
   SetMetadata(PERMISSIONS_KEY, permissions);

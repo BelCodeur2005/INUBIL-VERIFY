@@ -1269,35 +1269,8 @@ INSERT INTO mentions_document (code, nom, note_min, note_max, ordre) VALUES
 ('pass',         'Pass',                 50.00,  59.99, 40);
 
 -- ------------------------------------------------------------
--- Permissions système
--- ------------------------------------------------------------
-INSERT INTO permissions (nom, description, module) VALUES
--- Administration
-('gerer_universites',           'Créer, modifier, approuver des universités',                 'admin'),
-('creer_roles',                 'Créer et modifier des rôles',                                'admin'),
-('gerer_utilisateurs',          'Gérer les comptes utilisateurs',                             'admin'),
-('gerer_types_document',        'Créer et modifier les types de documents',                   'admin'),
-('voir_statistiques_globales',  'Voir le tableau de bord global',                             'admin'),
-('voir_journal_audit',          'Consulter le journal d''audit',                              'admin'),
-('gerer_configurations',        'Modifier les configurations système',                        'admin'),
--- Documents
-('saisir_document',             'Créer un brouillon de document',                             'documents'),
-('valider_document',            'Valider et déclencher l''enregistrement blockchain',         'documents'),
-('revoquer_document',           'Révoquer un document actif',                                 'documents'),
-('voir_documents_universite',   'Voir tous les documents de son université',                  'documents'),
--- Étudiant
-('voir_son_dossier',            'Accéder à son propre dossier académique',                    'etudiant'),
-('partager_document',           'Partager un de ses documents avec une institution tierce',   'etudiant'),
--- Vérification
-('verifier_document',           'Vérifier l''authenticité d''un document (accès public)',     'verification'),
-('consulter_document_partage',  'Consulter un document partagé par un étudiant',              'verification'),
-('telecharger_rapport',         'Télécharger un rapport de vérification PDF',                 'verification'),
--- Intégrations techniques
-('gerer_cles_api',              'Créer et gérer les clés API',                                'integration'),
-('gerer_webhooks',              'Créer et gérer les webhooks',                                'integration');
-
--- ------------------------------------------------------------
 -- Rôles système (non supprimables)
+-- Permissions et role_permissions gérés par prisma/seed.ts
 -- ------------------------------------------------------------
 INSERT INTO roles (nom, description, est_systeme) VALUES
 ('super_admin',            'Accès total à la plateforme',                              TRUE),
@@ -1308,63 +1281,6 @@ INSERT INTO roles (nom, description, est_systeme) VALUES
 ('etudiant',               'Accès au dossier personnel',                               TRUE),
 ('autre_universite',       'Consultation de documents partagés par un étudiant',       TRUE),
 ('employeur',              'Vérification de documents (compte optionnel)',              TRUE);
-
--- ------------------------------------------------------------
--- Attribution des permissions aux rôles système
--- ------------------------------------------------------------
-
--- super_admin : tout
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
-WHERE r.nom = 'super_admin';
-
--- admin_istama : supervision globale
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r JOIN permissions p ON p.nom IN (
-    'gerer_universites', 'creer_roles', 'gerer_utilisateurs', 'gerer_types_document',
-    'voir_statistiques_globales', 'voir_journal_audit',
-    'voir_documents_universite', 'verifier_document', 'telecharger_rapport'
-) WHERE r.nom = 'admin_istama';
-
--- responsable_universite : gestion complète de son institution
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r JOIN permissions p ON p.nom IN (
-    'gerer_utilisateurs', 'gerer_types_document', 'voir_statistiques_globales',
-    'saisir_document', 'valider_document', 'revoquer_document', 'voir_documents_universite',
-    'gerer_cles_api', 'gerer_webhooks', 'verifier_document', 'telecharger_rapport'
-) WHERE r.nom = 'responsable_universite';
-
--- directeur_pedagogique : validation et supervision académique
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r JOIN permissions p ON p.nom IN (
-    'valider_document', 'revoquer_document',
-    'voir_documents_universite', 'voir_statistiques_globales',
-    'verifier_document', 'telecharger_rapport'
-) WHERE r.nom = 'directeur_pedagogique';
-
--- agent_saisie : saisie uniquement
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r JOIN permissions p ON p.nom IN (
-    'saisir_document', 'voir_documents_universite'
-) WHERE r.nom = 'agent_saisie';
-
--- etudiant : son dossier + partage
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r JOIN permissions p ON p.nom IN (
-    'voir_son_dossier', 'partager_document', 'verifier_document'
-) WHERE r.nom = 'etudiant';
-
--- autre_universite : lecture documents partagés
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r JOIN permissions p ON p.nom IN (
-    'verifier_document', 'consulter_document_partage', 'telecharger_rapport'
-) WHERE r.nom = 'autre_universite';
-
--- employeur : vérification uniquement
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r JOIN permissions p ON p.nom IN (
-    'verifier_document', 'telecharger_rapport'
-) WHERE r.nom = 'employeur';
 
 -- ------------------------------------------------------------
 -- Configurations initiales
