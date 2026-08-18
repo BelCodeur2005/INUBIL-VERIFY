@@ -1,0 +1,624 @@
+.page {
+  background-color: #f8f9fa;
+  color: #191c1d;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Header Isolé et Corrigé */
+.header {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 50;
+  background-color: rgba(248, 249, 250, 0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #c2c6d1;
+}
+
+.headerContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 100% !important; /* Calage parfait du logo à gauche */
+  padding-left: 16px;
+  padding-right: 32px;
+  height: 4rem;
+}
+
+.brandGroup {
+  display: flex;
+  align-items: center;
+  
+}
+
+.logo {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
+  height: 80px;
+}
+
+.brandName {
+  font-size: 24px;
+  font-weight: 700;
+  color: #002c53;
+  margin-left: 16px;
+}
+
+.navGroup {
+  display: flex;
+  align-items: center;
+  gap: 32px; /* Espacement avec le bouton Connexion */
+  margin-left: auto;
+}
+
+.navGroup nav {
+  display: flex;
+  align-items: center;
+  gap: 24px; /* Espacement parfait entre les liens */
+}
+
+.navLinkActive {
+  color: #002c53;
+  font-weight: 700;
+  border-bottom: 2px solid #002c53;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  text-decoration: none;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.navLink {
+  color: #42474f;
+  text-decoration: none;
+  transition: color 0.2s;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.navLink:hover {
+  color: #0060ac;
+}
+
+.connexionBtn {
+  background-color: #002c53;
+  color: #ffffff;
+  padding: 8px 24px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.connexionBtn:hover {
+  opacity: 0.9;
+}
+
+/* Main Layout */
+.main {
+  flex-grow: 1;
+  padding-top: 6rem;
+}
+
+.mainContainer {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  padding-bottom: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* Bannière Succès Green */
+.banner {
+  background-color: #E8F5E9;
+  border: 1px solid #2E7D32;
+  padding: 24px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+@media (min-width: 768px) {
+  .banner {
+    flex-direction: row;
+  }
+}
+
+.bannerIconContainer {
+  background-color: #2E7D32;
+  color: #ffffff;
+  padding: 12px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bannerTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2E7D32;
+  letter-spacing: -0.01em;
+}
+
+.bannerDesc {
+  color: rgba(46, 125, 50, 0.9);
+  font-size: 16px;
+  margin-top: 4px;
+}
+
+/* Grille Principale */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+/* Section Données Certifiées (Gauche) */
+.leftCard {
+  grid-column: span 12 / span 12;
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #c2c6d1;
+  border-top: 4px solid #2E7D32; /* Liseré vert immuable */
+  position: relative;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .leftCard {
+    grid-column: span 7 / span 7;
+  }
+}
+
+.watermark {
+  position: absolute;
+  right: -64px;
+  bottom: -64px;
+  opacity: 0.05;
+  color: #191c1d;
+  pointer-events: none;
+  user-select: none;
+}
+
+.watermarkIcon {
+  font-size: 240px !important;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 10;
+}
+
+.cardTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #002c53;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(46, 125, 50, 0.2);
+}
+
+.dataGrid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 24px 40px;
+  border-top: 1px solid #c2c6d1;
+  border-bottom: 1px solid #c2c6d1;
+  padding-top: 40px;
+  padding-bottom: 40px;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 10;
+}
+
+@media (min-width: 640px) {
+  .dataGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #42474f;
+  text-transform: uppercase;
+}
+
+.valueBold {
+  font-size: 18px;
+  font-weight: 700;
+  color: #191c1d;
+}
+
+.valueNormal {
+  font-size: 16px;
+  color: #191c1d;
+}
+
+.valueAccent {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0060ac;
+}
+
+.valueCode {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #002c53;
+}
+
+.downloadBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #002c53;
+  color: #ffffff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  z-index: 10;
+}
+
+.downloadBtn:hover {
+  opacity: 0.9;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.downloadBtn:active {
+  transform: scale(0.98);
+}
+
+/* Section Traçabilité (Droite) */
+.rightCard {
+  grid-column: span 12 / span 12;
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 40px;
+  border: 1px solid #c2c6d1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .rightCard {
+    grid-column: span 5 / span 5;
+  }
+}
+
+.previewBox {
+  flex-grow: 1;
+  aspect-ratio: 4 / 3;
+  background-color: #e7e8e9;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.previewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.5;
+  filter: grayscale(100%);
+}
+
+.previewOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 44, 83, 0.1);
+  transition: background-color 0.2s;
+}
+
+.previewOverlay:hover {
+  background-color: rgba(0, 44, 83, 0.2);
+}
+
+.qrContainer {
+  border-top: 1px solid #c2c6d1;
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.qrBox {
+  width: 128px;
+  height: 128px;
+  background-color: #ffffff;
+  border: 2px solid rgba(0, 44, 83, 0.1);
+  border-radius: 8px;
+  margin-bottom: 24px;
+  padding: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qrMock {
+  width: 100%;
+  height: 100%;
+  opacity: 0.8;
+  background-image: radial-gradient(circle, #000 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+
+/* Section Cryptographique (Bas Gauche) */
+.cryptoCard {
+  grid-column: span 12 / span 12;
+  background-color: #ECEFF1;
+  border-radius: 12px;
+  padding: 40px;
+  border: 1px solid #c2c6d1;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+@media (min-width: 768px) {
+  .cryptoCard {
+    grid-column: span 8 / span 8;
+  }
+}
+
+.cryptoTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #002c53;
+  margin-bottom: 24px;
+}
+
+.cryptoList {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.hashRow {
+  background-color: rgba(255, 255, 255, 0.5);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .hashRow {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.hashLabel {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #42474f;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.hashCode {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: #002c53;
+  word-break: break-all;
+}
+
+.copyBtn {
+  color: #002c53;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+
+@media (min-width: 640px) {
+  .copyBtn {
+    align-self: center;
+  }
+}
+
+.copyBtn:hover {
+  background-color: rgba(0, 44, 83, 0.1);
+  color: #0060ac;
+}
+
+.copyBtnSuccess {
+  color: #22c486 !important;
+}
+
+.subCryptoGrid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 24px;
+}
+
+@media (min-width: 640px) {
+  .subCryptoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.cryptoBlock {
+  background-color: rgba(255, 255, 255, 0.5);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #ffffff;
+}
+
+.networkStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pulseDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #22c486;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+
+.ipfsStatus {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #22c486;
+}
+
+/* Section Historique d'Audit (Bas Droite) */
+.auditCard {
+  grid-column: span 12 / span 12;
+  background-color: #f3f4f5;
+  border-radius: 12px;
+  padding: 40px;
+  border: 1px solid #c2c6d1;
+}
+
+@media (min-width: 768px) {
+  .auditCard {
+    grid-column: span 4 / span 4;
+  }
+}
+
+.auditTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #002c53;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 24px;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.timelineItem {
+  display: flex;
+  gap: 12px;
+}
+
+.timelineAxis {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.timelineDotGreen {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #22c486;
+  margin-top: 8px;
+}
+
+.timelineLine {
+  width: 1px;
+  flex-grow: 1;
+  background-color: #c2c6d1;
+}
+
+.timelineDotOutline {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #002c53;
+  margin-top: 6px;
+}
+
+.timelineNodeTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #191c1d;
+}
+
+.timelineNodeTitleActive {
+  font-size: 12px;
+  font-weight: 700;
+  color: #002c53;
+}

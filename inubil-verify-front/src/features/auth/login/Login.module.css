@@ -1,0 +1,513 @@
+/* Cercle blanc agrandi et fixe */
+.userAvatar {
+  width: 110px;
+  height: 110px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px auto;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+/* Bonhomme beaucoup plus grand */
+.avatarIcon {
+  width: 72px;
+  height: 72px;
+  will-change: transform;
+  transition: transform 0.05s linear;
+}
+
+
+/* Conteneur principal centré */
+.loginWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color:linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  padding: 20px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Carte principale split-screen */
+.authCard {
+  display: flex;
+  width: 100%;
+  max-width: 880px;
+  min-height: 520px;
+  background-color: linear-gradient(135deg, #0350bd 0%, #062362 100%);;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* COLONNE GAUCHE */
+.leftPanel {
+  flex: 1;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.leftPanel::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  left: -50px;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.leftPanel::after {
+  content: '';
+  position: absolute;
+  bottom: -80px;
+  right: -80px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.leftContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.leftTitle {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #ffffff !important;
+  font-family: inherit !important;
+}
+
+.leftSubtitle {
+  font-size: 0.95rem;
+  color: #cbd5e1 !important;
+  margin-bottom: 32px;
+  line-height: 1.5;
+  font-family: inherit !important;
+}
+
+.socialButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+  margin: 20px auto 0 auto;
+  position: relative;
+  z-index: 10;
+}
+
+.btnSocial {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit !important;
+}
+
+.btnSocial:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ------------------ COLONNE DROITE ------------------ */
+.rightPanel {
+  flex: 1.1;
+  background-color: #ffffff;
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.topNav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0;
+}
+
+.activeTab {
+  background-color: transparent;
+  color: #888888;
+  padding: 6px 12px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-family: inherit !important;
+}
+
+.inactiveTab {
+  background:linear-gradient(135deg, #0350bd 0%, #062362 100%) ;
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.2s;
+  font-family: inherit !important;
+}
+
+.inactiveTab:hover {
+  background-color: #1e40a2;
+}
+
+.formHeader {
+  margin-top: 10px;
+  margin-bottom: 25px;
+}
+
+.authTitle {
+  color: #2c2c2c !important;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+  font-family: inherit !important;
+}
+
+.authSubtitle {
+  color: #888888 !important;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  font-family: inherit !important;
+}
+
+.formStack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.formLabel {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #888888 !important;
+  margin-bottom: 2px;
+  font-family: inherit !important;
+}
+
+/* Suppression définitive du bloc de fond et forçage de la ligne */
+.inputField {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 30px 6px 0 !important;
+  background-color: transparent !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1.5px solid #333333 !important;
+  border-radius: 0 !important;
+  font-size: 0.85rem;
+  color: #222222 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  font-family: inherit !important;
+}
+
+/* Suppression de la couleur bleue/grise forcée par l'autocomplétion du navigateur */
+.inputField:-webkit-autofill,
+.inputField:-webkit-autofill:hover, 
+.inputField:-webkit-autofill:focus, 
+.inputField:-webkit-autofill:active {
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: #222222 !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+  box-shadow: inset 0 0 0px 9999px transparent !important;
+}
+
+.inputField::placeholder {
+  color: #aaaaaa;
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+.inputField:focus {
+  border-bottom-color: #2b56cb !important;
+  box-shadow: none !important;
+}
+
+.passwordWrapper {
+  position: relative !important;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+
+
+/*.btnPrimary {
+  width: 100%;
+  background-color: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  color: #ffffff;
+  font-weight: 600;
+  padding: 12px;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+  font-family: inherit !important;
+}*/
+
+.btnPrimary:hover {
+  background-color: #1e40a2;
+}
+
+.footerLinks {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px;
+  font-size: 0.72rem;
+  font-family: inherit !important;
+}
+
+.authLink {
+  color: #555555 !important;
+  text-decoration: none;
+  font-weight: 500;
+  font-family: inherit !important;
+}
+
+.authLink:hover {
+  text-decoration: underline;
+}
+
+.registerText {
+  color: #555555 !important;
+  font-family: inherit !important;
+}
+
+.registerLink {
+  color: #2b56cb !important;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.registerLink:hover {
+  text-decoration: underline;
+}
+
+/* ------------------ KEYFRAMES (ANIMATIONS) ------------------ */
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ------------------ COLONNE DROITE ANIMÉE ------------------ */
+.rightPanel {
+  flex: 1.1;
+  background-color: #ffffff;
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  /* Animation d'entrée */
+  animation: fadeInSlide 0.6s ease-out forwards;
+}
+
+/* Animation en cascade des éléments du formulaire */
+.formHeader {
+  margin-top: 10px;
+  margin-bottom: 25px;
+  animation: fadeInSlide 0.5s ease-out 0.1s both;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  animation: fadeInSlide 0.5s ease-out 0.2s both;
+}
+
+/* Champ de texte avec animation de bordure au Focus */
+.inputField {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 30px 8px 0 !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-bottom: 1.5px solid #cbd5e1 !important;
+  border-radius: 0 !important;
+  font-size: 0.85rem;
+  color: #1e293b !important;
+  outline: none !important;
+  box-shadow: none !important;
+  font-family: inherit !important;
+  /* Transition fluide */
+  transition: border-color 0.3s ease, padding 0.2s ease;
+}
+
+.inputField:focus {
+  border-bottom-color: #2b56cb !important;
+  padding-left: 4px !important; /* Léger décalage vers la droite pour le feedback visuel */
+}
+
+/* Animation du bouton Œil pour le mot de passe */
+.eyeButton {
+  position: absolute;
+  right: 0;
+  bottom: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.eyeButton:hover {
+  transform: scale(1.15) rotate(5deg);
+  opacity: 0.8;
+}
+
+.eyeButton:active {
+  transform: scale(0.95);
+}
+
+/* Bouton principal interactif */
+.btnPrimary {
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  width: 100%;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  font-family: inherit !important;
+  /* Animations de survol et clic */
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeInSlide 0.5s ease-out 0.3s both;
+}
+
+.formHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 5px;
+  margin-bottom: 20px;
+}
+
+.btnPrimary:hover {
+  background-color: #1e40a2;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(43, 86, 203, 0.25);
+}
+
+.btnPrimary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(43, 86, 203, 0.15);
+}
+
+/* Liens du bas animés */
+.footerLinks {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px;
+  font-size: 0.72rem;
+  font-family: inherit !important;
+  animation: fadeInSlide 0.5s ease-out 0.4s both;
+}
+
+.authLink, .registerLink {
+  transition: color 0.2s ease, transform 0.2s ease;
+  display: inline-block;
+}
+
+.authLink:hover, .registerLink:hover {
+  transform: translateX(2px);
+}
+
+.alertError {
+  padding: 10px;
+  background-color: #fef2f2;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-family: inherit !important;
+}
+
+.btnSocialIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px; /* Espace généreux entre l'icône SVG et le texte */
+  width: 100%;
+  padding: 10px 20px;
+  background-color: #ffffff;
+  color: #1f2937;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease-in-out;
+}
+
+.btnSocialIcon span {
+  display: inline-block;
+  line-height: 1;
+}
+
+/* Empêche les SVGs de rétrécir ou de se déformer */
+.btnSocialIcon svg {
+  flex-shrink: 0;
+}
+
+/* Effets au survol */
+.btnSocialIcon:hover {
+  background-color: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.btnSocialIcon:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+  .leftPanel {
+    display: none;
+  }
+}

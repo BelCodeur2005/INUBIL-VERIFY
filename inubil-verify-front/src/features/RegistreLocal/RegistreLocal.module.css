@@ -1,0 +1,222 @@
+.container {
+  padding: 24px;
+  background-color: #f8fafc;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1e293b;
+}
+
+/* Header */
+.headerPage {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #062362;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* Stat Cards */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.statCard {
+  background: #ffffff;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.statValue {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #062362;
+}
+
+.statValueSmall {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0350bd;
+  margin-top: 4px;
+}
+
+.warningText {
+  color: #d97706;
+}
+
+/* Tableau & Filtres */
+.tableCard {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+  padding: 20px;
+}
+
+.tableToolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.searchInput {
+  width: 320px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  outline: none;
+}
+
+.filterGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.selectFilter {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #334155;
+}
+
+/* Styles du tableau identiques à la grille principale */
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+.dataTable th {
+  padding: 12px 16px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.dataTable td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.boldText {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.subtleText {
+  color: #64748b;
+}
+
+.hashCode {
+  font-family: monospace;
+  font-size: 0.75rem;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #475569;
+}
+
+/* Badges de Statut */
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.badgeSuccess {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.badgeWarning {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.badgeDanger {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Boutons */
+.btnPrimary {
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btnPrimary:hover {
+  opacity: 0.95;
+}
+
+.btnSecondary {
+  background-color: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.actionBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-right: 6px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.actionBtn:hover {
+  opacity: 1;
+}

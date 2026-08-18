@@ -1,0 +1,813 @@
+/* Layout Principal global */
+.page {
+  display: flex;
+  background-color: #F4F6F9;
+  color: #191c1d;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ---------------- SIDEBAR NAVIGATION ---------------- */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 256px;
+  background-color: #002c53;
+  border-right: 1px solid rgba(194, 198, 209, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  padding-top: 32px;
+  z-index: 50;
+  transition: all 0.3s ease;
+}
+
+.brandGroup {
+  padding: 24px 24px;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Centre le logo */
+  background-color: #ffffff; /* Fond blanc */
+  border-bottom: 1px solid rgba(194, 198, 209, 0.2);
+  margin-top: -32px;
+}
+
+.logoBox {
+  width: 120px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo {
+  width: 100%;
+  height: 200%;
+  object-fit: contain;
+}
+
+.userContextWrapper {
+  padding: 0 24px;
+  margin-bottom: 32px;
+}
+
+.userContextBox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: #0a4275;
+  border-radius: 12px;
+}
+
+.avatarInitials {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #68abff;
+  color: #003e73;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.userMetadata {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.userName {
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userWallet {
+  color: #a3c9ff;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Liens de Navigation menu side */
+.navigation {
+  flex: 1;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.navBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.navBtn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.navBtnActive {
+  background-color: #ffffff !important;
+  color: #002c53 !important;
+  font-weight: bold;
+}
+
+.sidebarFooter {
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logoutBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.logoutBtn:hover {
+  color: #ffffff;
+}
+
+.logoutText {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ---------------- CONTENU CENTRAL ---------------- */
+.main {
+  margin-left: 256px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* Header horizontal sup */
+.header {
+  height: 64px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e1e3e4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.notifBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.notifBtn:hover {
+  background-color: #edeeef;
+}
+
+.divider {
+  height: 32px;
+  width: 1px;
+  background-color: #c2c6d1;
+  margin: 0 8px;
+}
+
+.profileIndicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.profileText {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+
+.profileName {
+  color: #191c1d;
+  font-weight: bold;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.profileRole {
+  color: #42474f;
+  font-size: 12px;
+}
+
+.headerAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #002c53;
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 2px solid #ffffff;
+}
+
+/* Canvas global intérieur */
+.canvas {
+  padding: 32px;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Bannière de Bienvenue */
+.welcomeBanner {
+  position: relative;
+  overflow: hidden;
+  background-color: #002c53;
+  border-radius: 12px;
+  padding: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bannerContent {
+  position: relative;
+  z-index: 10;
+  max-width: 512px;
+}
+
+.bannerTitle {
+  font-size: 30px;
+  color: #ffffff;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.bannerDesc {
+  color: #a3c9ff;
+  font-size: 16px;
+  font-weight: 300;
+  opacity: 0.9;
+  line-height: 1.5;
+}
+
+.bannerActionGroup {
+  margin-top: 24px;
+}
+
+.shareProfileBtn {
+  background-color: #ffffff;
+  color: #002c53;
+  font-weight: bold;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: filter 0.2s;
+}
+
+.shareProfileBtn:hover {
+  filter: brightness(1.1);
+}
+
+/* ---------------- GRILLE DES STATISTIQUES ---------------- */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .statsGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.statCard {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #e1e3e4;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  transition: box-shadow 0.2s;
+}
+
+.statCard:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.statIconContainer {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconCertified { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
+.iconPending { background-color: rgba(0, 96, 172, 0.1); color: #0060ac; }
+.iconViews { background-color: rgba(179, 143, 77, 0.1); color: #B38F4D; }
+
+.statLabel {
+  color: #42474f;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: bold;
+}
+
+.statCount {
+  font-size: 30px;
+  font-weight: 900;
+  color: #191c1d;
+  margin-top: 4px;
+}
+
+/* ---------------- SECTION DIPLÔMES ---------------- */
+.degreesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  color: #191c1d;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleIndicator {
+  width: 6px;
+  height: 32px;
+  background-color: #002c53;
+  border-radius: 9999px;
+}
+
+.seeAllLink {
+  color: #0060ac;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.seeAllLink:hover {
+  text-decoration: underline;
+}
+
+.degreesGrid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 32px;
+}
+
+@media (min-width: 1280px) {
+  .degreesGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Carte diplôme */
+.degreeCard {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e1e3e4;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  position: relative;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.degreeCard:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.cardTopIndicator {
+  height: 6px;
+  width: 100%;
+  background-color: #10b981;
+}
+
+.cardBody {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  
+}
+
+.cardActionGroup {
+  margin-top: auto;
+  padding-top: 20px; 
+  display: flex;
+  gap: 12px;
+  z-index: 10;
+}
+
+.cardMainRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 24px;
+}
+
+.degreeTitles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10;
+}
+
+.degreeName {
+  font-size: 18px;
+  color: #002c53;
+  font-weight: bold;
+  line-height: 1.3;
+}
+
+.degreeInstitution {
+  color: #42474f;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.goldText {
+  color: #B38F4D;
+  font-weight: bold;
+}
+
+.statusBadge {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  letter-spacing: 0.1em;
+  z-index: 10;
+}
+
+.metadataGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+  z-index: 10;
+}
+
+.metaBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metaLabel {
+  font-size: 12px;
+  color: #737780;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metaValue {
+  font-size: 14px;
+  font-weight: bold;
+  color: #2e3132;
+}
+
+/* Bloc de hachage crypto */
+.hashBlock {
+  background-color: #F8F9FA;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(115, 119, 128, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: border-color 0.2s;
+  z-index: 10;
+}
+
+.hashBlock:hover {
+  border-color: rgba(179, 143, 77, 0.5);
+}
+
+.hashLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.hashLeft span {
+  color: #737780;
+  font-size: 18px;
+}
+
+.hashCode {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #42474f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.copyHashBtn {
+  background: transparent;
+  border: none;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #002c53;
+  display: flex;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.copyHashBtn:hover {
+  background-color: #ffffff;
+}
+
+.cardActionGroup {
+  margin-top: auto;
+  padding-top: 32px;
+  display: flex;
+  gap: 12px;
+  z-index: 10;
+}
+
+.viewDegreeBtn {
+  flex: 1;
+  background-color: #002c53;
+  color: #ffffff;
+  font-weight: bold;
+  padding: 12px 0;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 44, 83, 0.2);
+  transition: background 0.2s;
+}
+
+.viewDegreeBtn:hover {
+  background-color: #0a4275;
+}
+
+.shareCardBtn {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e1e3e4;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #002c53;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shareCardBtn:hover {
+  background-color: #edeeef;
+}
+
+/* Filigrane (Sceau de fond) */
+.sealWatermark {
+  opacity: 0.03;
+  pointer-events: none;
+  position: absolute;
+  right: -20px;
+  bottom: -20px;
+  transform: rotate(-15deg);
+}
+
+.sealWatermark span {
+  font-size: 180px !important;
+}
+
+/* Case "Ajouter un certificat" */
+.addCardPlaceholder {
+  border: 2px dashed #c2c6d1;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.addCardPlaceholder:hover {
+  border-color: rgba(179, 143, 77, 0.5);
+  background-color: #ffffff;
+}
+
+.addIconBox {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #edeeef;
+  color: #737780;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  transition: all 0.2s;
+}
+
+.addCardPlaceholder:hover .addIconBox {
+  background-color: rgba(179, 143, 77, 0.1);
+  color: #B38F4D;
+}
+
+.addTitle {
+  font-weight: bold;
+  color: #191c1d;
+  margin-bottom: 8px;
+}
+
+.addDesc {
+  font-size: 14px;
+  color: #42474f;
+  max-width: 240px;
+  line-height: 1.4;
+}
+
+.startProcessBtn {
+  margin-top: 24px;
+  background: transparent;
+  border: none;
+  color: #002c53;
+  font-weight: bold;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.addCardPlaceholder:hover .startProcessBtn {
+  transform: translateY(-2px);
+}
+
+/* ---------------- FOOTER SÉCURITÉ BAS ---------------- */
+.securityTipFooter {
+  background-color: #e7e8e9;
+  border-radius:xl;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  border: 1px solid #e1e3e4;
+}
+
+@media (min-width: 640px) {
+  .securityTipFooter {
+    flex-direction: row;
+  }
+}
+
+.securityTipIconBox {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  background-color: #ffffff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.securityTipIconBox span {
+  font-size: 30px;
+  color: #B38F4D;
+}
+
+.securityTipTexts {
+  flex: 1;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .securityTipTexts {
+    text-align: left;
+  }
+}
+
+.securityTipTitle {
+  font-size: 14px;
+  font-weight: bold;
+  color: #191c1d;
+  margin-bottom: 4px;
+}
+
+.securityTipDesc {
+  font-size: 12px;
+  color: #42474f;
+  line-height: 1.4;
+}
+
+.learnMoreBtn {
+  font-weight: bold;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  background-color: #002c53;
+  color: #ffffff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.learnMoreBtn:hover {
+  background-color: #0a4275;
+}

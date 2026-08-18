@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
+// Structure locale pour les messages d'alerte(notifications toast)
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 export interface Toast {
