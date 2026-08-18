@@ -15,6 +15,7 @@ import { QrCodeService } from './qr-code.service';
 import { NotificationEmissionService } from './notification-emission.service';
 import { StorageService } from '../storage/storage.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
+import { ConfigurationsService } from '../configurations/configurations.service';
 import { CreerDocumentDto } from './dto/creer-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { RevoquerDocumentDto } from './dto/revoquer-document.dto';
@@ -34,9 +35,17 @@ export class DocumentsService {
     private readonly notif: NotificationEmissionService,
     private readonly storage: StorageService,
     private readonly blockchain: BlockchainService,
+    private readonly configurations: ConfigurationsService,
   ) {}
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
+
+  /** Limite effective (en octets) pour un upload de PDF — parametre systeme "pdf_max_taille_mo". */
+  private async pdfMaxTailleOctets(): Promise<number> {
+    const brut = await this.configurations.get('pdf_max_taille_mo', '20');
+    const mo = Number(brut);
+    return (Number.isFinite(mo) && mo > 0 ? mo : 20) * 1024 * 1024;
+  }
 
   private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
     const u = await this.prisma.utilisateurs.findFirst({
@@ -269,6 +278,13 @@ export class DocumentsService {
     if (!['brouillon', 'en_validation', 'rejete'].includes(doc.statut)) {
       throw new BadRequestException(
         `Impossible d'uploader un PDF pour un document en statut "${doc.statut}"`,
+      );
+    }
+
+    const maxOctets = await this.pdfMaxTailleOctets();
+    if (fichierTailleOctets > maxOctets) {
+      throw new BadRequestException(
+        `Le fichier depasse la taille maximale autorisee (${Math.round(maxOctets / 1024 / 1024)} Mo)`,
       );
     }
 

@@ -9,6 +9,7 @@ import { QrCodeService } from './qr-code.service';
 import { NotificationEmissionService } from './notification-emission.service';
 import { StorageService } from '../storage/storage.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
+import { ConfigurationsService } from '../configurations/configurations.service';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,10 @@ const makeBlockchain = () => ({
 });
 const makeConfig   = () => ({ get: jest.fn().mockReturnValue('https://verify.inubil.com') });
 
+const makeConfigurations = () => ({
+  get: jest.fn().mockImplementation((_cle: string, defaut?: string) => Promise.resolve(defaut)),
+});
+
 const makeActeur   = (univId: string | null = UNIV_ID) => ({ universite_id: univId });
 
 const makeDocument = (overrides: any = {}) => ({
@@ -76,28 +81,31 @@ describe('DocumentsService', () => {
   let storage: ReturnType<typeof makeStorage>;
   let blockchain: ReturnType<typeof makeBlockchain>;
   let config: ReturnType<typeof makeConfig>;
+  let configurations: ReturnType<typeof makeConfigurations>;
 
   beforeEach(async () => {
-    prisma     = makePrisma();
-    audit      = makeAudit();
-    hash       = makeHash();
-    qr         = makeQr();
-    notif      = makeNotif();
-    storage    = makeStorage();
-    blockchain = makeBlockchain();
-    config     = makeConfig();
+    prisma         = makePrisma();
+    audit          = makeAudit();
+    hash           = makeHash();
+    qr             = makeQr();
+    notif          = makeNotif();
+    storage        = makeStorage();
+    blockchain     = makeBlockchain();
+    config         = makeConfig();
+    configurations = makeConfigurations();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DocumentsService,
-        { provide: PrismaService,               useValue: prisma     },
-        { provide: ConfigService,               useValue: config     },
-        { provide: AuditService,                useValue: audit      },
-        { provide: HashService,                 useValue: hash       },
-        { provide: QrCodeService,               useValue: qr         },
-        { provide: NotificationEmissionService, useValue: notif      },
-        { provide: StorageService,              useValue: storage    },
-        { provide: BlockchainService,           useValue: blockchain },
+        { provide: PrismaService,               useValue: prisma         },
+        { provide: ConfigService,               useValue: config         },
+        { provide: AuditService,                useValue: audit          },
+        { provide: HashService,                 useValue: hash           },
+        { provide: QrCodeService,               useValue: qr             },
+        { provide: NotificationEmissionService, useValue: notif          },
+        { provide: StorageService,              useValue: storage        },
+        { provide: BlockchainService,           useValue: blockchain     },
+        { provide: ConfigurationsService,       useValue: configurations },
       ],
     }).compile();
 
@@ -258,6 +266,31 @@ describe('DocumentsService', () => {
       await expect(service.uploadPdf(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID)).resolves.toBeDefined();
       const updateData = (prisma.documents.update as jest.Mock).mock.calls[0][0].data;
       expect(updateData.pdf_url).toBeNull();
+    });
+
+    it('lève BadRequestException si le fichier dépasse pdf_max_taille_mo (configuré)', async () => {
+      configurations.get.mockResolvedValue('1'); // 1 Mo
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'brouillon' }));
+
+      const grosFichier = 2 * 1024 * 1024; // 2 Mo
+      await expect(
+        service.uploadPdf(DOC_ID, fakePdf, grosFichier, ACTEUR_ID),
+      ).rejects.toThrow(BadRequestException);
+      expect(hash.calculateHash).not.toHaveBeenCalled();
+    });
+
+    it('accepte un fichier sous la limite par défaut (20 Mo) si le paramètre n\'est pas configuré', async () => {
+      configurations.get.mockResolvedValue(undefined);
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst
+        .mockResolvedValueOnce(makeDocument({ statut: 'brouillon' }))
+        .mockResolvedValueOnce(null);
+      prisma.documents.update.mockResolvedValue(makeDocument({ hash_sha256: FAKE_HASH }));
+
+      await expect(
+        service.uploadPdf(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID),
+      ).resolves.toBeDefined();
     });
   });
 

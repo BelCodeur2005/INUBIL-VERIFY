@@ -17,6 +17,7 @@ import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { AuditService } from '../audit/audit.service';
+import { ConfigurationsService } from '../configurations/configurations.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { AuthTokensDto } from './dto/auth-response.dto';
@@ -26,8 +27,10 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 
-const MAX_TENTATIVES = 5;
-const DUREE_BLOCAGE_MIN = 15;
+// Valeurs par defaut si les parametres systeme correspondants (configurations)
+// sont absents ou invalides — voir gererEchec().
+const MAX_TENTATIVES_DEFAUT = 5;
+const DUREE_BLOCAGE_MIN_DEFAUT = 15;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;       // 1h
 const EMAIL_VERIF_TTL_MS = 24 * 60 * 60 * 1000;  // 24h
 
@@ -42,6 +45,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly mail: MailService,
     private readonly audit: AuditService,
+    private readonly configurations: ConfigurationsService,
   ) {}
 
   // ─── REGISTER ───────────────────────────────────────────────────────
@@ -556,13 +560,25 @@ export class AuthService {
     });
   }
 
+  /** Lit un parametre systeme numerique (configurations), avec repli sur une valeur par defaut. */
+  private async parametreNumerique(cle: string, defaut: number): Promise<number> {
+    const brut = await this.configurations.get(cle, String(defaut));
+    const valeur = Number(brut);
+    return Number.isFinite(valeur) && valeur > 0 ? valeur : defaut;
+  }
+
   private async gererEchec(user: utilisateurs): Promise<void> {
+    const [maxTentatives, dureeBlocageMin] = await Promise.all([
+      this.parametreNumerique('max_tentatives_connexion', MAX_TENTATIVES_DEFAUT),
+      this.parametreNumerique('duree_blocage_min', DUREE_BLOCAGE_MIN_DEFAUT),
+    ]);
+
     const tentatives = user.tentatives_connexion + 1;
     const data: { tentatives_connexion: number; bloque_jusqu?: Date } = {
       tentatives_connexion: tentatives,
     };
-    if (tentatives >= MAX_TENTATIVES) {
-      data.bloque_jusqu = new Date(Date.now() + DUREE_BLOCAGE_MIN * 60 * 1000);
+    if (tentatives >= maxTentatives) {
+      data.bloque_jusqu = new Date(Date.now() + dureeBlocageMin * 60 * 1000);
     }
     await this.prisma.utilisateurs.update({ where: { id: user.id }, data });
   }

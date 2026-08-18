@@ -26,8 +26,7 @@ import {
 import { PublicVerifyService } from './public-verify.service';
 import { VerifierHashDto } from './dto/verifier-hash.dto';
 import { VerifyResponseDto } from './dto/verify-response.dto';
-
-const PDF_MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 Mo
+import { PDF_HARD_LIMIT_BYTES } from '../common/constants/upload.constants';
 
 @ApiTags('Vérification publique')
 @Controller('verify')
@@ -120,17 +119,21 @@ export class PublicVerifyController {
       type: 'object',
       required: ['fichier'],
       properties: {
-        fichier: { type: 'string', format: 'binary', description: 'PDF à vérifier (max 20 Mo)' },
+        fichier: {
+          type: 'string',
+          format: 'binary',
+          description: 'PDF a verifier — jusqu\'a 20 Mo (plafond serveur) ; limite effective pilotable via le parametre systeme "pdf_max_taille_mo"',
+        },
       },
     },
   })
   @ApiOkResponse({ type: VerifyResponseDto })
-  @ApiResponse({ status: 400, description: 'Fichier manquant ou format non-PDF.' })
+  @ApiResponse({ status: 400, description: 'Fichier manquant, format non-PDF, ou taille superieure a la limite configuree.' })
   @ApiResponse({ status: 404, description: 'Aucun document avec ce hash.' })
   @UseInterceptors(
     FileInterceptor('fichier', {
       storage: memoryStorage(),
-      limits: { fileSize: PDF_MAX_SIZE_BYTES },
+      limits: { fileSize: PDF_HARD_LIMIT_BYTES },
       fileFilter: (_req, file, cb) => {
         if (file.mimetype !== 'application/pdf') {
           return cb(new BadRequestException('Seuls les fichiers PDF sont acceptés'), false);

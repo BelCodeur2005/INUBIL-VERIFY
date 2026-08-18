@@ -281,20 +281,40 @@ async function main(): Promise<void> {
   console.log(`${mentions.length} mentions upserted pour ${universite.nom_court}.`);
 
   // ── 8. Configurations système ───────────────────────────────────────────────
-  await prisma.configurations.upsert({
-    where: { cle: 'partage_duree_jours' },
-    update: {},
-    create: {
+  const configurationsSysteme = [
+    {
       cle: 'partage_duree_jours',
       valeur: '30',
-      type: 'number',
       description:
         "Duree par defaut (en jours) d'un lien de partage de document quand l'etudiant " +
         'ne choisit ni date precise ni option "permanent".',
-      modifiable_par: 'super_admin',
     },
-  });
-  console.log('Configuration "partage_duree_jours" upserted (30 jours par defaut).');
+    {
+      cle: 'max_tentatives_connexion',
+      valeur: '5',
+      description: 'Nombre de tentatives de connexion echouees avant blocage temporaire du compte.',
+    },
+    {
+      cle: 'duree_blocage_min',
+      valeur: '15',
+      description: 'Duree (en minutes) du blocage d\'un compte apres max_tentatives_connexion echecs.',
+    },
+    {
+      cle: 'pdf_max_taille_mo',
+      valeur: '20',
+      description:
+        'Taille maximale (en Mo) acceptee pour un upload de PDF (emission de document et verification par upload). ' +
+        'Ne peut pas depasser le plafond serveur (20 Mo, non configurable).',
+    },
+  ];
+  for (const c of configurationsSysteme) {
+    await prisma.configurations.upsert({
+      where: { cle: c.cle },
+      update: {},
+      create: { cle: c.cle, valeur: c.valeur, type: 'number', description: c.description, modifiable_par: 'super_admin' },
+    });
+  }
+  console.log(`${configurationsSysteme.length} configurations systeme upserted.`);
 
   // ── 9. Étudiant de test ─────────────────────────────────────────────────────
   const numeroEtudiant = 'ISTAMA-2023-0001';
