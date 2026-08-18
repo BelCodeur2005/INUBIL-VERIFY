@@ -7,7 +7,7 @@
  * Idempotent : peut etre relance sans creer de doublons.
  *
  * Donnees crees :
- *   1. Role super_admin + 25 permissions granulaires
+ *   1. Role super_admin + 39 permissions granulaires
  *   2. Compte admin  (admin@inubil.com / Admin123!)
  *   3. Universite    ISTAMA INUBIL (statut active)
  *   4. Type document Licence en Informatique (categorie diplome)

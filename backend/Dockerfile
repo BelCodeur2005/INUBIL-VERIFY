@@ -1,7 +1,7 @@
 # ─── Stage 1 : Dépendances ────────────────────────────────────────────────────
 FROM node:20-alpine AS deps
 WORKDIR /app
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl postgresql-client
 COPY package*.json ./
 COPY prisma ./prisma
 RUN npm ci
@@ -9,7 +9,7 @@ RUN npm ci
 # ─── Stage 2 : Développement (hot-reload) ─────────────────────────────────────
 FROM node:20-alpine AS development
 WORKDIR /app
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl postgresql-client
 COPY package*.json ./
 COPY prisma ./prisma
 RUN npm ci && npx prisma generate
@@ -21,7 +21,7 @@ CMD ["npm", "run", "start:dev"]
 # ─── Stage 3 : Build ──────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl postgresql-client
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
@@ -33,7 +33,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl postgresql-client
 COPY package*.json ./
 COPY prisma ./prisma
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force

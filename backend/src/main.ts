@@ -5,6 +5,12 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
+// BigInt natif n'est pas sérialisable en JSON (ethers.js v6 retourne des BigInt
+// pour les numéros de bloc). On les convertit en string pour éviter le crash.
+(BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function () {
+  return this.toString();
+};
+
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
@@ -28,9 +34,20 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // CORS : autorise uniquement le frontend declare (cahier §9.1)
+  // CORS : autorise le frontend declare + Swagger UI en dev (cahier §9.1)
+  const frontendUrl = config.get<string>('FRONTEND_URL') ?? 'http://localhost:4200';
+  const allowedOrigins = [
+    frontendUrl,
+    'http://localhost:3000', // Swagger UI (même hôte que l'API)
+    'http://127.0.0.1:3000',
+  ];
   app.enableCors({
-    origin: config.get<string>('FRONTEND_URL'),
+    origin: (origin, callback) => {
+      // Requêtes sans Origin (curl, Postman, mobile) → autorisées
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS: origine non autorisée — ${origin}`));
+    },
     credentials: true,
   });
 

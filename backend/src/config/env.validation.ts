@@ -63,4 +63,12 @@ export const envValidationSchema = Joi.object({
   DEPLOYER_PRIVATE_KEY: Joi.string().optional().allow(''),
   CONTRACT_ADDRESS:     Joi.string().optional().allow(''),
   POLYGON_NETWORK:      Joi.string().valid('polygon_amoy', 'polygon_mainnet').default('polygon_amoy'),
+
+  // ─── Backup automatique - N0C Storage via FTP ───────────────────
+  BACKUP_FTP_HOST:        Joi.string().optional().allow(''),
+  BACKUP_FTP_USER:        Joi.string().optional().allow(''),
+  BACKUP_FTP_PASS:        Joi.string().optional().allow(''),
+  BACKUP_FTP_DIR:         Joi.string().optional().default('/'),
+  BACKUP_FTP_SECURE:      Joi.string().valid('true', 'false').optional().default('true'),
+  BACKUP_RETENTION_DAYS:  Joi.number().min(1).optional().default(30),
 });

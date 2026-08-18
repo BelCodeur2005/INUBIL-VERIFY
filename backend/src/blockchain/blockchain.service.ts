@@ -82,7 +82,12 @@ export class BlockchainService {
       this.logger.log(`Diplôme enregistré on-chain : ${numeroUnique} (tx: ${tx.hash}, bloc: ${blocNumero})`);
       return { txHash: tx.hash, blocNumero };
     } catch (err) {
-      this.logger.error(`Erreur enregistrerDiplome (${numeroUnique}) :`, err);
+      const raison = err instanceof Error ? err.message : String(err);
+      if (raison.includes('deja enregistre')) {
+        this.logger.warn(`Diplôme ${numeroUnique} déjà enregistré on-chain — ignoré.`);
+      } else {
+        this.logger.error(`Erreur enregistrerDiplome (${numeroUnique}) : ${raison}`);
+      }
       return null;
     }
   }
