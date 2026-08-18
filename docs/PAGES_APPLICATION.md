@@ -1,6 +1,6 @@
 # Pages de l'Application - INUBIL Verify
 
-> Document de référence listant toutes les pages Angular de la plateforme.  
+> Document de référence listant toutes les pages de la plateforme (frontend React).  
 > Organisé par module, avec la route, le rôle requis et l'issue GitHub correspondante.
 
 **Total : 34 pages**

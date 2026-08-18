@@ -6,7 +6,7 @@ Plateforme de certification et d'authentification de diplômes sur blockchain po
 
 | Couche | Technologie |
 |---|---|
-| Frontend | Angular 18+ |
+| Frontend | React |
 | Backend | NestJS 10+ / Node 20 LTS |
 | Base de données | PostgreSQL 16 + Prisma ORM |
 | Blockchain | Polygon (Solidity 0.8+, Ethers.js v6) |
