@@ -1,22 +1,23 @@
+/* Cercle blanc agrandi et fixe */
 .userAvatar {
-  width: 52px;
-  height: 52px;
-  background-color: #ebf0ff;
+  width: 110px;
+  height: 110px;
+  background-color: #ffffff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
-  box-shadow: 0 4px 12px rgba(43, 86, 203, 0.15);
-  /* Transition fluide pour amortir le suivi de la souris */
-  transition: transform 0.1s ease-out, background-color 0.3s ease;
-  will-change: transform;
+  margin: 0 auto 24px auto;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
 }
 
+/* Bonhomme beaucoup plus grand */
 .avatarIcon {
-  width: 26px;
-  height: 26px;
-  color: #2b56cb;
+  width: 72px;
+  height: 72px;
+  will-change: transform;
+  transition: transform 0.05s linear;
 }
 
 
@@ -26,7 +27,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #f1f5f9;
+  background-color:linear-gradient(135deg, #0350bd 0%, #062362 100%);
   padding: 20px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
@@ -37,7 +38,7 @@
   width: 100%;
   max-width: 880px;
   min-height: 520px;
-  background-color: #ffffff;
+  background-color: linear-gradient(135deg, #0350bd 0%, #062362 100%);;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid #e2e8f0;
@@ -45,7 +46,7 @@
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
-/* ------------------ COLONNE GAUCHE ------------------ */
+/* COLONNE GAUCHE */
 .leftPanel {
   flex: 1;
   background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
@@ -81,8 +82,10 @@
 }
 
 .leftContent {
-  position: relative;
-  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .leftTitle {
@@ -105,6 +108,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
+  max-width: 280px;
+  margin: 20px auto 0 auto;
+  position: relative;
+  z-index: 10;
 }
 
 .btnSocial {
@@ -150,7 +158,7 @@
 }
 
 .inactiveTab {
-  background-color: #2b56cb;
+  background:linear-gradient(135deg, #0350bd 0%, #062362 100%) ;
   color: #ffffff;
   padding: 6px 14px;
   border-radius: 2px;
@@ -250,21 +258,11 @@
   width: 100%;
 }
 
-.eyeButton {
-  position: absolute;
-  right: 0;
-  bottom: 6px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-}
 
-.btnPrimary {
+
+/*.btnPrimary {
   width: 100%;
-  background-color: #2b56cb;
+  background-color: linear-gradient(135deg, #0350bd 0%, #062362 100%);
   color: #ffffff;
   font-weight: 600;
   padding: 12px;
@@ -275,7 +273,7 @@
   margin-top: 10px;
   transition: background-color 0.2s;
   font-family: inherit !important;
-}
+}*/
 
 .btnPrimary:hover {
   background-color: #1e40a2;
@@ -401,8 +399,8 @@
 
 /* Bouton principal interactif */
 .btnPrimary {
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
   width: 100%;
-  background-color: #2b56cb;
   color: #ffffff;
   font-weight: 600;
   padding: 12px;
@@ -415,6 +413,14 @@
   /* Animations de survol et clic */
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeInSlide 0.5s ease-out 0.3s both;
+}
+
+.formHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 5px;
+  margin-bottom: 20px;
 }
 
 .btnPrimary:hover {
@@ -457,6 +463,47 @@
   border-radius: 6px;
   margin-bottom: 12px;
   font-family: inherit !important;
+}
+
+.btnSocialIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px; /* Espace généreux entre l'icône SVG et le texte */
+  width: 100%;
+  padding: 10px 20px;
+  background-color: #ffffff;
+  color: #1f2937;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease-in-out;
+}
+
+.btnSocialIcon span {
+  display: inline-block;
+  line-height: 1;
+}
+
+/* Empêche les SVGs de rétrécir ou de se déformer */
+.btnSocialIcon svg {
+  flex-shrink: 0;
+}
+
+/* Effets au survol */
+.btnSocialIcon:hover {
+  background-color: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.btnSocialIcon:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 768px) {

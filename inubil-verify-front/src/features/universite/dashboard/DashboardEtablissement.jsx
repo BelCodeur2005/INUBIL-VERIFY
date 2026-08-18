@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import styles from './DashboardEtablissement.module.css';
 import Ajout_Unitaire from '../../../shared/components/Ajout_Unitaire';
+import { Link } from 'react-router-dom';
 
 const IconTotal = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5">
@@ -71,8 +72,8 @@ const IconArrow = () => (
 export default function DashboardEtablissement() {
   const navigate = useNavigate();
 
-  // État local pour contrôler la visibilité de la modale d'ajout unitaire
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isModalOpen, setIsModalOpen } = useOutletContext();
+  
 
 
   const [diplomes] = useState([
@@ -233,14 +234,7 @@ export default function DashboardEtablissement() {
               <IconArrow />
             </button>
 
-            <button className={styles.actionYellow}>
-              <span className={styles.actionIconBoxDark}><IconUpload /></span>
-              <span className={styles.actionTexts}>
-                <span className={styles.actionMainDark}>Importation .XLSX / .JSON</span>
-                <span className={styles.actionSubDark}>TRAITEMENT PAR LOTS</span>
-              </span>
-              <span className={styles.arrowDark}><IconArrow /></span>
-            </button>
+            
           </div>
 
           {/* Journal */}
@@ -253,7 +247,9 @@ export default function DashboardEtablissement() {
                 <span className={styles.journalTime}>Il y a 4 min • Nœud Central</span>
               </div>
             </div>
-            <button className={styles.btnJournal}>VOIR TOUT LE JOURNAL ↗</button>
+            <Link to="/universite/journal" className={styles.btnJournal}>
+              VOIR TOUT LE JOURNAL ↗
+            </Link>
           </div>
 
         </div>
@@ -266,3 +262,4 @@ export default function DashboardEtablissement() {
     </div>
   );
 }
+

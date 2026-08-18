@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import styles from './AppLayout.module.css';
 import Logo_Inubil from '../../../assets/Logo_Inubil.png';
@@ -24,7 +25,7 @@ const navItems = [
       </svg>
     ),
   },
-  {
+  /*{
     path: '/universite/importation',
     label: 'Importation de Masse',
     icon: (
@@ -33,7 +34,7 @@ const navItems = [
         <path d="M20 21H4"/>
       </svg>
     ),
-  },
+  },*/
   {
     path: '/universite/registre',
     label: 'Registre Local',
@@ -82,6 +83,15 @@ const bottomNavItems = [
 ];
 
 export default function AppLayout() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleNavClick = (e, item) => {
+    if (item.path === '/universite/ajout') {
+      e.preventDefault();
+      setIsModalOpen(true);
+    }
+  };
+
   return (
     <div className={styles.shell}>
 
@@ -103,8 +113,9 @@ export default function AppLayout() {
               key={item.path}
               to={item.path}
               end={item.path === '/universite'}
+              onClick={(e) => handleNavClick(e, item)}
               className={({ isActive }) =>
-                `${styles.navItem} ${isActive ? styles.navItemActive : ''}`
+                `${styles.navItem} ${isActive && item.path !== '/universite/ajout' ? styles.navItemActive : ''}`
               }
             >
               <span className={styles.navIcon}>{item.icon}</span>
@@ -181,7 +192,7 @@ export default function AppLayout() {
 
         {/* Contenu injecté */}
         <main className={styles.main}>
-          <Outlet />
+          <Outlet context={{ isModalOpen, setIsModalOpen }} />
         </main>
       </div>
     </div>

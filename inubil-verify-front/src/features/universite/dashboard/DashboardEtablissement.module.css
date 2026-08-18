@@ -47,7 +47,7 @@
 .statNum {
   font-size: 2rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #0b192c;
 }
 
 .statNumAmber {
@@ -86,7 +86,7 @@
 
 /* Node card */
 .nodeCard {
-  background: #002c53;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
   border-radius: 12px;
   padding: 20px;
   color: white;
@@ -116,7 +116,7 @@
 
 .nodeFooter {
   font-size: 0.7rem;
-  color: #64748b;
+  color: #cbd5e1;
 }
 
 /* ── Main Grid ── */
@@ -152,7 +152,7 @@
   gap: 8px;
   font-size: 0.82rem;
   font-weight: 700;
-  color: #1e293b;
+  color: #0b192c;
   letter-spacing: 0.3px;
 }
 
@@ -171,9 +171,12 @@
   color: #475569;
   cursor: pointer;
   letter-spacing: 0.3px;
+  transition: all 0.2s ease;
 }
 
 .btnOutline:hover {
+  border-color: #2b56cb;
+  color: #2b56cb;
   background: #f8fafc;
 }
 
@@ -218,7 +221,7 @@
 
 .bold {
   font-weight: 600;
-  color: #0f172a;
+  color: #0b192c;
   line-height: 1.4;
 }
 
@@ -265,7 +268,8 @@
 }
 
 .badgeAncre    { background: #f0fdf4; color: #16a34a; }
-.badgeRevision { background: #eff6ff; color: #2563eb; }
+.badgeRevision { background: #eef2ff; color: #2b56cb; }
+
 .badgeRejete   { background: #fef2f2; color: #ef4444; }
 
 .dotGreen {
@@ -321,9 +325,9 @@
 }
 
 .paginActive {
-  background: #1e2d45;
+  background: #2b56cb;
   color: white;
-  border-color: #1e2d45;
+  border-color: #2b56cb;
 }
 
 /* ── Sidebar droite ── */
@@ -331,7 +335,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background-color: #002C53;
+  background-color: transparent;
 }
 
 .panel {
@@ -344,7 +348,7 @@
 .panelTitle {
   font-size: 0.78rem;
   font-weight: 700;
-  color: #334155;
+  color: #0b192c;
   letter-spacing: 0.5px;
   margin: 0 0 14px 0;
 }
@@ -352,7 +356,7 @@
 /* Actions */
 .actionDark {
   width: 100%;
-  background: #1e2d45;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
   color: white;
   border: none;
   border-radius: 10px;
@@ -363,11 +367,16 @@
   cursor: pointer;
   margin-bottom: 10px;
   text-align: left;
+  transition: background-color 0.2s ease;
+}
+
+.actionDark:hover {
+  background: #1d40b0;
 }
 
 .actionYellow {
   width: 100%;
-  background: #facc15;
+  background: #f59e0b;
   border: none;
   border-radius: 10px;
   padding: 14px 16px;
@@ -376,10 +385,15 @@
   gap: 12px;
   cursor: pointer;
   text-align: left;
+  transition: background-color 0.2s ease;
+}
+
+.actionYellow:hover {
+  background: #d97706;
 }
 
 .actionIconBox {
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.2);
   width: 34px;
   height: 34px;
   border-radius: 8px;
@@ -391,7 +405,7 @@
 }
 
 .actionIconBoxDark {
-  background: rgba(0,0,0,0.1);
+  background: rgba(255, 255, 255, 0.25);
   width: 34px;
   height: 34px;
   border-radius: 8px;
@@ -399,7 +413,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #1e2d45;
+  color: #ffffff;
 }
 
 .actionTexts {
@@ -407,14 +421,15 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%)
 }
 
-.actionMain    { font-size: 0.85rem; font-weight: 700; color: white; }
-.actionSub     { font-size: 0.7rem; color: #94a3b8; }
-.actionMainDark { font-size: 0.85rem; font-weight: 700; color: #1e293b; }
-.actionSubDark  { font-size: 0.68rem; font-weight: 700; color: #78350f; letter-spacing: 0.5px; }
+.actionMain    { font-size: 0.85rem; font-weight: 700; color: white;background: linear-gradient(135deg, #0350bd 0%, #062362 100%) }
+.actionSub     { font-size: 0.7rem; color: #e0e7ff; }
+.actionMainDark { font-size: 0.85rem; font-weight: 700; color: #ffffff; }
+.actionSubDark  { font-size: 0.68rem; font-weight: 700; color: #fef3c7; letter-spacing: 0.5px; }
 
-.arrowDark { color: #1e293b; display: flex; }
+.arrowDark { color: #ffffff; display: flex; }
 
 /* Journal */
 .journalItem {
@@ -440,7 +455,7 @@
   display: block;
   font-size: 0.82rem;
   font-weight: 600;
-  color: #1e293b;
+  color: #043b89;
   margin-bottom: 2px;
 }
 
@@ -457,11 +472,13 @@
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #475569;
+  color: #2b56cb;
   cursor: pointer;
   letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+  text-decoration: none;
 }
 
 .btnJournal:hover {
-  background: #f1f5f9;
+  background: #eef2ff;
 }

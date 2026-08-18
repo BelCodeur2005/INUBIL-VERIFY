@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styles from './ResetPassword.module.css'; 
+import styles from './ResetPassword.module.css';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -9,52 +9,152 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Validation dynamique des critères
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    navigate('/auth/login');
+    if (hasMinLength && hasUppercase && hasNumber && hasSpecialChar && password === confirmPassword) {
+      navigate('/auth/login');
+    }
   };
 
   return (
-    <div className={styles.authCard}>
-      <div className={styles.textCenter}>
-        <h2 className={styles.authTitle}>Nouveau mot de passe</h2>
-        <p className={styles.authSubtitle}>Saisissez vos nouvelles informations de connexion.</p>
+    <div className={styles.pageContainer}>
+      <div className={styles.authCard}>
+
+        {/* VOLET GAUCHE - HERO BRANDING */}
+        <div className={styles.heroSection}>
+          <div className={styles.heroContent}>
+            
+            <h1 className={styles.heroTitle}>NOUVEAU MOT DE PASSE</h1>
+            <p className={styles.heroSubtitle}>
+              Définissez un mot de passe robuste pour garantir la sécurité de votre compte et de vos documents.
+            </p>
+          </div>
+
+          <div className={styles.circleBg1}></div>
+          <div className={styles.circleBg2}></div>
+          <div className={styles.circleBg3}></div>
+        </div>
+
+        {/* VOLET DROIT - FORMULAIRE */}
+        <div className={styles.formSection}>
+
+          <div className={styles.topBadgeWrapper}>
+            <span className={styles.topBadge}>
+              <span className={styles.badgeDot}></span> SÉCURITÉ DU COMPTE
+            </span>
+          </div>
+
+          <div className={styles.textCenter}>
+            <h2 className={styles.authTitle}>Réinitialisation</h2>
+            <p className={styles.authSubtitle}>Saisissez vos nouvelles informations de connexion.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className={styles.formStack}>
+            
+            {/* Champ Nouveau mot de passe */}
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>NOUVEAU MOT DE PASSE</label>
+              <div className={styles.passwordWrapper}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className={styles.inputField}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className={styles.eyeButton}
+                  tabIndex="-1"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {showPassword ? (
+                      <>
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </>
+                    ) : (
+                      <>
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </>
+                    )}
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Champ Confirmer le mot de passe */}
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>CONFIRMER LE MOT DE PASSE</label>
+              <div className={styles.passwordWrapper}>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className={styles.inputField}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className={styles.eyeButton}
+                  tabIndex="-1"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {showConfirmPassword ? (
+                      <>
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </>
+                    ) : (
+                      <>
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </>
+                    )}
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Panneau des exigences dynamiques */}
+            <div className={styles.requirementsBox}>
+              <h3 className={styles.requirementsTitle}>EXIGENCES DU MOT DE PASSE :</h3>
+              <ul className={styles.requirementsList}>
+                <li className={hasMinLength ? styles.validItem : ''}>
+                  <span className={styles.checkIcon}>{hasMinLength ? '✓' : '•'}</span> 8 caractères minimum
+                </li>
+                <li className={hasUppercase ? styles.validItem : ''}>
+                  <span className={styles.checkIcon}>{hasUppercase ? '✓' : '•'}</span> Au moins une lettre majuscule
+                </li>
+                <li className={hasNumber ? styles.validItem : ''}>
+                  <span className={styles.checkIcon}>{hasNumber ? '✓' : '•'}</span> Au moins un chiffre
+                </li>
+                <li className={hasSpecialChar ? styles.validItem : ''}>
+                  <span className={styles.checkIcon}>{hasSpecialChar ? '✓' : '•'}</span> Au moins un caractère spécial (@, #, !, etc.)
+                </li>
+              </ul>
+            </div>
+
+            <button type="submit" className={styles.btnPrimary}>
+              <span>Mettre à jour le mot de passe</span>
+              <span className={styles.arrowIcon}>→</span>
+            </button>
+          </form>
+
+        </div>
+
       </div>
-
-      <form onSubmit={handleSubmit} className={styles.formStack}>
-        {/* Même structure de champs et cadre gris "EXIGENCES" qu'avant... */}
-        <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Nouveau mot de passe</label>
-          <div className={styles.passwordWrapper}>
-            <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className={styles.inputField} required />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className={styles.eyeButton}>
-              <div className={`${styles.eyeIcon} ${showPassword ? styles.eyeOpen : ''}`}></div>
-            </button>
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label className={styles.formLabel}>Confirmer le mot de passe</label>
-          <div className={styles.passwordWrapper}>
-            <input type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" className={styles.inputField} required />
-            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className={styles.eyeButton}>
-              <div className={`${styles.eyeIcon} ${showConfirmPassword ? styles.eyeOpen : ''}`}></div>
-            </button>
-          </div>
-        </div>
-
-        <div className={styles.requirementsBox}>
-          <h3 className={styles.requirementsTitle}>EXIGENCES :</h3>
-          <ul className={styles.requirementsList}>
-            <li><span className={styles.checkIcon}>✓</span> 8 caractères minimum</li>
-            <li><span className={styles.checkIcon}>✓</span> Une majuscule</li>
-            <li><span className={styles.checkIcon}>✓</span> Un chiffre</li>
-            <li><span className={styles.checkIcon}>✓</span> Un caractère spécial</li>
-          </ul>
-        </div>
-
-        <button type="submit" className={styles.btnPrimary}>Mettre jour le mot de passe</button>
-      </form>
     </div>
   );
 }

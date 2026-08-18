@@ -13,6 +13,11 @@ import Valide from './features/Public/Valide';
 import DashboardEtudiant from './features/Etudiant/DashboardEtudiant';
 import DashboardDirecteur from './features/DashboardDirecteur/DashboardDirecteur';
 import AdminInubil from './features/AdminInubil/AdminInubil';
+import RegistreLocal from './features/RegistreLocal/RegistreLocal';
+import Revocations from './features/ListeRevocations_Agent/ListeRevocations_Agent';
+import Parametres_Agent from './features/Parametres_Agent/Parametres_Agent';
+import Support_Agent from './features/Support_Agent/Support';
+import JournalActivites from './features/JournalActivites/JournalActivites';
 
 export default function App() {
   return (
@@ -30,8 +35,15 @@ export default function App() {
         {/*2. L'ESPACE UNIVERSITÉ */}
         <Route path="/universite" element={<AppLayout />}>
           <Route index element={<DashboardEtablissement />} />
+          <Route path="registre" element={<RegistreLocal />} />
+          <Route path="revocations" element={<Revocations />} />
+          <Route path="parametres" element={<Parametres_Agent />} />
+          <Route path="support" element={<Support_Agent />} />
+          <Route path="journal" element={<JournalActivites />} />
           
         </Route>
+
+      
 
         {/* 3. DASHBOARD DIRECTEUR */}
         <Route path="/dashboard-directeur" element={<DashboardDirecteur />} />

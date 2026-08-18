@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import styles from './Ajout_Unitaire.module.css';
 
 export default function FormCertificatModal({ isOpen, onClose }) {
-  // Gestion des états du formulaire
+  const fileInputRef = useRef(null); // Ref pour piloter l'input fichier caché
+  const [selectedFile, setSelectedFile] = useState(null); // État du fichier sélectionné
+
   const [formData, setFormData] = useState({
     nom: '',
     prenoms: '',
@@ -22,23 +24,45 @@ export default function FormCertificatModal({ isOpen, onClose }) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Déclenche l'ouverture du sélecteur de fichier
+  const handleBrowseClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Traite la sélection du fichier
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  // Supprime le fichier sélectionné
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Données du certificat soumises :", formData);
-    // Insère ici ton appel d'API axios ou fetch
-    onClose(); // Ferme la modale après soumission réussie
+    const dataToSend = {
+      ...formData,
+      fichier: selectedFile
+    };
+    console.log("Données complètes du certificat soumises :", dataToSend);
+    onClose();
   };
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContainer} onClick={(e) => e.stopPropagation()}>
         
-        {/* Bouton de fermeture croix */}
         <button className={styles.closeBtn} onClick={onClose} aria-label="Fermer">
           <span className="material-symbols-outlined">close</span>
         </button>
 
-        {/* En-tête du formulaire */}
         <div className={styles.formHeader}>
           <div>
             <h2 className={styles.formTitle}>Nouveau Dossier Diplômé</h2>
@@ -174,30 +198,47 @@ export default function FormCertificatModal({ isOpen, onClose }) {
               <span className="material-symbols-outlined">description</span>
               <h3>Pièces Justificatives</h3>
             </div>
+            
+            {/* Input masqué */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+              accept=".pdf,.jpeg,.jpg,.png" 
+              style={{ display: 'none' }} 
+            />
+
             <div className={styles.uploadArea}>
               <span className={`material-symbols-outlined ${styles.uploadIcon}`}>cloud_upload</span>
               <p className={styles.uploadMainText}>Glissez-déposez le scan du diplôme (PDF, JPEG)</p>
               <p className={styles.uploadSubText}>Taille maximale autorisée : 10 Mo par fichier</p>
-              <button type="button" className={styles.browseBtn}>Parcourir les fichiers</button>
+              <button type="button" className={styles.browseBtn} onClick={handleBrowseClick}>
+                Parcourir les fichiers
+              </button>
             </div>
             
-            {/* Aperçu du fichier */}
-            <div className={styles.fileListPreview}>
-              <div className={styles.fileCard}>
-                <div className={styles.fileIconBox}>
-                  <span className="material-symbols-outlined">picture_as_pdf</span>
+            {/* Aperçu dynamique du fichier sélectionné */}
+            {selectedFile && (
+              <div className={styles.fileListPreview}>
+                <div className={styles.fileCard}>
+                  <div className={styles.fileIconBox}>
+                    <span className="material-symbols-outlined">
+                      {selectedFile.type.includes('pdf') ? 'picture_as_pdf' : 'image'}
+                    </span>
+                  </div>
+                  <div className={styles.fileDetails}>
+                    <p className={styles.fileName}>{selectedFile.name}</p>
+                    <p className={styles.fileStatus}>
+                      <span className={styles.statusDot}></span> 
+                      {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • Prêt pour injection
+                    </p>
+                  </div>
+                  <button type="button" className={styles.deleteFileBtn} onClick={handleRemoveFile}>
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
                 </div>
-                <div className={styles.fileDetails}>
-                  <p className={styles.fileName}>DIPLOME_MASTER_KOUAM.pdf</p>
-                  <p className={styles.fileStatus}>
-                    <span className={styles.statusDot}></span> 1.2 MB • Prêt pour injection
-                  </p>
-                </div>
-                <button type="button" className={styles.deleteFileBtn}>
-                  <span className="material-symbols-outlined">close</span>
-                </button>
               </div>
-            </div>
+            )}
           </section>
 
           {/* Zone d'actions inférieure */}
