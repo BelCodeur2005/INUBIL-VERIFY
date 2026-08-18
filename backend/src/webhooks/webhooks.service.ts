@@ -13,6 +13,7 @@ import {
   WebhookResponseDto,
   WebhookLivraisonResponseDto,
 } from './dto/webhook-response.dto';
+import { assertSafeWebhookUrl, safeWebhookFetch } from './webhook-url-guard';
 
 @Injectable()
 export class WebhooksService {
@@ -84,6 +85,7 @@ export class WebhooksService {
     ip?: string,
   ): Promise<WebhookResponseDto> {
     const universiteId = await this.getUniversiteActeur(acteurId);
+    await assertSafeWebhookUrl(dto.url);
     const secret = randomBytes(32).toString('hex');
 
     const webhook = await this.prisma.webhooks.create({
@@ -120,6 +122,7 @@ export class WebhooksService {
     if (!webhook) throw new NotFoundException(`Webhook ${id} introuvable`);
     if (webhook.universite_id !== universiteId)
       throw new ForbiddenException('Accès refusé');
+    if (dto.url !== undefined) await assertSafeWebhookUrl(dto.url);
 
     const updated = await this.prisma.webhooks.update({
       where: { id },
@@ -202,7 +205,7 @@ export class WebhooksService {
 
     const debut = Date.now();
     try {
-      const response = await fetch(webhook.url, {
+      const response = await safeWebhookFetch(webhook.url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -264,7 +267,7 @@ export class WebhooksService {
       });
 
       this.logger.warn(`Webhook test échoué ${webhook.url}: ${err}`);
-      return { succes: false, message: `Erreur réseau : ${String(err)}` };
+      return { succes: false, message: 'Livraison échouée' };
     }
   }
 
@@ -295,7 +298,7 @@ export class WebhooksService {
       const debut = Date.now();
 
       try {
-        const response = await fetch(webhook.url, {
+        const response = await safeWebhookFetch(webhook.url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
