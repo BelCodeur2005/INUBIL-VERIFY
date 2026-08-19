@@ -52,16 +52,24 @@ export class WebhooksService {
   }
 
   /**
-   * Universite de l'acteur, ou null pour un super-admin (non rattache a une
-   * universite). Utiliser assertMemeUniversite() pour les controles d'acces :
-   * null = pas de restriction (super-admin peut agir sur toutes les universites).
+   * Universite de l'acteur, ou null UNIQUEMENT si son role est explicitement
+   * "super_admin" (verifie par nom de role, jamais devine depuis l'absence
+   * d'universite). Tout autre utilisateur sans universite est refuse — ne pas
+   * inferer un statut privilegie a partir d'un champ nullable.
    */
   private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id: acteurId },
-      select: { universite_id: true },
+      select: {
+        universite_id: true,
+        roles_utilisateurs_role_idToroles: { select: { nom: true } },
+      },
     });
-    return u?.universite_id ?? null;
+    if (u?.roles_utilisateurs_role_idToroles?.nom === 'super_admin') return null;
+    if (!u?.universite_id) {
+      throw new ForbiddenException("Vous n'êtes pas associé à une université");
+    }
+    return u.universite_id;
   }
 
   /** Universite obligatoire pour creer une ressource rattachee a une universite precise. */
@@ -69,7 +77,7 @@ export class WebhooksService {
     const universiteId = await this.getActeurUniversiteId(acteurId);
     if (!universiteId)
       throw new ForbiddenException(
-        "Vous n'êtes pas associé à une université — impossible de déterminer où créer cette ressource",
+        "Super-admin non rattaché à une université — impossible de déterminer où créer cette ressource",
       );
     return universiteId;
   }

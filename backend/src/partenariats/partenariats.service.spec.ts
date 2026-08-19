@@ -56,9 +56,21 @@ describe('PartenariatsService', () => {
   });
 
   const asActeurDeUniv = () =>
-    prisma.utilisateurs.findFirst.mockResolvedValue({ universite_id: UNIV_ID });
+    prisma.utilisateurs.findFirst.mockResolvedValue({
+      universite_id: UNIV_ID,
+      roles_utilisateurs_role_idToroles: { nom: 'responsable_universite' },
+    });
   const asSuperAdmin = () =>
-    prisma.utilisateurs.findFirst.mockResolvedValue({ universite_id: null });
+    prisma.utilisateurs.findFirst.mockResolvedValue({
+      universite_id: null,
+      roles_utilisateurs_role_idToroles: { nom: 'super_admin' },
+    });
+  /** Cas cible du finding securite : sans universite ET sans role super_admin -> refuse, pas bypass. */
+  const asUtilisateurOrphelin = () =>
+    prisma.utilisateurs.findFirst.mockResolvedValue({
+      universite_id: null,
+      roles_utilisateurs_role_idToroles: { nom: 'agent_saisie' },
+    });
 
   describe('lister', () => {
     it('filtre par universite pour un acteur normal', async () => {
@@ -166,6 +178,13 @@ describe('PartenariatsService', () => {
       );
 
       await expect(service.supprimer(PARTENARIAT_ID, ACTEUR_ID)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('un utilisateur sans université ET sans rôle super_admin est refusé, pas bypassé (pas de fail-open)', async () => {
+      asUtilisateurOrphelin();
+
+      await expect(service.lister('orphelin')).rejects.toThrow(ForbiddenException);
+      expect(prisma.partenariats_universite.findMany).not.toHaveBeenCalled();
     });
   });
 });
