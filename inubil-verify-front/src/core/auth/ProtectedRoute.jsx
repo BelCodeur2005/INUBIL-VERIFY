@@ -17,11 +17,12 @@ export default function ProtectedRoute({ children, rolesAutorises }) {
   // 2. Si l'utilisateur n'est pas connecté -> redirection vers le login
   if (!estConnecte) {
     // On sauvegarde l'URL demandée pour y rediriger l'utilisateur après sa connexion
-    return <Navigate to="/auth/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // 3. Si l'utilisateur est connecté mais n'a pas le bon rôle -> redirection vers 403 Forbidden
-  if (rolesAutorises && !rolesAutorises.includes(utilisateur.role)) {
+  // utilisateur.role est { id, nom } (forme de ProfileResponseDto), pas une chaîne.
+  if (rolesAutorises && !rolesAutorises.includes(utilisateur.role?.nom)) {
     return <Navigate to="/403" replace />;
   }
 

@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom'; 
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../../core/auth/useAuth';
 import styles from './Login.module.css';
 
 export default function Login() {
   const navigate = useNavigate();
-  
+  const { login } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [erreur, setErreur] = useState('');
+  const [enCours, setEnCours] = useState(false);
 
   // Position dynamique appliquée uniquement au bonhomme
   const [avatarPos, setAvatarPos] = useState({ x: 0, y: 0, rotate: 0 });
@@ -26,7 +29,7 @@ export default function Login() {
     setAvatarPos({ x: moveX, y: moveY, rotate });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErreur('');
 
@@ -35,10 +38,14 @@ export default function Login() {
       return;
     }
 
+    setEnCours(true);
     try {
-      navigate('/universite');
-    } catch {
-      setErreur('Identifiants invalides. Veuillez réessayer.');
+      const destination = await login(email, password);
+      navigate(destination);
+    } catch (err) {
+      setErreur(err.message || 'Identifiants invalides. Veuillez réessayer.');
+    } finally {
+      setEnCours(false);
     }
   };
 
@@ -122,9 +129,6 @@ export default function Login() {
         <div className={styles.rightPanel}>
           <div className={styles.topNav}>
             <span className={styles.activeTab}>Connexion</span>
-            <Link to="/auth/register" className={styles.inactiveTab}>
-              S'inscrire
-            </Link>
           </div>
 
           <div className={styles.formHeader}>
@@ -171,20 +175,14 @@ export default function Login() {
               </div>
             </div>
 
-            <button type="submit" className={styles.btnPrimary}>
-              Se connecter
+            <button type="submit" className={styles.btnPrimary} disabled={enCours}>
+              {enCours ? 'Connexion...' : 'Se connecter'}
             </button>
 
             <div className={styles.footerLinks}>
               <Link to="/forgot-password" className={styles.authLink}>
                 Mot de passe oublié ?
               </Link>
-              <span className={styles.registerText}>
-                Nouveau ?{' '}
-                <Link to="/auth/register" className={styles.registerLink}>
-                  Créer un compte
-                </Link>
-              </span>
             </div>
           </form>
         </div>

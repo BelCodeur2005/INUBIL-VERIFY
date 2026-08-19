@@ -1,39 +1,53 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthContext } from './auth-context';
+import { login as loginApi, logout as logoutApi, getProfil } from './auth.api';
+import { getAccessToken, clearTokens } from '../api/token-storage';
+import { redirectionParRole } from './role-redirect';
 
 export function AuthProvider({ children }) {
-  const [utilisateur, setUtilisateur] = useState(() => {
-    const savedUser = localStorage.getItem('inubil_session');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-  const [loading] = useState(false);
+  const [utilisateur, setUtilisateur] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = (email, password) => {
-    if (!email || !password) {
-      throw new Error('Email et mot de passe requis');
+  // Restaure la session au chargement de l'app si un token est deja present (retour de visite).
+  useEffect(() => {
+    let annule = false;
+
+    async function restaurerSession() {
+      if (!getAccessToken()) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const profil = await getProfil();
+        if (!annule) setUtilisateur(profil);
+      } catch {
+        clearTokens();
+      } finally {
+        if (!annule) setLoading(false);
+      }
     }
 
-    const fauxUtilisateur = {
-      id: '1',
-      email: email,
-      nom: 'N.',
-      prenom: 'Merveil',
-      role: 'super_admin',
-      avatar_url: null
+    restaurerSession();
+    return () => {
+      annule = true;
     };
-    setUtilisateur(fauxUtilisateur);
-    localStorage.setItem('inubil_session', JSON.stringify(fauxUtilisateur));
-    return '/universite';
+  }, []);
+
+  const login = async (email, motDePasse) => {
+    await loginApi(email, motDePasse);
+    const profil = await getProfil();
+    setUtilisateur(profil);
+    return redirectionParRole(profil.role?.nom);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await logoutApi();
     setUtilisateur(null);
-    localStorage.removeItem('inubil_session');
     window.location.href = '/login';
   };
 
   const nomComplet = () => {
-    if (!utilisateur) return 'Marie Ngo';
+    if (!utilisateur) return '';
     return `${utilisateur.prenom} ${utilisateur.nom}`.trim();
   };
 
@@ -43,7 +57,7 @@ export function AuthProvider({ children }) {
     login,
     logout,
     nomComplet,
-    estConnecte: true
+    estConnecte: !!utilisateur,
   };
 
   return (
