@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo_Inubil from '../../assets/Logo_Inubil.png';
 import styles from './DashboardEtudiant.module.css';
@@ -14,7 +14,7 @@ export default function DashboardEtudiant() {
   const user = {
     name: "Alain Koffi",
     address: "0x9e3f42...da8c2e11a0982f55c2",
-    shortAddress: "0x...82f",
+    shortAddress: "0x9e3f...82f",
     level: "Étudiant en Master",
     initials: "AK"
   };
@@ -28,9 +28,9 @@ export default function DashboardEtudiant() {
   return (
     <div className={styles.page}>
       
-      {/* PERSISTENT LEFT SIDEBAR */}
+      {/* SIDEBAR NAVIGATION */}
       <aside className={styles.sidebar}>
-        {/* Brand Header */}
+        {/* Logo Header */}
         <div className={styles.brandGroup}>
           <div className={styles.logoBox}>
             <img alt="INUBIL Logo" className={styles.logo} src={Logo_Inubil} />
@@ -56,7 +56,7 @@ export default function DashboardEtudiant() {
             onClick={() => setActiveMenu('dashboard')}
             className={`${styles.navBtn} ${activeMenu === 'dashboard' ? styles.navBtnActive : ''}`}
           >
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: activeMenu === 'dashboard' ? "'FILL' 1" : "'FILL' 0" }}>dashboard</span>
+            <span className="material-symbols-outlined">dashboard</span>
             <span>Tableau de Bord</span>
           </button>
 
@@ -64,7 +64,7 @@ export default function DashboardEtudiant() {
             onClick={() => setActiveMenu('diplomas')}
             className={`${styles.navBtn} ${activeMenu === 'diplomas' ? styles.navBtnActive : ''}`}
           >
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: activeMenu === 'diplomas' ? "'FILL' 1" : "'FILL' 0" }}>verified_user</span>
+            <span className="material-symbols-outlined">verified_user</span>
             <span>Mes Diplômes</span>
           </button>
 
@@ -72,23 +72,23 @@ export default function DashboardEtudiant() {
             onClick={() => setActiveMenu('views')}
             className={`${styles.navBtn} ${activeMenu === 'views' ? styles.navBtnActive : ''}`}
           >
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: activeMenu === 'views' ? "'FILL' 1" : "'FILL' 0" }}>visibility</span>
+            <span className="material-symbols-outlined">visibility</span>
             <span>Vues Recruteurs</span>
           </button>
 
-          <button 
+          {/*<button 
             onClick={() => setActiveMenu('security')}
             className={`${styles.navBtn} ${activeMenu === 'security' ? styles.navBtnActive : ''}`}
           >
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: activeMenu === 'security' ? "'FILL' 1" : "'FILL' 0" }}>security</span>
+            <span className="material-symbols-outlined">security</span>
             <span>Sécurité</span>
-          </button>
+          </button>  */}
 
           <button 
             onClick={() => setActiveMenu('settings')}
             className={`${styles.navBtn} ${activeMenu === 'settings' ? styles.navBtnActive : ''}`}
           >
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: activeMenu === 'settings' ? "'FILL' 1" : "'FILL' 0" }}>settings</span>
+            <span className="material-symbols-outlined">settings</span>
             <span>Paramètres</span>
           </button>
         </nav>
@@ -106,9 +106,9 @@ export default function DashboardEtudiant() {
       <main className={styles.main}>
         {/* TopAppBar */}
         <header className={styles.header}>
-          <div></div>
+          
           <div className={styles.headerActions}>
-            <button className={styles.notifBtn}>
+            <button className={styles.notifBtn} title="Notifications">
               <span className="material-symbols-outlined">notifications</span>
             </button>
             <div className={styles.divider}></div>
@@ -124,30 +124,28 @@ export default function DashboardEtudiant() {
           </div>
         </header>
 
-        {/* CANVAS / BODY CONTAINER */}
+        {/* CANVAS CONTAINER */}
         <div className={styles.canvas}>
           
-          {/* Welcome Banner */}
+          {/* Welcome Banner compacte */}
           <section className={styles.welcomeBanner}>
             <div className={styles.bannerContent}>
-              <h1 className={styles.bannerTitle}>Bonjour, {user.name.split(' ')[0]} !</h1>
+              <h1 className={styles.bannerTitle}>Bonjour, {user.name.split(' ')[0]} ! 👋</h1>
               <p className={styles.bannerDesc}>
-                Bienvenue sur votre espace sécurisé INUBIL. Vos titres académiques sont ancrés sur la blockchain pour une intégrité totale et une vérification instantanée.
+                Bienvenue dans votre espace personnel INUBIL VERIFY
               </p>
-              <div className={styles.bannerActionGroup}>
-                <button className={styles.shareProfileBtn}>
-                  <span className="material-symbols-outlined">share</span> Partager mon profil
-                </button>
-              </div>
             </div>
+            <button className={styles.shareProfileBtn}>
+              <span className="material-symbols-outlined">share</span>
+              Partager mon profil
+            </button>
           </section>
 
           {/* Stats Grid */}
           <div className={styles.statsGrid}>
-            {/* Card 1 */}
             <div className={styles.statCard}>
               <div className={`${styles.statIconContainer} ${styles.iconCertified}`}>
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                <span className="material-symbols-outlined">verified</span>
               </div>
               <div>
                 <p className={styles.statLabel}>Diplômes Certifiés</p>
@@ -155,7 +153,6 @@ export default function DashboardEtudiant() {
               </div>
             </div>
 
-            {/* Card 2 */}
             <div className={styles.statCard}>
               <div className={`${styles.statIconContainer} ${styles.iconPending}`}>
                 <span className="material-symbols-outlined">hourglass_empty</span>
@@ -166,10 +163,9 @@ export default function DashboardEtudiant() {
               </div>
             </div>
 
-            {/* Card 3 */}
             <div className={styles.statCard}>
               <div className={`${styles.statIconContainer} ${styles.iconViews}`}>
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>visibility</span>
+                <span className="material-symbols-outlined">visibility</span>
               </div>
               <div>
                 <p className={styles.statLabel}>Vues Recruteurs</p>
@@ -183,9 +179,9 @@ export default function DashboardEtudiant() {
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>
                 <span className={styles.titleIndicator}></span>
-                Mes Diplômes
+                Mes Diplômes & Certificats
               </h2>
-              <a className={styles.seeAllLink} href="#">
+              <a className={styles.seeAllLink} href="#all">
                 Tout Voir <span className="material-symbols-outlined">open_in_new</span>
               </a>
             </div>
@@ -207,7 +203,6 @@ export default function DashboardEtudiant() {
                     <span className={styles.statusBadge}>Actif</span>
                   </div>
 
-                  {/* Metadata Grid */}
                   <div className={styles.metadataGrid}>
                     <div className={styles.metaBlock}>
                       <span className={styles.metaLabel}>Mention</span>
@@ -219,10 +214,9 @@ export default function DashboardEtudiant() {
                     </div>
                   </div>
 
-                  {/* Hash Block */}
                   <div className={styles.hashBlock}>
                     <div className={styles.hashLeft}>
-                      <span className="material-symbols-outlined">database</span>
+                      <span className="material-symbols-outlined">fingerprint</span>
                       <code className={styles.hashCode}>{user.address}</code>
                     </div>
                     <button 
@@ -243,13 +237,12 @@ export default function DashboardEtudiant() {
                     >
                       <span className="material-symbols-outlined">visibility</span> Voir le Diplôme
                     </button>
-                    <button className={styles.shareCardBtn}>
+                    <button className={styles.shareCardBtn} title="Partager ce diplôme">
                       <span className="material-symbols-outlined">share</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Seal Watermark Background */}
                 <div className={styles.sealWatermark}>
                   <span className="material-symbols-outlined">verified</span>
                 </div>
@@ -271,7 +264,7 @@ export default function DashboardEtudiant() {
             </div>
           </section>
 
-          {/* Bottom Security Tip Footer */}
+          {/* Footer Sécurité compact */}
           <footer className={styles.securityTipFooter}>
             <div className={styles.securityTipIconBox}>
               <span className="material-symbols-outlined">gavel</span>
@@ -279,15 +272,15 @@ export default function DashboardEtudiant() {
             <div className={styles.securityTipTexts}>
               <h5 className={styles.securityTipTitle}>Conseil de sécurité</h5>
               <p className={styles.securityTipDesc}>
-                Ne partagez jamais vos clés privées INUBIL. Pour permettre à un recruteur de consulter vos titres, utilisez uniquement le bouton de partage générant un lien public sécurisé.
+                Ne partagez jamais vos identifiants secrets. Utilisez le bouton de partage pour générer des preuves publiques.
               </p>
             </div>
             <button className={styles.learnMoreBtn}>En savoir plus</button>
           </footer>
+
         </div>
       </main>
 
-      {/* AJOUT DU MODAL ICI EN BAS DE PAGE */}
       <VerificationModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 

@@ -1,30 +1,35 @@
+import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Logo_Inubil from '../../../assets/Logo_Inubil.png';
+import styles from './AuthLayout.module.css';
 
 export default function AuthLayout() {
+  useEffect(() => {
+    // Bloque le scroll global au niveau du navigateur (body et html)
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    // Restaure le scroll quand on quitte les pages d'auth
+    return () => {
+      document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
+    };
+  }, []);
+
   return (
-    <div 
-      style={{ 
-        minHeight: '100vh', 
-        width: '100vw', 
-        background: 'linear-gradient(135deg, #0350bd 0%, #062362 100%)', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        margin: 0, 
-        padding: 0 
-      }}
-    >
+    <div className={styles.authContainer}>
       
-      {/* Navbar supérieure toujours affichée */}
-      <nav style={{ backgroundColor: 'white', height: '60px', display: 'flex', alignItems: 'center', padding: '0 24px', width: '100%', boxSizing: 'border-box' }}>
+      {/* Navbar supérieure */}
+      <nav className={styles.navbar}>
         <img 
           src={Logo_Inubil} 
           alt="INUBIL Verify Logo" 
-          style={{ height: '80px', width: 'auto', objectFit: 'contain' }} 
+          className={styles.logo} 
         />
       </nav>
       
-      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', width: '100%', boxSizing: 'border-box' }}>
+      {/* Conteneur principal */}
+      <main className={styles.mainContent}>
         <Outlet />
       </main>
 

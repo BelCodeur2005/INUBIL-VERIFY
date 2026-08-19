@@ -1,0 +1,43 @@
+/* Conteneur global bloqué à la taille exacte de l'écran */
+.authContainer {
+  height: 100vh;
+  max-height: 100vh;
+  width: 100vw;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Empêche le défilement */
+  box-sizing: border-box;
+}
+
+/* Navbar supérieure fixe */
+.navbar {
+  background-color: #ffffff;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0; /* Empêche la navbar de s'écraser */
+}
+
+.logo {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* Zone centrale centrée sans scroll */
+.mainContent {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden; /* Empêche le contenu de scroller */
+}

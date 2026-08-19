@@ -39,7 +39,7 @@ export default function ForgotPassword() {
         <div className={styles.formSection}>
 
           {/* Badge de catégorie */}
-          <div className={styles.topBadgeWrapper}>
+          {/*<div className={styles.topBadgeWrapper}>
             <span className={styles.topBadge}>
               <span className={styles.badgeDot}></span> SÉCURITÉ DU COMPTE
             </span>

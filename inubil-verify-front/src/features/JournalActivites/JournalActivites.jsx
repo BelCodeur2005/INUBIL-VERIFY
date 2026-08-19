@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import styles from './JournalActivites.module.css'
 
 const logsData = [
   { id: 'BK-992', action: 'Ancrage Diplôme', cible: 'Mbarga Lucien (FS-240188)', date: '18/08/2026 - 14:32', statut: 'SUCCÈS', hash: '0x8a1...f3e9' },
