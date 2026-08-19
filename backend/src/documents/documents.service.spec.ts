@@ -9,6 +9,7 @@ import { QrCodeService } from './qr-code.service';
 import { NotificationEmissionService } from './notification-emission.service';
 import { StorageService } from '../storage/storage.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
+import { ConfigurationsService } from '../configurations/configurations.service';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────
 
@@ -47,7 +48,14 @@ const makeBlockchain = () => ({
 });
 const makeConfig   = () => ({ get: jest.fn().mockReturnValue('https://verify.inubil.com') });
 
-const makeActeur   = (univId: string | null = UNIV_ID) => ({ universite_id: univId });
+const makeConfigurations = () => ({
+  get: jest.fn().mockImplementation((_cle: string, defaut?: string) => Promise.resolve(defaut)),
+});
+
+const makeActeur   = (univId: string | null = UNIV_ID) => ({
+  universite_id: univId,
+  roles_utilisateurs_role_idToroles: { nom: univId === null ? 'super_admin' : 'agent_saisie' },
+});
 
 const makeDocument = (overrides: any = {}) => ({
   id: DOC_ID,
@@ -76,28 +84,31 @@ describe('DocumentsService', () => {
   let storage: ReturnType<typeof makeStorage>;
   let blockchain: ReturnType<typeof makeBlockchain>;
   let config: ReturnType<typeof makeConfig>;
+  let configurations: ReturnType<typeof makeConfigurations>;
 
   beforeEach(async () => {
-    prisma     = makePrisma();
-    audit      = makeAudit();
-    hash       = makeHash();
-    qr         = makeQr();
-    notif      = makeNotif();
-    storage    = makeStorage();
-    blockchain = makeBlockchain();
-    config     = makeConfig();
+    prisma         = makePrisma();
+    audit          = makeAudit();
+    hash           = makeHash();
+    qr             = makeQr();
+    notif          = makeNotif();
+    storage        = makeStorage();
+    blockchain     = makeBlockchain();
+    config         = makeConfig();
+    configurations = makeConfigurations();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DocumentsService,
-        { provide: PrismaService,               useValue: prisma     },
-        { provide: ConfigService,               useValue: config     },
-        { provide: AuditService,                useValue: audit      },
-        { provide: HashService,                 useValue: hash       },
-        { provide: QrCodeService,               useValue: qr         },
-        { provide: NotificationEmissionService, useValue: notif      },
-        { provide: StorageService,              useValue: storage    },
-        { provide: BlockchainService,           useValue: blockchain },
+        { provide: PrismaService,               useValue: prisma         },
+        { provide: ConfigService,               useValue: config         },
+        { provide: AuditService,                useValue: audit          },
+        { provide: HashService,                 useValue: hash           },
+        { provide: QrCodeService,               useValue: qr             },
+        { provide: NotificationEmissionService, useValue: notif          },
+        { provide: StorageService,              useValue: storage        },
+        { provide: BlockchainService,           useValue: blockchain     },
+        { provide: ConfigurationsService,       useValue: configurations },
       ],
     }).compile();
 
@@ -126,6 +137,16 @@ describe('DocumentsService', () => {
       expect(prisma.documents.create).toHaveBeenCalled();
       expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'DOCUMENT_CREER' }));
       expect(result.statut).toBe('brouillon');
+    });
+
+    it('un utilisateur sans université ET sans rôle super_admin est refusé, pas bypassé (pas de fail-open)', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue({
+        universite_id: null,
+        roles_utilisateurs_role_idToroles: { nom: 'agent_saisie' },
+      });
+
+      await expect(service.creer(dto, ACTEUR_ID)).rejects.toThrow(ForbiddenException);
+      expect(prisma.documents.create).not.toHaveBeenCalled();
     });
 
     it('lève ForbiddenException si l\'acteur est d\'une autre université', async () => {
@@ -258,6 +279,64 @@ describe('DocumentsService', () => {
       await expect(service.uploadPdf(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID)).resolves.toBeDefined();
       const updateData = (prisma.documents.update as jest.Mock).mock.calls[0][0].data;
       expect(updateData.pdf_url).toBeNull();
+    });
+
+    it('lève BadRequestException si le fichier dépasse pdf_max_taille_mo (configuré)', async () => {
+      configurations.get.mockResolvedValue('1'); // 1 Mo
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'brouillon' }));
+
+      const grosFichier = 2 * 1024 * 1024; // 2 Mo
+      await expect(
+        service.uploadPdf(DOC_ID, fakePdf, grosFichier, ACTEUR_ID),
+      ).rejects.toThrow(BadRequestException);
+      expect(hash.calculateHash).not.toHaveBeenCalled();
+    });
+
+    it('accepte un fichier sous la limite par défaut (20 Mo) si le paramètre n\'est pas configuré', async () => {
+      configurations.get.mockResolvedValue(undefined);
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst
+        .mockResolvedValueOnce(makeDocument({ statut: 'brouillon' }))
+        .mockResolvedValueOnce(null);
+      prisma.documents.update.mockResolvedValue(makeDocument({ hash_sha256: FAKE_HASH }));
+
+      await expect(
+        service.uploadPdf(DOC_ID, fakePdf, fakePdf.length, ACTEUR_ID),
+      ).resolves.toBeDefined();
+    });
+  });
+
+  // ── getPdfUrl ──────────────────────────────────────────────────────────
+
+  describe('getPdfUrl', () => {
+    it('retourne l\'URL présignée avec une expiration de 900s (15 min) par défaut', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'actif', pdf_url: FAKE_PDF_KEY }));
+
+      const result = await service.getPdfUrl(DOC_ID, ACTEUR_ID);
+
+      expect(configurations.get).toHaveBeenCalledWith('presigned_url_duree_min', '15');
+      expect(storage.getPresignedUrl).toHaveBeenCalledWith(FAKE_PDF_KEY, 900);
+      expect(result.expires_in_seconds).toBe(900);
+    });
+
+    it('utilise la durée configurée via presigned_url_duree_min', async () => {
+      configurations.get.mockResolvedValue('5'); // 5 minutes
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'actif', pdf_url: FAKE_PDF_KEY }));
+
+      const result = await service.getPdfUrl(DOC_ID, ACTEUR_ID);
+
+      expect(storage.getPresignedUrl).toHaveBeenCalledWith(FAKE_PDF_KEY, 300);
+      expect(result.expires_in_seconds).toBe(300);
+    });
+
+    it('lève ForbiddenException si le document est révoqué', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'revoque', pdf_url: FAKE_PDF_KEY }));
+
+      await expect(service.getPdfUrl(DOC_ID, ACTEUR_ID)).rejects.toThrow(ForbiddenException);
     });
   });
 

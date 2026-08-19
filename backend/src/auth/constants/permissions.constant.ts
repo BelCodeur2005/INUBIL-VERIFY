@@ -50,6 +50,30 @@ export enum Permission {
   // ── Statistiques & Audit ──────────────────────────────────────────────────
   STATS_READ = 'stats:read',
   AUDIT_READ = 'audit:read',
+
+  // ── Notifications ─────────────────────────────────────────────────────────
+  NOTIF_READ = 'notif:read',
+
+  // ── Configurations ────────────────────────────────────────────────────────
+  CONFIG_READ = 'config:read',
+  CONFIG_EDIT = 'config:edit',
+
+  // ── Clés API ──────────────────────────────────────────────────────────────
+  API_READ   = 'api:read',
+  API_CREATE = 'api:create',
+  API_DELETE = 'api:delete',
+
+  // ── Webhooks ──────────────────────────────────────────────────────────────
+  WEBHOOK_READ   = 'webhook:read',
+  WEBHOOK_CREATE = 'webhook:create',
+  WEBHOOK_EDIT   = 'webhook:edit',
+  WEBHOOK_DELETE = 'webhook:delete',
+
+  // ── Partenariats ──────────────────────────────────────────────────────────
+  PARTNER_READ   = 'partner:read',
+  PARTNER_CREATE = 'partner:create',
+  PARTNER_EDIT   = 'partner:edit',
+  PARTNER_DELETE = 'partner:delete',
 }
 
 /** Toutes les permissions systeme (utile pour le seed / l'attribution en masse). */

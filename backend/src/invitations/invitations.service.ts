@@ -314,13 +314,25 @@ export class InvitationsService {
 
   // ─── Helpers ─────────────────────────────────────────────────────────
 
-  // Renvoie universite_id de l'acteur - null = super-admin (pas de restriction tenant).
+  /**
+   * Universite de l'acteur, ou null UNIQUEMENT si son role est explicitement
+   * "super_admin" (verifie par nom de role, jamais devine depuis l'absence
+   * d'universite). Tout autre utilisateur sans universite est refuse — ne pas
+   * inferer un statut privilegie a partir d'un champ nullable.
+   */
   private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
     const acteur = await this.prisma.utilisateurs.findFirst({
       where: { id: acteurId, deleted_at: null },
-      select: { universite_id: true },
+      select: {
+        universite_id: true,
+        roles_utilisateurs_role_idToroles: { select: { nom: true } },
+      },
     });
-    return acteur?.universite_id ?? null;
+    if (acteur?.roles_utilisateurs_role_idToroles?.nom === 'super_admin') return null;
+    if (!acteur?.universite_id) {
+      throw new ForbiddenException("Vous n'êtes pas associé à une université");
+    }
+    return acteur.universite_id;
   }
 
   private hash(value: string): string {

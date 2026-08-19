@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function Support_Agent() {
   return (
     <div style={{ padding: '24px', maxWidth: '800px' }}>

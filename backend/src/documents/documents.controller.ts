@@ -41,8 +41,7 @@ import { UpdateDocumentDto } from './dto/update-document.dto';
 import { RevoquerDocumentDto } from './dto/revoquer-document.dto';
 import { RejeterDocumentDto } from './dto/rejeter-document.dto';
 import { DocumentQueryDto } from './dto/document-query.dto';
-
-const PDF_MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 Mo
+import { PDF_HARD_LIMIT_BYTES } from '../common/constants/upload.constants';
 
 @ApiTags('Documents')
 @ApiBearerAuth('access-token')
@@ -134,7 +133,7 @@ export class DocumentsController {
   @UseInterceptors(
     FileInterceptor('fichier', {
       storage: memoryStorage(),
-      limits: { fileSize: PDF_MAX_SIZE_BYTES },
+      limits: { fileSize: PDF_HARD_LIMIT_BYTES },
       fileFilter: (_req, file, cb) => {
         if (file.mimetype !== 'application/pdf') {
           return cb(new BadRequestException('Seuls les fichiers PDF sont acceptés'), false);
@@ -153,12 +152,16 @@ export class DocumentsController {
       type: 'object',
       required: ['fichier'],
       properties: {
-        fichier: { type: 'string', format: 'binary', description: 'PDF officiel (max 20 Mo)' },
+        fichier: {
+          type: 'string',
+          format: 'binary',
+          description: 'PDF officiel — jusqu\'a 20 Mo (plafond serveur) ; limite effective pilotable via le parametre systeme "pdf_max_taille_mo"',
+        },
       },
     },
   })
   @ApiOkResponse({ description: 'PDF enregistré, hash SHA-256 calculé.' })
-  @ApiResponse({ status: 400, description: 'Fichier manquant, format non-PDF, ou document déjà actif.' })
+  @ApiResponse({ status: 400, description: 'Fichier manquant, format non-PDF, document déjà actif, ou taille supérieure à la limite configurée.' })
   @ApiResponse({ status: 403, description: 'Permission doc:create requise.' })
   @ApiResponse({ status: 404, description: 'Document introuvable.' })
   uploadPdf(

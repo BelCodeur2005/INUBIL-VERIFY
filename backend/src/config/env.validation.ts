@@ -6,9 +6,9 @@ import * as Joi from 'joi';
  * Les variables COEUR (base de donnees, JWT, chiffrement) sont requises :
  * l'app refuse de demarrer si elles manquent (echec rapide et explicite).
  *
- * Les cles d'INTEGRATIONS EXTERNES (Pinata, Polygon, Mail) restent
+ * Les cles d'INTEGRATIONS EXTERNES (Polygon, Mail, S3/R2) restent
  * optionnelles tant que les modules correspondants ne sont pas developpes
- * (respectivement taches #21, #22/#39, #25).
+ * (respectivement taches #22/#39, #25, #21).
  */
 export const envValidationSchema = Joi.object({
   // ─── Application ───────────────────────────────────────────────
@@ -53,14 +53,17 @@ export const envValidationSchema = Joi.object({
   AWS_S3_BUCKET:          Joi.string().optional().allow(''),
   CLOUDFLARE_ACCOUNT_ID:  Joi.string().optional().allow(''),
 
-  // ─── IPFS Pinata - conservé pour compatibilité (optionnel) ────
-  PINATA_API_KEY: Joi.string().optional().allow(''),
-  PINATA_SECRET_KEY: Joi.string().optional().allow(''),
-  PINATA_GATEWAY: Joi.string().uri().optional(),
-
   // ─── Blockchain Polygon - optionnel jusqu'a #22/#39 ────────────
   POLYGON_RPC_URL:      Joi.string().uri().optional(),
   DEPLOYER_PRIVATE_KEY: Joi.string().optional().allow(''),
   CONTRACT_ADDRESS:     Joi.string().optional().allow(''),
   POLYGON_NETWORK:      Joi.string().valid('polygon_amoy', 'polygon_mainnet').default('polygon_amoy'),
+
+  // ─── Backup automatique - N0C Storage via FTP ───────────────────
+  BACKUP_FTP_HOST:        Joi.string().optional().allow(''),
+  BACKUP_FTP_USER:        Joi.string().optional().allow(''),
+  BACKUP_FTP_PASS:        Joi.string().optional().allow(''),
+  BACKUP_FTP_DIR:         Joi.string().optional().default('/'),
+  BACKUP_FTP_SECURE:      Joi.string().valid('true', 'false').optional().default('true'),
+  BACKUP_RETENTION_DAYS:  Joi.number().min(1).optional().default(30),
 });

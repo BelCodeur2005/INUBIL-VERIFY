@@ -1,8 +1,12 @@
+import { BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PublicVerifyService } from './public-verify.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HashService } from '../documents/hash.service';
 import { RapportVerificationPdfService } from '../documents/rapport-verification-pdf.service';
+import { BlockchainService } from '../blockchain/blockchain.service';
+import { ConfigurationsService } from '../configurations/configurations.service';
 
 const HASH_REEL  = 'a'.repeat(64);
 const HASH_FAUX  = 'b'.repeat(64);
@@ -43,23 +47,42 @@ const makeRapportPdf = () => ({
   generateRapport: jest.fn().mockResolvedValue(Buffer.from('%PDF-fake-rapport')),
 });
 
+const makeBlockchain = () => ({
+  verifierDiplome: jest.fn().mockResolvedValue(null),
+});
+
+const makeConfig = () => ({
+  get: jest.fn().mockImplementation((_key: string, defaut?: unknown) => defaut),
+});
+
+const makeConfigurations = () => ({
+  get: jest.fn().mockImplementation((_cle: string, defaut?: string) => Promise.resolve(defaut)),
+});
+
 describe('PublicVerifyService', () => {
   let service: PublicVerifyService;
   let prisma: ReturnType<typeof makePrisma>;
   let hash: ReturnType<typeof makeHash>;
   let rapportPdf: ReturnType<typeof makeRapportPdf>;
+  let blockchain: ReturnType<typeof makeBlockchain>;
+  let configurations: ReturnType<typeof makeConfigurations>;
 
   beforeEach(async () => {
-    prisma     = makePrisma();
-    hash       = makeHash();
-    rapportPdf = makeRapportPdf();
+    prisma         = makePrisma();
+    hash           = makeHash();
+    rapportPdf     = makeRapportPdf();
+    blockchain     = makeBlockchain();
+    configurations = makeConfigurations();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PublicVerifyService,
-        { provide: PrismaService,                 useValue: prisma     },
-        { provide: HashService,                   useValue: hash       },
-        { provide: RapportVerificationPdfService, useValue: rapportPdf },
+        { provide: PrismaService,                 useValue: prisma         },
+        { provide: HashService,                   useValue: hash           },
+        { provide: RapportVerificationPdfService, useValue: rapportPdf     },
+        { provide: BlockchainService,             useValue: blockchain     },
+        { provide: ConfigService,                 useValue: makeConfig()   },
+        { provide: ConfigurationsService,         useValue: configurations },
       ],
     }).compile();
 
@@ -192,6 +215,22 @@ describe('PublicVerifyService', () => {
           data: expect.objectContaining({ type_verification: 'upload_pdf' }),
         }),
       );
+    });
+
+    it('rejette un fichier depassant pdf_max_taille_mo (configure)', async () => {
+      configurations.get.mockResolvedValue('1'); // 1 Mo
+      const gros = Buffer.alloc(2 * 1024 * 1024); // 2 Mo
+
+      await expect(service.verifierParUpload(gros)).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.documents.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('accepte un fichier sous la limite par defaut si le parametre n\'est pas configure', async () => {
+      configurations.get.mockResolvedValue(undefined);
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+      const petit = Buffer.from('%PDF-1.4 fake');
+
+      await expect(service.verifierParUpload(petit)).resolves.toBeDefined();
     });
   });
 

@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../../core/auth/useAuth';
+import { useAuth } from './useAuth';
+import styles from './ProtectedRoute.module.css';
 
 export default function ProtectedRoute({ children, rolesAutorises }) {
   const { utilisateur, estConnecte, loading } = useAuth();
@@ -8,8 +9,8 @@ export default function ProtectedRoute({ children, rolesAutorises }) {
   // 1. En cours de chargement de la session (vérification du localStorage)
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+      <div className={styles.loadingScreen}>
+        <div className={styles.spinner}></div>
       </div>
     );
   }
@@ -17,11 +18,12 @@ export default function ProtectedRoute({ children, rolesAutorises }) {
   // 2. Si l'utilisateur n'est pas connecté -> redirection vers le login
   if (!estConnecte) {
     // On sauvegarde l'URL demandée pour y rediriger l'utilisateur après sa connexion
-    return <Navigate to="/auth/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // 3. Si l'utilisateur est connecté mais n'a pas le bon rôle -> redirection vers 403 Forbidden
-  if (rolesAutorises && !rolesAutorises.includes(utilisateur.role)) {
+  // utilisateur.role est { id, nom } (forme de ProfileResponseDto), pas une chaîne.
+  if (rolesAutorises && !rolesAutorises.includes(utilisateur.role?.nom)) {
     return <Navigate to="/403" replace />;
   }
 

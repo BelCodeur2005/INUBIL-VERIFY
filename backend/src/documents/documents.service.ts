@@ -15,6 +15,7 @@ import { QrCodeService } from './qr-code.service';
 import { NotificationEmissionService } from './notification-emission.service';
 import { StorageService } from '../storage/storage.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
+import { ConfigurationsService } from '../configurations/configurations.service';
 import { CreerDocumentDto } from './dto/creer-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { RevoquerDocumentDto } from './dto/revoquer-document.dto';
@@ -34,16 +35,44 @@ export class DocumentsService {
     private readonly notif: NotificationEmissionService,
     private readonly storage: StorageService,
     private readonly blockchain: BlockchainService,
+    private readonly configurations: ConfigurationsService,
   ) {}
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
 
+  /** Limite effective (en octets) pour un upload de PDF — parametre systeme "pdf_max_taille_mo". */
+  private async pdfMaxTailleOctets(): Promise<number> {
+    const brut = await this.configurations.get('pdf_max_taille_mo', '20');
+    const mo = Number(brut);
+    return (Number.isFinite(mo) && mo > 0 ? mo : 20) * 1024 * 1024;
+  }
+
+  /** Duree de validite (en secondes) d'un lien de telechargement presigne — parametre systeme "presigned_url_duree_min". */
+  private async presignedUrlDureeSecondes(): Promise<number> {
+    const brut = await this.configurations.get('presigned_url_duree_min', '15');
+    const min = Number(brut);
+    return (Number.isFinite(min) && min > 0 ? min : 15) * 60;
+  }
+
+  /**
+   * Universite de l'acteur, ou null UNIQUEMENT si son role est explicitement
+   * "super_admin" (verifie par nom de role, jamais devine depuis l'absence
+   * d'universite). Tout autre utilisateur sans universite est refuse — ne pas
+   * inferer un statut privilegie a partir d'un champ nullable.
+   */
   private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id: acteurId },
-      select: { universite_id: true },
+      select: {
+        universite_id: true,
+        roles_utilisateurs_role_idToroles: { select: { nom: true } },
+      },
     });
-    return u?.universite_id ?? null;
+    if (u?.roles_utilisateurs_role_idToroles?.nom === 'super_admin') return null;
+    if (!u?.universite_id) {
+      throw new ForbiddenException("Vous n'êtes pas associé à une université");
+    }
+    return u.universite_id;
   }
 
   private assertMemeUniversite(
@@ -272,6 +301,13 @@ export class DocumentsService {
       );
     }
 
+    const maxOctets = await this.pdfMaxTailleOctets();
+    if (fichierTailleOctets > maxOctets) {
+      throw new BadRequestException(
+        `Le fichier depasse la taille maximale autorisee (${Math.round(maxOctets / 1024 / 1024)} Mo)`,
+      );
+    }
+
     const hashSha256 = this.hash.calculateHash(fichierBuffer);
 
     const doublon = await this.prisma.documents.findFirst({
@@ -497,11 +533,11 @@ export class DocumentsService {
       throw new BadRequestException('Aucun PDF associé à ce document');
     }
 
-    const EXPIRES = 900; // 15 minutes
-    const url = await this.storage.getPresignedUrl(doc.pdf_url, EXPIRES);
+    const expires = await this.presignedUrlDureeSecondes();
+    const url = await this.storage.getPresignedUrl(doc.pdf_url, expires);
     if (!url) throw new BadRequestException('Stockage S3 non configuré');
 
-    return { url, expires_in_seconds: EXPIRES };
+    return { url, expires_in_seconds: expires };
   }
 
   // ─── Blockchain (fire & forget) ──────────────────────────────────────────

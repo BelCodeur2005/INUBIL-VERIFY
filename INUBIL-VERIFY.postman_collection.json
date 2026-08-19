@@ -1,0 +1,1664 @@
+{
+  "info": {
+    "_postman_id": "inubil-verify-collection-v1",
+    "name": "INUBIL-VERIFY API",
+    "description": "Collection complète de l'API INUBIL-VERIFY — Plateforme blockchain de certification de diplômes.\n\n**Démarrage rapide :**\n1. Importer l'environnement `INUBIL-VERIFY.postman_environment.json`\n2. Sélectionner l'environnement `INUBIL-VERIFY — Développement local`\n3. Exécuter **Auth > Login** — les tokens sont sauvegardés automatiquement\n4. Toutes les requêtes protégées utilisent `{{access_token}}` automatiquement\n\n**Workflow diplôme complet :**\n`POST /admin/etudiants` → `POST /documents` → `POST /documents/:id/pdf` → `POST /documents/:id/valider` → `GET /verify/:ref`\n\n**Stack :** NestJS · Prisma · PostgreSQL · Polygon blockchain · Cloudflare R2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentification",
+      "description": "Inscription, connexion, gestion des tokens JWT et du profil utilisateur.",
+      "item": [
+        {
+          "name": "Inscription",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"KAMGA\",\n  \"prenom\": \"Bertrand\",\n  \"email\": \"bertrand.kamga@test.cm\",\n  \"mot_de_passe\": \"MonMotDePasse123!\",\n  \"confirmation_mot_de_passe\": \"MonMotDePasse123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Crée un compte en attente de vérification email. Un email est envoyé automatiquement."
+          }
+        },
+        {
+          "name": "Vérifier email",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{verify_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/verifier-email",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verifier-email"]
+            },
+            "description": "Confirme l'email via le token reçu dans l'email de vérification."
+          }
+        },
+        {
+          "name": "Renvoyer email de vérification",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bertrand.kamga@test.cm\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/verifier-email/renvoyer",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verifier-email", "renvoyer"]
+            },
+            "description": "Renvoi de l'email de vérification (max 3 fois / 10 min par IP)."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "  pm.environment.set('access_token', json.access_token);",
+                  "  pm.environment.set('refresh_token', json.refresh_token);",
+                  "  console.log('Tokens sauvegardés dans l\\'environnement');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"mot_de_passe\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Connexion. Le test script sauvegarde automatiquement `access_token` et `refresh_token` dans l'environnement."
+          }
+        },
+        {
+          "name": "Refresh token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "  pm.environment.set('access_token', json.access_token);",
+                  "  pm.environment.set('refresh_token', json.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Renouvelle l'access token (expire après 15 min) avec le refresh token (7 jours)."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Révoque la session — le refresh token est invalidé immédiatement."
+          }
+        },
+        {
+          "name": "Mot de passe oublié",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "forgot-password"]
+            },
+            "description": "Envoie un email de réinitialisation si le compte existe (réponse identique dans tous les cas pour éviter l'énumération)."
+          }
+        },
+        {
+          "name": "Réinitialiser mot de passe",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"nouveau_mot_de_passe\": \"NouveauMdp456!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "reset-password"]
+            },
+            "description": "Réinitialise le mot de passe via le token reçu par email (expire 1h)."
+          }
+        },
+        {
+          "name": "Mon profil (GET /auth/me)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Profil complet de l'utilisateur connecté : rôle, université, permissions."
+          }
+        },
+        {
+          "name": "Modifier mon profil",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"KAMGA\",\n  \"prenom\": \"Bertrand Junior\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Modifie nom/prénom. Si email est modifié, il reste en attente de vérification."
+          }
+        },
+        {
+          "name": "Changer mot de passe",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ancien_mot_de_passe\": \"Admin123!\",\n  \"nouveau_mot_de_passe\": \"NouveauMdp456!\",\n  \"confirmation_mot_de_passe\": \"NouveauMdp456!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "password"]
+            },
+            "description": "Requiert l'ancien mot de passe. Répond 204 No Content si succès."
+          }
+        },
+        {
+          "name": "Mes permissions (RBAC)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/auth/permissions",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "permissions"]
+            },
+            "description": "Liste toutes les permissions du rôle actuel (ex: doc:validate, univ:approve)."
+          }
+        },
+        {
+          "name": "Mes sessions actives",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const sessions = pm.response.json();",
+                  "if (sessions.length > 0) {",
+                  "  pm.environment.set('session_id', sessions[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/auth/sessions",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "sessions"]
+            },
+            "description": "Liste toutes les sessions JWT actives de l'utilisateur connecté."
+          }
+        },
+        {
+          "name": "Révoquer une session",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/auth/sessions/{{session_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "sessions", "{{session_id}}"]
+            },
+            "description": "Révoque une session spécifique (déconnexion à distance). Répond 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏛️ Universités",
+      "description": "Gestion des universités partenaires. Cycle de vie : en_attente → approuvee → active.",
+      "item": [
+        {
+          "name": "Lister les universités",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "  pm.environment.set('universite_id', json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/universites?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["universites"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "statut", "value": "active", "disabled": true },
+                { "key": "type", "value": "privee", "disabled": true },
+                { "key": "search", "value": "ISTAMA", "disabled": true }
+              ]
+            },
+            "description": "Filtres disponibles : `statut` (en_attente|approuvee|active|suspendue|rejetee), `type` (publique|privee), `pays`, `search`."
+          }
+        },
+        {
+          "name": "Détail d'une université",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/universites/{{universite_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["universites", "{{universite_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Créer une université",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.environment.set('universite_id', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Institut Supérieur de Technologie et de Management INUBIL\",\n  \"nom_court\": \"ISTAMA INUBIL\",\n  \"pays\": \"Cameroun\",\n  \"ville\": \"Douala\",\n  \"adresse\": \"Bonamoussadi, Douala, Cameroun\",\n  \"type\": \"privee\",\n  \"email_contact\": \"contact@istama-inubil.cm\",\n  \"telephone\": \"+237 6 77 00 00 00\",\n  \"description\": \"Institut privé d'enseignement supérieur créé en 2006\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/universites",
+              "host": ["{{base_url}}"],
+              "path": ["universites"]
+            },
+            "description": "Crée une université en statut `en_attente`. Nécessite la permission `univ:create`."
+          }
+        },
+        {
+          "name": "Modifier une université",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telephone\": \"+237 6 88 00 00 00\",\n  \"site_web\": \"https://istama-inubil.cm\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/universites/{{universite_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["universites", "{{universite_id}}"]
+            },
+            "description": "Tous les champs sont optionnels. Nécessite `univ:edit`."
+          }
+        },
+        {
+          "name": "Approuver une université",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/universites/{{universite_id}}/approuver",
+              "host": ["{{base_url}}"],
+              "path": ["universites", "{{universite_id}}", "approuver"]
+            },
+            "description": "Passe le statut `en_attente → approuvee`. Nécessite `univ:approve`."
+          }
+        },
+        {
+          "name": "Activer une université",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/universites/{{universite_id}}/activer",
+              "host": ["{{base_url}}"],
+              "path": ["universites", "{{universite_id}}", "activer"]
+            },
+            "description": "Passe le statut `approuvee → active`. L'université peut maintenant émettre des diplômes. Nécessite `univ:activate`."
+          }
+        },
+        {
+          "name": "Suspendre une université",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"raison\": \"Non-conformité détectée lors de l'audit trimestriel\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/universites/{{universite_id}}/suspendre",
+              "host": ["{{base_url}}"],
+              "path": ["universites", "{{universite_id}}", "suspendre"]
+            },
+            "description": "Passe le statut `active → suspendue`. Nécessite `univ:suspend`."
+          }
+        },
+        {
+          "name": "Rejeter une université",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"raison\": \"Documents de conformité incomplets\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/universites/{{universite_id}}/rejeter",
+              "host": ["{{base_url}}"],
+              "path": ["universites", "{{universite_id}}", "rejeter"]
+            },
+            "description": "Passe le statut `en_attente → rejetee`. Nécessite `univ:reject`."
+          }
+        },
+        {
+          "name": "Supprimer une université",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/universites/{{universite_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["universites", "{{universite_id}}"]
+            },
+            "description": "Soft delete. Bloqué si l'université est active. Nécessite `univ:delete`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "👨‍🎓 Étudiants (admin)",
+      "description": "Gestion des dossiers étudiants. Un dossier étudiant doit exister avant de pouvoir émettre un diplôme.",
+      "item": [
+        {
+          "name": "Lister les étudiants",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "  pm.environment.set('etudiant_id', json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/etudiants?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "etudiants"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "search", "value": "KAMGA", "disabled": true },
+                { "key": "universite_id", "value": "{{universite_id}}", "disabled": true }
+              ]
+            },
+            "description": "Filtre automatiquement par université de l'acteur (sauf super admin). Nécessite `student:read`."
+          }
+        },
+        {
+          "name": "Détail d'un étudiant",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/etudiants/{{etudiant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "etudiants", "{{etudiant_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Créer un étudiant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.environment.set('etudiant_id', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numero_etudiant\": \"ISTAMA-2024-0001\",\n  \"nom\": \"KAMGA\",\n  \"prenom\": \"Bertrand\",\n  \"date_naissance\": \"2001-03-15\",\n  \"lieu_naissance\": \"Douala\",\n  \"nationalite\": \"Camerounaise\",\n  \"email\": \"bertrand.kamga@istama.cm\",\n  \"telephone\": \"+237 6 55 00 00 00\",\n  \"universite_id\": \"{{universite_id}}\",\n  \"annee_entree\": 2024\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/etudiants",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "etudiants"]
+            },
+            "description": "Enregistre un dossier étudiant. Prérequis avant la saisie d'un diplôme. Nécessite `doc:create`."
+          }
+        },
+        {
+          "name": "Modifier un étudiant",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telephone\": \"+237 6 99 00 00 00\",\n  \"email\": \"b.kamga@istama.cm\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/etudiants/{{etudiant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "etudiants", "{{etudiant_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Supprimer un étudiant",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/admin/etudiants/{{etudiant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "etudiants", "{{etudiant_id}}"]
+            },
+            "description": "Soft delete. Bloqué si l'étudiant possède des documents émis."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📄 Documents & Diplômes",
+      "description": "Workflow complet : Créer brouillon → Uploader PDF → Valider (blockchain) → Révoquer si besoin.\n\nLe directeur peut aussi rejeter un document pour demander des corrections à l'agent.",
+      "item": [
+        {
+          "name": "Lister les documents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "  pm.environment.set('document_id', json.data[0].id);",
+                  "  pm.environment.set('document_ref', json.data[0].numero_unique);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/documents?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["documents"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "statut", "value": "brouillon", "disabled": true },
+                { "key": "etudiant_id", "value": "{{etudiant_id}}", "disabled": true },
+                { "key": "search", "value": "KAMGA", "disabled": true }
+              ]
+            },
+            "description": "Filtre par statut, étudiant, type, date. Nécessite `doc:read`."
+          }
+        },
+        {
+          "name": "Détail d'un document",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_id}}"]
+            }
+          }
+        },
+        {
+          "name": "1. Créer un brouillon",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.environment.set('document_id', json.id);",
+                  "  pm.environment.set('document_ref', json.numero_unique);",
+                  "  console.log('Document créé:', json.numero_unique);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiant_id\": \"{{etudiant_id}}\",\n  \"type_document_id\": \"{{type_document_id}}\",\n  \"annee_academique\": \"2023-2024\",\n  \"date_emission\": \"2024-07-15\",\n  \"lieu_delivrance\": \"Douala\",\n  \"filiere\": \"Génie Informatique\",\n  \"mention_id\": \"{{mention_id}}\",\n  \"moyenne_generale\": 14.5,\n  \"note_sur\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/documents",
+              "host": ["{{base_url}}"],
+              "path": ["documents"]
+            },
+            "description": "Crée un brouillon. Le numéro unique INUB-YYYY-XXXX est généré automatiquement. Nécessite `doc:create`."
+          }
+        },
+        {
+          "name": "Modifier un brouillon",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"annee_academique\": \"2023-2024\",\n  \"moyenne_generale\": 15.2,\n  \"filiere\": \"Génie Logiciel\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_id}}"]
+            },
+            "description": "Uniquement pour les documents en statut `brouillon`. Nécessite `doc:create`."
+          }
+        },
+        {
+          "name": "2. Uploader le PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.hash_sha256) {",
+                  "  pm.environment.set('document_hash', json.hash_sha256);",
+                  "  console.log('Hash SHA-256:', json.hash_sha256);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "fichier",
+                  "type": "file",
+                  "src": "",
+                  "description": "Sélectionner un fichier PDF (max 20 Mo)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}/pdf",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_id}}", "pdf"]
+            },
+            "description": "Upload le PDF officiel. Calcule et sauvegarde le hash SHA-256. Ce hash sera ancré sur la blockchain lors de la validation. Nécessite `doc:create`.\n\n**Répond avec le document mis à jour** incluant `hash_sha256`. Si le document était rejeté, il repasse en `brouillon`."
+          }
+        },
+        {
+          "name": "Obtenir lien PDF temporaire",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}/pdf",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_id}}", "pdf"]
+            },
+            "description": "Génère un lien pré-signé Cloudflare R2 valable 15 minutes. Nécessite `doc:read`."
+          }
+        },
+        {
+          "name": "3. Valider (directeur → blockchain)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}/valider",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_id}}", "valider"]
+            },
+            "description": "Valide le document : génère le QR code, passe le statut à `actif`, et ancre le hash SHA-256 sur la blockchain Polygon. **Le PDF doit être uploadé au préalable.** Nécessite `doc:validate`."
+          }
+        },
+        {
+          "name": "Rejeter (directeur → agent)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motif\": \"La filière indiquée ne correspond pas aux archives de l'université. Veuillez corriger et re-uploader le PDF.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}/rejeter",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_id}}", "rejeter"]
+            },
+            "description": "Refuse le document avec un motif obligatoire. Passe le statut à `rejete`. L'agent peut corriger puis re-uploader le PDF. Nécessite `doc:validate`."
+          }
+        },
+        {
+          "name": "Révoquer un diplôme",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"raison\": \"Fraude détectée lors d'un audit — diplôme obtenu de manière frauduleuse\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}/revoquer",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_id}}", "revoquer"]
+            },
+            "description": "Révoque un diplôme actif avec motif obligatoire. La révocation est enregistrée sur la blockchain. Nécessite `doc:revoke`."
+          }
+        },
+        {
+          "name": "Supprimer un brouillon",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_id}}"]
+            },
+            "description": "Suppression définitive. Uniquement pour les brouillons. Nécessite `doc:delete`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "✅ Vérification publique",
+      "description": "Endpoints publics sans authentification. Utilisés par les recruteurs, autres universités, etc. pour vérifier l'authenticité d'un diplôme.",
+      "item": [
+        {
+          "name": "Vérifier par numéro (QR code)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/verify/{{document_ref}}",
+              "host": ["{{base_url}}"],
+              "path": ["verify", "{{document_ref}}"]
+            },
+            "description": "Endpoint scanné par le QR code imprimé sur le diplôme physique. Format : `INUB-YYYY-XXXX`. Limite : 30 req/min par IP."
+          }
+        },
+        {
+          "name": "Télécharger rapport PDF de vérification",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/verify/{{document_ref}}/rapport",
+              "host": ["{{base_url}}"],
+              "path": ["verify", "{{document_ref}}", "rapport"]
+            },
+            "description": "Génère un rapport PDF horodaté de vérification (logo INUBIL, résultat, hash, blockchain). Limite : 10 req/min par IP."
+          }
+        },
+        {
+          "name": "Vérifier par hash SHA-256",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hash\": \"{{document_hash}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/verify/hash",
+              "host": ["{{base_url}}"],
+              "path": ["verify", "hash"]
+            },
+            "description": "Vérifie par empreinte SHA-256 du PDF (64 caractères hexadécimaux). Le vérificateur calcule lui-même le hash du PDF reçu. Limite : 10 req/min par IP."
+          }
+        },
+        {
+          "name": "Vérifier par upload PDF",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "fichier",
+                  "type": "file",
+                  "src": "",
+                  "description": "PDF à vérifier (max 20 Mo) — le hash est calculé côté serveur"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/verify/upload",
+              "host": ["{{base_url}}"],
+              "path": ["verify", "upload"]
+            },
+            "description": "Upload le PDF directement — le hash SHA-256 est calculé côté serveur. Limite : 5 req/min par IP."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔗 Partage public",
+      "description": "Liens de partage temporaires et contrôlés générés par les étudiants.",
+      "item": [
+        {
+          "name": "Accéder à un document partagé",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partages/{{partage_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["partages", "{{partage_token}}"]
+            },
+            "description": "Accède au document via son token de partage (64 hex chars). Aucune authentification requise. Répond 410 si le lien est expiré, 404 si révoqué."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📧 Invitations",
+      "description": "Système d'invitation par email pour ajouter des collaborateurs (agents, directeurs) à une université.",
+      "item": [
+        {
+          "name": "Activer via token d'invitation (public)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{invitation_token}}\",\n  \"nom\": \"BELLO\",\n  \"prenom\": \"Alain\",\n  \"mot_de_passe\": \"MonMdp456!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/invitations/activer",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", "activer"]
+            },
+            "description": "Crée le compte et retourne les tokens JWT directement. Le collaborateur est immédiatement connecté."
+          }
+        },
+        {
+          "name": "Créer une invitation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.environment.set('invitation_id', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"agent.saisie@istama.cm\",\n  \"role_id\": \"{{role_id}}\",\n  \"universite_id\": \"{{universite_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/invitations",
+              "host": ["{{base_url}}"],
+              "path": ["invitations"]
+            },
+            "description": "Envoie un email d'invitation avec un lien valable 72h. Nécessite `user:assign_role`."
+          }
+        },
+        {
+          "name": "Lister les invitations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/invitations?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["invitations"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "statut", "value": "en_attente", "disabled": true }
+              ]
+            },
+            "description": "Nécessite `user:read`."
+          }
+        },
+        {
+          "name": "Renvoyer une invitation",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/invitations/{{invitation_id}}/renvoyer",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", "{{invitation_id}}", "renvoyer"]
+            },
+            "description": "Génère un nouveau token (72h) et renvoie l'email. Incrémente `nb_relances`."
+          }
+        },
+        {
+          "name": "Annuler une invitation",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/invitations/{{invitation_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", "{{invitation_id}}"]
+            },
+            "description": "Suppression définitive. Uniquement pour les invitations `en_attente`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Rôles & Permissions",
+      "description": "Gestion des rôles RBAC et de leurs permissions.",
+      "item": [
+        {
+          "name": "Lister les rôles",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.length > 0) pm.environment.set('role_id', json[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/roles",
+              "host": ["{{base_url}}"],
+              "path": ["roles"],
+              "query": [
+                { "key": "universite_id", "value": "{{universite_id}}", "disabled": true }
+              ]
+            },
+            "description": "Filtre optionnel par universite_id. Sans filtre : retourne les rôles globaux."
+          }
+        },
+        {
+          "name": "Détail d'un rôle",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/roles/{{role_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["roles", "{{role_id}}"]
+            },
+            "description": "Retourne le rôle avec toutes ses permissions."
+          }
+        },
+        {
+          "name": "Créer un rôle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.environment.set('role_id', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"agent_saisie\",\n  \"description\": \"Agent de saisie des diplômes\",\n  \"universite_id\": \"{{universite_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/roles",
+              "host": ["{{base_url}}"],
+              "path": ["roles"]
+            },
+            "description": "Nécessite `role:create`. universite_id null = rôle global INUBIL."
+          }
+        },
+        {
+          "name": "Assigner des permissions à un rôle",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissions\": [\n    \"doc:read\",\n    \"doc:create\",\n    \"student:read\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/roles/{{role_id}}/permissions",
+              "host": ["{{base_url}}"],
+              "path": ["roles", "{{role_id}}", "permissions"]
+            },
+            "description": "**Opération atomique** — remplace toutes les permissions du rôle. Nécessite `role:assign`.\n\nPermissions disponibles : `univ:read/create/edit/delete/approve/activate/suspend/reject`, `role:read/create/edit/delete/assign`, `user:read/edit/assign_role`, `doc:read/create/validate/revoke/delete/share`, `student:read`, `stats:read`, `audit:read`, `notif:read`, `config:read/edit`, `api:read/create/delete`, `webhook:read/create/edit/delete`, `partner:read/create/edit/delete`"
+          }
+        },
+        {
+          "name": "Modifier un rôle",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Agent de saisie principal\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/roles/{{role_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["roles", "{{role_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Supprimer un rôle",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/roles/{{role_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["roles", "{{role_id}}"]
+            },
+            "description": "Bloqué si le rôle est système ou assigné à des utilisateurs."
+          }
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Administration",
+      "description": "Tableau de bord admin : statistiques, journal d'audit, gestion globale des utilisateurs.",
+      "item": [
+        {
+          "name": "Statistiques globales",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/statistiques",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "statistiques"]
+            },
+            "description": "KPIs : universités actives, documents émis/révoqués, vérifications du mois, etc. Nécessite `stats:read`."
+          }
+        },
+        {
+          "name": "Graphe temporel (vérifications + documents)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/statistiques/graphe?granularite=jour&debut=2026-01-01&fin=2026-06-30",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "statistiques", "graphe"],
+              "query": [
+                { "key": "granularite", "value": "jour" },
+                { "key": "debut", "value": "2026-01-01" },
+                { "key": "fin", "value": "2026-06-30" }
+              ]
+            },
+            "description": "Séries temporelles. granularite : `jour` ou `mois`. Nécessite `stats:read`."
+          }
+        },
+        {
+          "name": "Journal d'audit",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/audit?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "audit"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "module", "value": "documents", "disabled": true },
+                { "key": "action", "value": "DOCUMENT_VALIDER", "disabled": true },
+                { "key": "utilisateur_id", "value": "{{universite_id}}", "disabled": true }
+              ]
+            },
+            "description": "Journal immuable de toutes les actions. Nécessite `audit:read`."
+          }
+        },
+        {
+          "name": "Lister tous les documents (admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/documents?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "documents"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Super admin voit tous les documents. Admin université ne voit que les siens. Nécessite `doc:read`."
+          }
+        },
+        {
+          "name": "Lister les utilisateurs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/utilisateurs?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "utilisateurs"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "statut", "value": "actif", "disabled": true }
+              ]
+            },
+            "description": "Nécessite `user:read`."
+          }
+        },
+        {
+          "name": "Activer un utilisateur",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/admin/utilisateurs/{{universite_id}}/activer",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "utilisateurs", "{{universite_id}}", "activer"]
+            },
+            "description": "Nécessite `user:edit`. Remplacer `{{universite_id}}` par l'ID de l'utilisateur cible."
+          }
+        },
+        {
+          "name": "Désactiver un utilisateur",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/admin/utilisateurs/{{universite_id}}/desactiver",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "utilisateurs", "{{universite_id}}", "desactiver"]
+            },
+            "description": "Bloque l'accès sans supprimer le compte. Nécessite `user:edit`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔔 Notifications",
+      "description": "Notifications in-app de l'utilisateur connecté. Self-service — aucune permission spéciale requise.",
+      "item": [
+        {
+          "name": "Mes notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "  pm.environment.set('notification_id', json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/notifications/moi?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "moi"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "statut", "value": "non_lue", "disabled": true }
+              ]
+            },
+            "description": "Retourne `{ data, total, non_lues }`. Filtre par statut : `non_lue`, `lue`, `archivee`."
+          }
+        },
+        {
+          "name": "Compteur non lues",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/notifications/moi/non-lues/count",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "moi", "non-lues", "count"]
+            },
+            "description": "Retourne `{ count: N }`. Idéal pour le badge dans la navbar."
+          }
+        },
+        {
+          "name": "Marquer une notification lue",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/notifications/{{notification_id}}/lire",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "{{notification_id}}", "lire"]
+            }
+          }
+        },
+        {
+          "name": "Tout marquer lu",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/notifications/moi/tout-lire",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "moi", "tout-lire"]
+            },
+            "description": "Marque toutes les notifications non lues comme lues en une seule requête."
+          }
+        },
+        {
+          "name": "Archiver une notification",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/notifications/{{notification_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "{{notification_id}}"]
+            },
+            "description": "Archive la notification (soft delete). Elle disparaît de la liste mais reste en base."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛠️ Configurations",
+      "description": "Paramètres dynamiques de la plateforme. Modifiables sans redéploiement. Nécessite `config:read` / `config:edit`.",
+      "item": [
+        {
+          "name": "Lister les configurations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/configurations",
+              "host": ["{{base_url}}"],
+              "path": ["configurations"]
+            },
+            "description": "Nécessite `config:read`."
+          }
+        },
+        {
+          "name": "Détail d'une configuration",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/configurations/{{config_cle}}",
+              "host": ["{{base_url}}"],
+              "path": ["configurations", "{{config_cle}}"]
+            },
+            "description": "Nécessite `config:read`."
+          }
+        },
+        {
+          "name": "Créer / Modifier une configuration",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valeur\": \"10\",\n  \"type\": \"number\",\n  \"description\": \"Nombre maximum d'invitations envoyées par jour par université\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/configurations/{{config_cle}}",
+              "host": ["{{base_url}}"],
+              "path": ["configurations", "{{config_cle}}"]
+            },
+            "description": "Upsert (crée ou met à jour). types disponibles : `string`, `number`, `boolean`, `json`. Nécessite `config:edit`."
+          }
+        },
+        {
+          "name": "Supprimer une configuration",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/configurations/{{config_cle}}",
+              "host": ["{{base_url}}"],
+              "path": ["configurations", "{{config_cle}}"]
+            },
+            "description": "Nécessite `config:edit`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🗝️ Clés API",
+      "description": "Clés d'accès programmatiques pour intégrations machine-to-machine (ERP, scripts). La clé en clair n'est retournée qu'une seule fois à la création.",
+      "item": [
+        {
+          "name": "Lister les clés API",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.length > 0) pm.environment.set('cle_api_id', json[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/cles-api",
+              "host": ["{{base_url}}"],
+              "path": ["cles-api"]
+            },
+            "description": "Retourne les clés de l'université de l'acteur. La `cle_hachee` est masquée — seul le `prefix` est visible. Nécessite `api:read`."
+          }
+        },
+        {
+          "name": "Détail d'une clé API",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/cles-api/{{cle_api_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["cles-api", "{{cle_api_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Créer une clé API",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.environment.set('cle_api_id', json.id);",
+                  "  console.log('CLÉ EN CLAIR (sauvegarder maintenant!) :', json.cle_en_clair);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Intégration ERP ISTAMA\",\n  \"permissions\": [\"doc:read\", \"student:read\"],\n  \"expiration\": \"2027-01-01T00:00:00Z\",\n  \"ip_whitelist\": [\"192.168.1.100\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/cles-api",
+              "host": ["{{base_url}}"],
+              "path": ["cles-api"]
+            },
+            "description": "**IMPORTANT :** La réponse contient `cle_en_clair` (format `inub_xxxx_...`). **Elle ne sera plus jamais affichée.** Copiez-la immédiatement. Nécessite `api:create`."
+          }
+        },
+        {
+          "name": "Modifier une clé API",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Intégration ERP ISTAMA v2\",\n  \"est_active\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/cles-api/{{cle_api_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["cles-api", "{{cle_api_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Révoquer une clé API",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/cles-api/{{cle_api_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["cles-api", "{{cle_api_id}}"]
+            },
+            "description": "Suppression définitive. La clé ne fonctionnera plus immédiatement. Nécessite `api:delete`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🪝 Webhooks",
+      "description": "Intégrations temps réel. L'université configure une URL qui reçoit des notifications POST quand des événements se produisent (diplôme validé, révoqué, etc.).",
+      "item": [
+        {
+          "name": "Lister les webhooks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.length > 0) pm.environment.set('webhook_id', json[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/webhooks",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks"]
+            },
+            "description": "Nécessite `webhook:read`."
+          }
+        },
+        {
+          "name": "Détail d'un webhook",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/webhooks/{{webhook_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks", "{{webhook_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Créer un webhook",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.environment.set('webhook_id', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Notification ERP diplômes\",\n  \"url\": \"https://erp.mon-universite.cm/api/webhooks/inubil\",\n  \"evenements\": [\n    \"document.valide\",\n    \"document.revoque\",\n    \"document.rejete\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/webhooks",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks"]
+            },
+            "description": "Un secret HMAC est généré automatiquement. Chaque requête envoyée à `url` contient le header `X-INUBIL-Signature: sha256=...`. Nécessite `webhook:create`."
+          }
+        },
+        {
+          "name": "Modifier un webhook",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"inactif\",\n  \"evenements\": [\"document.valide\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/webhooks/{{webhook_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks", "{{webhook_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Supprimer un webhook",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/webhooks/{{webhook_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks", "{{webhook_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Historique des livraisons",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/webhooks/{{webhook_id}}/livraisons",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks", "{{webhook_id}}", "livraisons"]
+            },
+            "description": "100 dernières tentatives d'envoi : statut HTTP, durée, corps de réponse. Utile pour diagnostiquer les échecs."
+          }
+        },
+        {
+          "name": "Tester un webhook (ping)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/webhooks/{{webhook_id}}/tester",
+              "host": ["{{base_url}}"],
+              "path": ["webhooks", "{{webhook_id}}", "tester"]
+            },
+            "description": "Envoie un payload de test `{ event: 'ping', timestamp: ... }` à l'URL configurée. Retourne `{ succes, statut_http, message }`. Timeout 10s. Nécessite `webhook:edit`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🤝 Partenariats",
+      "description": "Accords formels entre universités (reconnaissance de diplômes, double-diplôme, échanges). Complémentaire à la blockchain : documente QUI reconnaît QUOI.",
+      "item": [
+        {
+          "name": "Lister mes partenariats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.length > 0) pm.environment.set('partenariat_id', json[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partenariats",
+              "host": ["{{base_url}}"],
+              "path": ["partenariats"]
+            },
+            "description": "Retourne les partenariats de l'université de l'acteur connecté. Nécessite `partner:read`."
+          }
+        },
+        {
+          "name": "Détail d'un partenariat",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partenariats/{{partenariat_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["partenariats", "{{partenariat_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Créer un partenariat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.environment.set('partenariat_id', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"universite_liee_id\": \"{{universite_id}}\",\n  \"type_partenariat\": \"reconnaissance\",\n  \"date_debut\": \"2026-01-01\",\n  \"date_fin\": \"2028-12-31\",\n  \"description\": \"Reconnaissance mutuelle des diplômes Licence en Informatique\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/partenariats",
+              "host": ["{{base_url}}"],
+              "path": ["partenariats"]
+            },
+            "description": "types disponibles : `reconnaissance`, `double_diplome`, `echange`, `cotutelle`. Bloqué si doublon ou auto-partenariat. Nécessite `partner:create`."
+          }
+        },
+        {
+          "name": "Modifier un partenariat",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"suspendu\",\n  \"description\": \"Partenariat suspendu en attente de renouvellement de convention\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/partenariats/{{partenariat_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["partenariats", "{{partenariat_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Supprimer un partenariat",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/partenariats/{{partenariat_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["partenariats", "{{partenariat_id}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

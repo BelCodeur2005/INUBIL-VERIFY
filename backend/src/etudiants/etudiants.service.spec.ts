@@ -3,6 +3,7 @@ import { ForbiddenException, NotFoundException, BadRequestException } from '@nes
 import { EtudiantsService } from './etudiants.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { ConfigurationsService } from '../configurations/configurations.service';
 
 const USER_ID   = 'usr-0000-0000-0000-000000000001';
 const ETU_ID    = 'etu-0000-0000-0000-000000000002';
@@ -68,6 +69,10 @@ const makeMail = () => ({
   sendPartageCreé: jest.fn().mockResolvedValue(undefined),
 });
 
+const makeConfigurations = () => ({
+  get: jest.fn().mockResolvedValue('30'),
+});
+
 const makePrisma = () => ({
   etudiants: {
     findFirst: jest.fn(),
@@ -94,16 +99,19 @@ describe('EtudiantsService', () => {
   let service: EtudiantsService;
   let prisma: ReturnType<typeof makePrisma>;
   let mail: ReturnType<typeof makeMail>;
+  let configurations: ReturnType<typeof makeConfigurations>;
 
   beforeEach(async () => {
     prisma = makePrisma();
     mail   = makeMail();
+    configurations = makeConfigurations();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EtudiantsService,
         { provide: PrismaService, useValue: prisma },
         { provide: MailService,   useValue: mail   },
+        { provide: ConfigurationsService, useValue: configurations },
       ],
     }).compile();
 
@@ -254,6 +262,80 @@ describe('EtudiantsService', () => {
       await service.creerPartage(USER_ID, { document_id: DOC_ID });
 
       expect(mail.sendPartageCreé).not.toHaveBeenCalled();
+    });
+
+    it('calcule l\'expiration par défaut depuis le paramètre systeme partage_duree_jours', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+      configurations.get.mockResolvedValue('7');
+
+      let capturedData: any;
+      prisma.partages_document.create.mockImplementation(async ({ data }: any) => {
+        capturedData = data;
+        return makePartage({ date_expiration: data.date_expiration });
+      });
+
+      const avant = Date.now();
+      await service.creerPartage(USER_ID, { document_id: DOC_ID });
+
+      expect(configurations.get).toHaveBeenCalledWith('partage_duree_jours', '30');
+      const ecartJours = (capturedData.date_expiration.getTime() - avant) / (24 * 3600 * 1000);
+      expect(ecartJours).toBeGreaterThan(6.9);
+      expect(ecartJours).toBeLessThan(7.1);
+    });
+
+    it('retombe sur 30 jours si partage_duree_jours n\'est pas configuré ou invalide', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+      configurations.get.mockResolvedValue(undefined);
+
+      let capturedData: any;
+      prisma.partages_document.create.mockImplementation(async ({ data }: any) => {
+        capturedData = data;
+        return makePartage({ date_expiration: data.date_expiration });
+      });
+
+      const avant = Date.now();
+      await service.creerPartage(USER_ID, { document_id: DOC_ID });
+
+      const ecartJours = (capturedData.date_expiration.getTime() - avant) / (24 * 3600 * 1000);
+      expect(ecartJours).toBeGreaterThan(29.9);
+      expect(ecartJours).toBeLessThan(30.1);
+    });
+
+    it('ne fixe aucune expiration si permanent=true', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+
+      let capturedData: any;
+      prisma.partages_document.create.mockImplementation(async ({ data }: any) => {
+        capturedData = data;
+        return makePartage({ date_expiration: null });
+      });
+
+      await service.creerPartage(USER_ID, { document_id: DOC_ID, permanent: true });
+
+      expect(capturedData.date_expiration).toBeNull();
+      expect(configurations.get).not.toHaveBeenCalled();
+    });
+
+    it('priorise date_expiration explicite sur le calcul par defaut', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+
+      let capturedData: any;
+      prisma.partages_document.create.mockImplementation(async ({ data }: any) => {
+        capturedData = data;
+        return makePartage({ date_expiration: data.date_expiration });
+      });
+
+      await service.creerPartage(USER_ID, {
+        document_id: DOC_ID,
+        date_expiration: '2026-12-31T23:59:59Z',
+      });
+
+      expect(capturedData.date_expiration).toEqual(new Date('2026-12-31T23:59:59Z'));
+      expect(configurations.get).not.toHaveBeenCalled();
     });
   });
 

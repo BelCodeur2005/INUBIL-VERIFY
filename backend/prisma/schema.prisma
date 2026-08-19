@@ -64,7 +64,6 @@ model documents {
   chiffrement_iv                                   String?                   @db.VarChar(32)
   chiffrement_cle_wrappee                          String?
   hash_sha256                                      String?                   @unique @db.VarChar(64)
-  cid_ipfs                                         String?                   @db.VarChar(100)
   adresse_contrat                                  String?                   @db.VarChar(42)
   transaction_hash                                 String?                   @db.VarChar(66)
   bloc_numero                                      BigInt?

@@ -1,8 +1,26 @@
 import { useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
+import { useAuth } from '../../../core/auth/useAuth';
 import styles from './AppLayout.module.css';
 import Logo_Inubil from '../../../assets/Logo_Inubil.png';
 
+// Les 3 rôles qui partagent ce layout — voir docs/ROLES_ET_PAGES.md §1-2.
+// directeur_pedagogique n'y atterrit pas encore via role-redirect.js (redirigé vers
+// /dashboard-directeur en attendant la fusion prévue), mais le filtrage ci-dessous
+// reste correct s'il y accède directement.
+const ROLES = {
+  AGENT: 'agent_saisie',
+  DIRECTEUR: 'directeur_pedagogique',
+  RESPONSABLE: 'responsable_universite',
+};
+
+const ROLE_LABELS = {
+  [ROLES.AGENT]: 'Agent de Saisie',
+  [ROLES.DIRECTEUR]: 'Directeur Pédagogique',
+  [ROLES.RESPONSABLE]: 'Responsable Université',
+};
+
+// roles: undefined = visible pour tout le monde dans ce layout.
 const navItems = [
   {
     path: '/universite',
@@ -25,16 +43,6 @@ const navItems = [
       </svg>
     ),
   },
-  /*{
-    path: '/universite/importation',
-    label: 'Importation de Masse',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="17 11 12 6 7 11"/><line x1="12" y1="6" x2="12" y2="18"/>
-        <path d="M20 21H4"/>
-      </svg>
-    ),
-  },*/
   {
     path: '/universite/registre',
     label: 'Registre Local',
@@ -47,9 +55,11 @@ const navItems = [
     ),
   },
   {
+    // doc:revoke — agent_saisie ne l'a pas (docs/ROLES_ET_PAGES.md §2).
     path: '/universite/revocations',
     label: 'Révocations',
     dot: true,
+    roles: [ROLES.DIRECTEUR, ROLES.RESPONSABLE],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -60,8 +70,23 @@ const navItems = [
 
 const bottomNavItems = [
   {
+    // Aucun des 3 rôles n'a de permission "audit"/"config" dédiée côté backend ;
+    // on réserve ces deux pages au rôle le plus élevé de ce layout en attendant.
+    path: '/universite/journal',
+    label: 'Journal Activités',
+    roles: [ROLES.RESPONSABLE],
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+    ),
+  },
+  {
     path: '/universite/parametres',
     label: 'Paramètres',
+    roles: [ROLES.RESPONSABLE],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3"/>
@@ -84,12 +109,27 @@ const bottomNavItems = [
 
 export default function AppLayout() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { utilisateur, logout } = useAuth();
+
+  const roleNom = utilisateur?.role?.nom;
+  const visible = (item) => !item.roles || roleNom === undefined || item.roles.includes(roleNom);
+  const navItemsVisibles = navItems.filter(visible);
+  const bottomNavItemsVisibles = bottomNavItems.filter(visible);
+
+  const prenom = utilisateur?.prenom ?? '';
+  const nom = utilisateur?.nom ?? '';
+  const initiales = `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || '··';
+  const roleLabel = ROLE_LABELS[roleNom] ?? roleNom ?? '';
 
   const handleNavClick = (e, item) => {
     if (item.path === '/universite/ajout') {
       e.preventDefault();
       setIsModalOpen(true);
     }
+  };
+
+  const handleLogout = async () => {
+    await logout();
   };
 
   return (
@@ -108,7 +148,7 @@ export default function AppLayout() {
 
         {/* Navigation principale */}
         <nav className={styles.nav}>
-          {navItems.map((item) => (
+          {navItemsVisibles.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -128,7 +168,7 @@ export default function AppLayout() {
 
         {/* Navigation bas */}
         <nav className={styles.navBottom}>
-          {bottomNavItems.map((item) => (
+          {bottomNavItemsVisibles.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -182,10 +222,22 @@ export default function AppLayout() {
             {/* Profil */}
             <div className={styles.userInfo}>
               <div className={styles.userTexts}>
-                <span className={styles.userName}>Marie Ngo</span>
-                <span className={styles.userRole}>Agent Principal</span>
+                <span className={styles.userName}>{`${prenom} ${nom}`.trim() || 'Utilisateur'}</span>
+                <span className={styles.userRole}>{roleLabel}</span>
               </div>
-              <div className={styles.avatar}>MN</div>
+              <div className={styles.avatar}>{initiales}</div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className={styles.iconBtn}
+                title="Se déconnecter"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </button>
             </div>
           </div>
         </header>

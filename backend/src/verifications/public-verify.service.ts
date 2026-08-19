@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { HashService } from '../documents/hash.service';
 import { RapportVerificationPdfService, RapportVerificationData } from '../documents/rapport-verification-pdf.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
+import { ConfigurationsService } from '../configurations/configurations.service';
 import { VerifyResponseDto, DocumentPublicDto, MatierePublicDto, BlockchainInfoDto } from './dto/verify-response.dto';
 
 @Injectable()
@@ -14,7 +15,15 @@ export class PublicVerifyService {
     private readonly rapportPdf: RapportVerificationPdfService,
     private readonly blockchain: BlockchainService,
     private readonly config: ConfigService,
+    private readonly configurations: ConfigurationsService,
   ) {}
+
+  /** Limite effective (en octets) pour un upload de PDF — parametre systeme "pdf_max_taille_mo". */
+  private async pdfMaxTailleOctets(): Promise<number> {
+    const brut = await this.configurations.get('pdf_max_taille_mo', '20');
+    const mo = Number(brut);
+    return (Number.isFinite(mo) && mo > 0 ? mo : 20) * 1024 * 1024;
+  }
 
   // ─── Points d'entrée publics ──────────────────────────────────────────
 
@@ -48,6 +57,13 @@ export class PublicVerifyService {
     ip?: string,
     userAgent?: string,
   ): Promise<VerifyResponseDto> {
+    const maxOctets = await this.pdfMaxTailleOctets();
+    if (pdfBuffer.length > maxOctets) {
+      throw new BadRequestException(
+        `Le fichier depasse la taille maximale autorisee (${Math.round(maxOctets / 1024 / 1024)} Mo)`,
+      );
+    }
+
     const hashCalcule = this.hash.calculateHash(pdfBuffer);
     const doc = await this.chargerDocument({ hash_sha256: hashCalcule });
     const infoBlockchain = doc ? await this.lireBlockchain(doc.numero_unique) : null;

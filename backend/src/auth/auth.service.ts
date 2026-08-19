@@ -17,6 +17,7 @@ import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { AuditService } from '../audit/audit.service';
+import { ConfigurationsService } from '../configurations/configurations.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { AuthTokensDto } from './dto/auth-response.dto';
@@ -25,9 +26,12 @@ import { ProfileResponseDto } from './dto/profile-response.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
+import { PASSWORD_MIN_LENGTH_FLOOR } from '../common/constants/password.constants';
 
-const MAX_TENTATIVES = 5;
-const DUREE_BLOCAGE_MIN = 15;
+// Valeurs par defaut si les parametres systeme correspondants (configurations)
+// sont absents ou invalides — voir gererEchec().
+const MAX_TENTATIVES_DEFAUT = 5;
+const DUREE_BLOCAGE_MIN_DEFAUT = 15;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;       // 1h
 const EMAIL_VERIF_TTL_MS = 24 * 60 * 60 * 1000;  // 24h
 
@@ -42,6 +46,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly mail: MailService,
     private readonly audit: AuditService,
+    private readonly configurations: ConfigurationsService,
   ) {}
 
   // ─── REGISTER ───────────────────────────────────────────────────────
@@ -55,6 +60,8 @@ export class AuthService {
       // Reponse volontairement vague pour ne pas confirmer l'existence du compte.
       return { message: 'Si cette adresse est valide, un email de verification vient d\'etre envoye.' };
     }
+
+    await this.assertMotDePasseAssezLong(dto.mot_de_passe);
 
     const rounds = Number(this.config.get<number>('BCRYPT_SALT_ROUNDS'));
     const motDePasseHache = await bcrypt.hash(dto.mot_de_passe, rounds);
@@ -312,6 +319,8 @@ export class AuthService {
       throw new BadRequestException('Token de reinitialisation invalide ou expire');
     }
 
+    await this.assertMotDePasseAssezLong(nouveauMotDePasse);
+
     const rounds = Number(this.config.get<number>('BCRYPT_SALT_ROUNDS'));
     const hash = await bcrypt.hash(nouveauMotDePasse, rounds);
 
@@ -479,6 +488,8 @@ export class AuthService {
       throw new BadRequestException('Ancien mot de passe incorrect');
     }
 
+    await this.assertMotDePasseAssezLong(dto.nouveau_mot_de_passe);
+
     const rounds = Number(this.config.get<number>('BCRYPT_SALT_ROUNDS'));
     const hash = await bcrypt.hash(dto.nouveau_mot_de_passe, rounds);
 
@@ -556,13 +567,42 @@ export class AuthService {
     });
   }
 
+  /** Lit un parametre systeme numerique (configurations), avec repli sur une valeur par defaut. */
+  private async parametreNumerique(cle: string, defaut: number): Promise<number> {
+    const brut = await this.configurations.get(cle, String(defaut));
+    const valeur = Number(brut);
+    return Number.isFinite(valeur) && valeur > 0 ? valeur : defaut;
+  }
+
+  /**
+   * Longueur minimale de mot de passe effective — parametre systeme "mot_de_passe_longueur_min".
+   * Ne peut jamais descendre sous PASSWORD_MIN_LENGTH_FLOOR (deja garanti par les DTOs),
+   * mais peut etre relevee sans redeploiement.
+   */
+  private async motDePasseLongueurMin(): Promise<number> {
+    const valeur = await this.parametreNumerique('mot_de_passe_longueur_min', PASSWORD_MIN_LENGTH_FLOOR);
+    return Math.max(valeur, PASSWORD_MIN_LENGTH_FLOOR);
+  }
+
+  private async assertMotDePasseAssezLong(motDePasse: string): Promise<void> {
+    const min = await this.motDePasseLongueurMin();
+    if (motDePasse.length < min) {
+      throw new BadRequestException(`Le mot de passe doit contenir au moins ${min} caracteres`);
+    }
+  }
+
   private async gererEchec(user: utilisateurs): Promise<void> {
+    const [maxTentatives, dureeBlocageMin] = await Promise.all([
+      this.parametreNumerique('max_tentatives_connexion', MAX_TENTATIVES_DEFAUT),
+      this.parametreNumerique('duree_blocage_min', DUREE_BLOCAGE_MIN_DEFAUT),
+    ]);
+
     const tentatives = user.tentatives_connexion + 1;
     const data: { tentatives_connexion: number; bloque_jusqu?: Date } = {
       tentatives_connexion: tentatives,
     };
-    if (tentatives >= MAX_TENTATIVES) {
-      data.bloque_jusqu = new Date(Date.now() + DUREE_BLOCAGE_MIN * 60 * 1000);
+    if (tentatives >= maxTentatives) {
+      data.bloque_jusqu = new Date(Date.now() + dureeBlocageMin * 60 * 1000);
     }
     await this.prisma.utilisateurs.update({ where: { id: user.id }, data });
   }

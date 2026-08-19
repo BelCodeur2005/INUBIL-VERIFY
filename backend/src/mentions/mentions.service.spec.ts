@@ -69,8 +69,18 @@ describe('MentionsService', () => {
       expect(result[0].code).toBe('AB');
     });
 
+    it('un utilisateur sans université ET sans rôle super_admin est refusé, pas bypassé (pas de fail-open)', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({
+        universite_id: null,
+        roles_utilisateurs_role_idToroles: { nom: 'agent_saisie' },
+      });
+
+      await expect(service.lister({}, ADMIN_ID)).rejects.toThrow(ForbiddenException);
+      expect(prisma.mentions_document.findMany).not.toHaveBeenCalled();
+    });
+
     it('super-admin voit toutes les mentions sans filtre par defaut', async () => {
-      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null });
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null, roles_utilisateurs_role_idToroles: { nom: 'super_admin' } });
       await service.lister({}, ADMIN_ID);
       const where = prisma.mentions_document.findMany.mock.calls[0][0].where;
       expect(where.universite_id).toBeUndefined();

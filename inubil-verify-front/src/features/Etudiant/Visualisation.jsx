@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import styles from './Visualisation.module.css';
 
 export default function VerificationModal({ isOpen, onClose }) {

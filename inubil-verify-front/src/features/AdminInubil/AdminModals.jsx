@@ -1,5 +1,3 @@
-import React from 'react';
-
 // Style commun pour le fond des modales
 const overlayStyle = {
   position: 'fixed',

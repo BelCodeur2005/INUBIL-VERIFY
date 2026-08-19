@@ -1,24 +1,52 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { api } from '../../../core/api/client';
 import styles from './ResetPassword.module.css';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
+
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [erreur, setErreur] = useState('');
+  const [enCours, setEnCours] = useState(false);
 
   // Validation dynamique des critères
   const hasMinLength = password.length >= 8;
   const hasUppercase = /[A-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
   const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const passwordsMatch = password.length > 0 && password === confirmPassword;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (hasMinLength && hasUppercase && hasNumber && hasSpecialChar && password === confirmPassword) {
-      navigate('/auth/login');
+    setErreur('');
+
+    if (!token) {
+      setErreur("Lien invalide : le jeton de réinitialisation est manquant.");
+      return;
+    }
+    if (!(hasMinLength && hasUppercase && hasNumber && hasSpecialChar)) {
+      setErreur('Le mot de passe ne respecte pas toutes les exigences ci-dessous.');
+      return;
+    }
+    if (!passwordsMatch) {
+      setErreur('Les mots de passe ne correspondent pas.');
+      return;
+    }
+
+    setEnCours(true);
+    try {
+      await api.post('/auth/reset-password', { token, nouveau_mot_de_passe: password }, { auth: false });
+      navigate('/login');
+    } catch (err) {
+      setErreur(err.message || 'Ce lien est invalide ou a expiré. Veuillez refaire une demande.');
+    } finally {
+      setEnCours(false);
     }
   };
 
@@ -54,6 +82,8 @@ export default function ResetPassword() {
             <h2 className={styles.authTitle}>Réinitialisation</h2>
             <p className={styles.authSubtitle}>Saisissez vos nouvelles informations de connexion.</p>
           </div>
+
+          {erreur && <div className={styles.alertError}>{erreur}</div>}
 
           <form onSubmit={handleSubmit} className={styles.formStack}>
             
@@ -146,10 +176,14 @@ export default function ResetPassword() {
               </ul>
             </div>
 
-            <button type="submit" className={styles.btnPrimary}>
-              <span>Mettre à jour le mot de passe</span>
+            <button type="submit" className={styles.btnPrimary} disabled={enCours}>
+              <span>{enCours ? 'Mise à jour...' : 'Mettre à jour le mot de passe'}</span>
               <span className={styles.arrowIcon}>→</span>
             </button>
+
+            <Link to="/login" className={styles.btnBack}>
+              <span className={styles.backArrow}>←</span> Retour à la page de connexion
+            </Link>
           </form>
 
         </div>

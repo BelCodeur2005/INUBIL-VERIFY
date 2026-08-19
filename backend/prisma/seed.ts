@@ -7,12 +7,14 @@
  * Idempotent : peut etre relance sans creer de doublons.
  *
  * Donnees crees :
- *   1. Role super_admin + 25 permissions granulaires
- *   2. Compte admin  (admin@inubil.com / Admin123!)
- *   3. Universite    ISTAMA INUBIL (statut active)
- *   4. Type document Licence en Informatique (categorie diplome)
- *   5. Mention       Assez Bien (12-14/20)
- *   6. Etudiant      KAMGA Bertrand (ISTAMA-2023-0001)
+ *   1. Role super_admin + 39 permissions granulaires
+ *   2. Roles metier (admin_istama, responsable_universite, directeur_pedagogique,
+ *      agent_saisie, etudiant, autre_universite, employeur) + leurs permissions
+ *   3. Compte admin  (admin@inubil.com / Admin123!)
+ *   4. Universite    ISTAMA INUBIL (statut active)
+ *   5. Type document Licence en Informatique (categorie diplome)
+ *   6. Mention       Assez Bien (12-14/20)
+ *   7. Etudiant      KAMGA Bertrand (ISTAMA-2023-0001)
  */
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
@@ -59,6 +61,30 @@ const PERMISSIONS: Array<{ nom: string; module: string; description: string }> =
   // ── Statistiques & Audit ─────────────────────────────────────────────────
   { nom: 'stats:read', module: 'statistiques', description: 'Consulter les statistiques de la plateforme' },
   { nom: 'audit:read', module: 'audit',        description: "Consulter le journal d'audit" },
+
+  // ── Notifications ─────────────────────────────────────────────────────────
+  { nom: 'notif:read', module: 'notifications', description: 'Consulter ses propres notifications' },
+
+  // ── Configurations ────────────────────────────────────────────────────────
+  { nom: 'config:read', module: 'configurations', description: 'Consulter les configurations de la plateforme' },
+  { nom: 'config:edit', module: 'configurations', description: 'Modifier les configurations de la plateforme' },
+
+  // ── Clés API ──────────────────────────────────────────────────────────────
+  { nom: 'api:read',   module: 'cles_api', description: "Consulter les clés API de l'université" },
+  { nom: 'api:create', module: 'cles_api', description: "Créer une clé API pour l'université" },
+  { nom: 'api:delete', module: 'cles_api', description: "Révoquer une clé API de l'université" },
+
+  // ── Webhooks ──────────────────────────────────────────────────────────────
+  { nom: 'webhook:read',   module: 'webhooks', description: 'Consulter les webhooks et leurs livraisons' },
+  { nom: 'webhook:create', module: 'webhooks', description: 'Créer un webhook' },
+  { nom: 'webhook:edit',   module: 'webhooks', description: 'Modifier un webhook' },
+  { nom: 'webhook:delete', module: 'webhooks', description: 'Supprimer un webhook' },
+
+  // ── Partenariats ──────────────────────────────────────────────────────────
+  { nom: 'partner:read',   module: 'partenariats', description: "Consulter les partenariats de l'université" },
+  { nom: 'partner:create', module: 'partenariats', description: "Créer un partenariat inter-universités" },
+  { nom: 'partner:edit',   module: 'partenariats', description: "Modifier un partenariat" },
+  { nom: 'partner:delete', module: 'partenariats', description: "Supprimer un partenariat" },
 ];
 
 const ANCIENNES_PERMISSIONS = [
@@ -71,6 +97,64 @@ const ANCIENNES_PERMISSIONS = [
   'saisir_document',
   'voir_dossier_etudiant',
   'partager_document',
+];
+
+/**
+ * Roles metier proposes (au-dela de super_admin) — conception issue de l'analyse
+ * RBAC / cahier des charges, a ajuster selon les besoins reels de l'equipe.
+ * Tous crees comme roles globaux (universite_id: null) et systeme (non supprimables) :
+ * ce sont des gabarits partages, pas des roles personnalises par universite.
+ */
+const ROLES_METIER: Array<{ nom: string; description: string; permissions: string[] }> = [
+  {
+    nom: 'admin_istama',
+    description: 'Supervision globale de la plateforme (sans les droits techniques de super_admin : pas de suppression d\'universite ni de gestion des cles API/webhooks/partenariats)',
+    permissions: [
+      'univ:read', 'univ:create', 'univ:edit', 'univ:approve', 'univ:activate', 'univ:suspend', 'univ:reject',
+      'user:read', 'user:edit', 'user:assign_role',
+      'role:read', 'role:create',
+      'stats:read', 'audit:read',
+      'doc:read',
+    ],
+  },
+  {
+    nom: 'responsable_universite',
+    description: 'Gestion complete de son etablissement : staff, emission/validation/revocation de diplomes, integrations (cles API, webhooks, partenariats)',
+    permissions: [
+      'user:read', 'user:edit', 'user:assign_role',
+      'doc:create', 'doc:validate', 'doc:revoke', 'doc:read',
+      'student:read',
+      'api:read', 'api:create', 'api:delete',
+      'webhook:read', 'webhook:create', 'webhook:edit', 'webhook:delete',
+      'partner:read', 'partner:create', 'partner:edit', 'partner:delete',
+      'stats:read',
+    ],
+  },
+  {
+    nom: 'directeur_pedagogique',
+    description: 'Validation academique — cumule les droits de saisie de agent_saisie (peut aussi saisir), plus valider/rejeter/revoquer',
+    permissions: ['doc:create', 'doc:validate', 'doc:revoke', 'doc:read', 'student:read', 'stats:read'],
+  },
+  {
+    nom: 'agent_saisie',
+    description: 'Saisie des diplomes et fiches etudiant — pas de droit de validation ni de revocation',
+    permissions: ['doc:create', 'doc:read', 'student:read'],
+  },
+  {
+    nom: 'etudiant',
+    description: 'Espace personnel de l\'etudiant — agit via /etudiants/moi (JWT seul, sans permission RBAC dediee) ; role cree pour l\'etiquetage et la redirection post-connexion',
+    permissions: [],
+  },
+  {
+    nom: 'autre_universite',
+    description: 'Compte optionnel pour une universite tierce qui verifie des diplomes — agit via les endpoints publics /verify et son historique personnel, sans permission RBAC dediee',
+    permissions: [],
+  },
+  {
+    nom: 'employeur',
+    description: 'Compte optionnel pour un employeur qui verifie des diplomes — agit via les endpoints publics /verify et son historique personnel, sans permission RBAC dediee',
+    permissions: [],
+  },
 ];
 
 async function main(): Promise<void> {
@@ -126,6 +210,33 @@ async function main(): Promise<void> {
     });
   }
   console.log(`${PERMISSIONS.length} permissions granulaires accordees a "super_admin".`);
+
+  // ── 3bis. Roles metier + leurs permissions ──────────────────────────────────
+  for (const r of ROLES_METIER) {
+    let roleMetier = await prisma.roles.findFirst({
+      where: { nom: r.nom, universite_id: null },
+    });
+    if (!roleMetier) {
+      roleMetier = await prisma.roles.create({
+        data: { nom: r.nom, description: r.description, est_systeme: true },
+      });
+      console.log(`Role "${r.nom}" cree.`);
+    }
+
+    for (const nomPermission of r.permissions) {
+      const perm = await prisma.permissions.findUnique({ where: { nom: nomPermission } });
+      if (!perm) {
+        console.warn(`  ATTENTION : permission "${nomPermission}" introuvable pour le role "${r.nom}" — ignoree.`);
+        continue;
+      }
+      await prisma.role_permissions.upsert({
+        where: { role_id_permission_id: { role_id: roleMetier.id, permission_id: perm.id } },
+        update: {},
+        create: { role_id: roleMetier.id, permission_id: perm.id },
+      });
+    }
+    console.log(`  "${r.nom}" : ${r.permissions.length} permission(s) accordee(s).`);
+  }
 
   // ── 4. Compte admin de test ─────────────────────────────────────────────────
   let admin = await prisma.utilisateurs.findUnique({ where: { email: adminEmail } });
@@ -256,7 +367,54 @@ async function main(): Promise<void> {
   }
   console.log(`${mentions.length} mentions upserted pour ${universite.nom_court}.`);
 
-  // ── 8. Étudiant de test ─────────────────────────────────────────────────────
+  // ── 8. Configurations système ───────────────────────────────────────────────
+  const configurationsSysteme = [
+    {
+      cle: 'partage_duree_jours',
+      valeur: '30',
+      description:
+        "Duree par defaut (en jours) d'un lien de partage de document quand l'etudiant " +
+        'ne choisit ni date precise ni option "permanent".',
+    },
+    {
+      cle: 'max_tentatives_connexion',
+      valeur: '5',
+      description: 'Nombre de tentatives de connexion echouees avant blocage temporaire du compte.',
+    },
+    {
+      cle: 'duree_blocage_min',
+      valeur: '15',
+      description: 'Duree (en minutes) du blocage d\'un compte apres max_tentatives_connexion echecs.',
+    },
+    {
+      cle: 'pdf_max_taille_mo',
+      valeur: '20',
+      description:
+        'Taille maximale (en Mo) acceptee pour un upload de PDF (emission de document et verification par upload). ' +
+        'Ne peut pas depasser le plafond serveur (20 Mo, non configurable).',
+    },
+    {
+      cle: 'presigned_url_duree_min',
+      valeur: '15',
+      description: 'Duree de validite (en minutes) d\'un lien de telechargement presigne de PDF.',
+    },
+    {
+      cle: 'mot_de_passe_longueur_min',
+      valeur: '8',
+      description:
+        'Longueur minimale exigee pour un mot de passe. Ne peut pas descendre sous 8 caracteres (plancher non configurable).',
+    },
+  ];
+  for (const c of configurationsSysteme) {
+    await prisma.configurations.upsert({
+      where: { cle: c.cle },
+      update: {},
+      create: { cle: c.cle, valeur: c.valeur, type: 'number', description: c.description, modifiable_par: 'super_admin' },
+    });
+  }
+  console.log(`${configurationsSysteme.length} configurations systeme upserted.`);
+
+  // ── 9. Étudiant de test ─────────────────────────────────────────────────────
   const numeroEtudiant = 'ISTAMA-2023-0001';
   const etudiantExistant = await prisma.etudiants.findFirst({
     where: { numero_etudiant: numeroEtudiant, deleted_at: null },

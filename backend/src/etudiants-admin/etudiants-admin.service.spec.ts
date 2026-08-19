@@ -79,22 +79,32 @@ describe('EtudiantsAdminService', () => {
       expect(result.total).toBe(1);
     });
 
+    it('un utilisateur sans université ET sans rôle super_admin est refusé, pas bypassé (pas de fail-open)', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({
+        universite_id: null,
+        roles_utilisateurs_role_idToroles: { nom: 'agent_saisie' },
+      });
+
+      await expect(service.lister({}, ADMIN_ID)).rejects.toThrow(ForbiddenException);
+      expect(prisma.etudiants.findMany).not.toHaveBeenCalled();
+    });
+
     it('super-admin voit tous sans filtre par defaut', async () => {
-      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null });
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null, roles_utilisateurs_role_idToroles: { nom: 'super_admin' } });
       await service.lister({}, ADMIN_ID);
       const where = prisma.etudiants.findMany.mock.calls[0][0].where;
       expect(where.universite_id).toBeUndefined();
     });
 
     it('super-admin peut filtrer par universite_id explicite', async () => {
-      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null });
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null, roles_utilisateurs_role_idToroles: { nom: 'super_admin' } });
       await service.lister({ universite_id: AUTRE_UNIV_ID }, ADMIN_ID);
       const where = prisma.etudiants.findMany.mock.calls[0][0].where;
       expect(where.universite_id).toBe(AUTRE_UNIV_ID);
     });
 
     it('applique la pagination correctement', async () => {
-      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null });
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null, roles_utilisateurs_role_idToroles: { nom: 'super_admin' } });
       await service.lister({ page: 3, limit: 10 }, ADMIN_ID);
       expect(prisma.etudiants.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ skip: 20, take: 10 }),

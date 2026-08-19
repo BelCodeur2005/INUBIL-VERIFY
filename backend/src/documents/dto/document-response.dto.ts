@@ -78,16 +78,13 @@ export class DocumentResponseDto {
   @ApiPropertyOptional({ example: 'a3f9c2d1e8b7...', description: 'Hash SHA-256 du PDF officiel (64 hex chars)' })
   hash_sha256: string | null;
 
-  @ApiPropertyOptional({ example: 'QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco' })
-  cid_ipfs: string | null;
-
   @ApiPropertyOptional({ example: null, description: 'Hash de transaction Polygon (#22)' })
   transaction_hash: string | null;
 
-  @ApiPropertyOptional({ example: 'https://gateway.pinata.cloud/ipfs/QmXoy...' })
+  @ApiPropertyOptional({ example: 'universites/.../qrcodes/2026/06/INUB-2026-0001-qr.png', description: 'Cle de stockage S3/R2 du QR code' })
   qr_code_url: string | null;
 
-  @ApiPropertyOptional({ example: 'https://gateway.pinata.cloud/ipfs/QmAbc...' })
+  @ApiPropertyOptional({ example: 'universites/.../documents/2026/06/INUB-2026-0001.pdf', description: 'Cle de stockage S3/R2 du PDF' })
   pdf_url: string | null;
 
   @ApiPropertyOptional({ example: 245 })

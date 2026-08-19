@@ -10,9 +10,10 @@ import { AuditModule } from '../audit/audit.module';
 import { MailModule } from '../mail/mail.module';
 import { StorageModule } from '../storage/storage.module';
 import { BlockchainModule } from '../blockchain/blockchain.module';
+import { ConfigurationsModule } from '../configurations/configurations.module';
 
 @Module({
-  imports: [AuditModule, MailModule, StorageModule, BlockchainModule],
+  imports: [AuditModule, MailModule, StorageModule, BlockchainModule, ConfigurationsModule],
   controllers: [DocumentsController],
   providers: [DocumentsService, NotificationEmissionService, HashService, PdfService, QrCodeService, RapportVerificationPdfService],
   exports: [DocumentsService, NotificationEmissionService, HashService, PdfService, QrCodeService, RapportVerificationPdfService],

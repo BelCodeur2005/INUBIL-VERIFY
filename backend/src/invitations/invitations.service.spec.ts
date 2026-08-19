@@ -163,7 +163,7 @@ describe('InvitationsService', () => {
     });
 
     it('super-admin (universite_id=null) peut créer pour n\'importe quelle université', async () => {
-      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null }); // super-admin
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null, roles_utilisateurs_role_idToroles: { nom: 'super_admin' } }); // super-admin
       prisma.universites.findFirst.mockResolvedValue({ id: AUTRE_UNIV_ID });
       prisma.roles.findFirst.mockResolvedValue({ id: ROLE_ID });
       prisma.invitations.findFirst.mockResolvedValue(null);
@@ -175,6 +175,18 @@ describe('InvitationsService', () => {
           ACTEUR_ID,
         ),
       ).resolves.toBeDefined();
+    });
+
+    it('un utilisateur sans université ET sans rôle super_admin est refusé, pas bypassé (pas de fail-open)', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({
+        universite_id: null,
+        roles_utilisateurs_role_idToroles: { nom: 'agent_saisie' },
+      });
+
+      await expect(
+        service.creer({ email: 'x@x.cm', role_id: ROLE_ID, universite_id: UNIV_ID }, ACTEUR_ID),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.invitations.create).not.toHaveBeenCalled();
     });
 
     it('lève NotFoundException si université introuvable', async () => {
@@ -212,7 +224,7 @@ describe('InvitationsService', () => {
 
   describe('lister', () => {
     it('retourne une page vide si aucune invitation', async () => {
-      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null }); // super-admin
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null, roles_utilisateurs_role_idToroles: { nom: 'super_admin' } }); // super-admin
       prisma.$transaction.mockResolvedValue([[], 0]);
 
       const result = await service.lister({ page: 1, limit: 20 }, ACTEUR_ID);
@@ -239,7 +251,7 @@ describe('InvitationsService', () => {
     });
 
     it('le super-admin peut filtrer par universite_id arbitraire', async () => {
-      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null }); // super-admin
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null, roles_utilisateurs_role_idToroles: { nom: 'super_admin' } }); // super-admin
       prisma.invitations.findMany.mockResolvedValue([]);
       prisma.invitations.count.mockResolvedValue(0);
       prisma.$transaction.mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops));
