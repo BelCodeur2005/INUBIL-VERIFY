@@ -1,19 +1,27 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { api } from '../../../core/api/client';
 import styles from './ForgotPassword.module.css';
 
 export default function ForgotPassword() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [succes, setSucces] = useState(false);
+  const [erreur, setErreur] = useState('');
+  const [enCours, setEnCours] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSucces(true);
-
-    setTimeout(() => {
-      navigate('/reset-password');
-    }, 2500);
+    setErreur('');
+    setEnCours(true);
+    try {
+      // Reponse volontairement identique que l'email existe ou non (anti-enumeration cote backend).
+      await api.post('/auth/forgot-password', { email }, { auth: false });
+      setSucces(true);
+    } catch (err) {
+      setErreur(err.message || 'Une erreur est survenue, veuillez réessayer.');
+    } finally {
+      setEnCours(false);
+    }
   };
 
   return (
@@ -65,8 +73,12 @@ export default function ForgotPassword() {
 
           {succes && (
             <div className={styles.alertSuccess}>
-              <span className={styles.alertIcon}>✓</span> E-mail de récupération envoyé ! Redirection...
+              <span className={styles.alertIcon}>✓</span> Si cette adresse est associée à un compte, un email de récupération vient d'être envoyé.
             </div>
+          )}
+
+          {erreur && (
+            <div className={styles.alertError}>{erreur}</div>
           )}
 
           <form onSubmit={handleSubmit} className={styles.formStack}>
@@ -93,8 +105,8 @@ export default function ForgotPassword() {
               </div>
             </div>
 
-            <button type="submit" className={styles.btnPrimary}>
-              <span>Envoyer le lien de récupération</span>
+            <button type="submit" className={styles.btnPrimary} disabled={enCours}>
+              <span>{enCours ? 'Envoi...' : 'Envoyer le lien de récupération'}</span>
               <span className={styles.arrowIcon}>→</span>
             </button>
 
@@ -105,7 +117,7 @@ export default function ForgotPassword() {
 
           {/* Footer de réassurance */}
           <div className={styles.securityFooter}>
-            <span>Le lien expire après 15 minutes d'inactivité.</span>
+            <span>Le lien de réinitialisation est valable 1 heure.</span>
           </div>
         </div>
 
