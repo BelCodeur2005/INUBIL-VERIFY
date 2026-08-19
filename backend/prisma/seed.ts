@@ -8,11 +8,13 @@
  *
  * Donnees crees :
  *   1. Role super_admin + 39 permissions granulaires
- *   2. Compte admin  (admin@inubil.com / Admin123!)
- *   3. Universite    ISTAMA INUBIL (statut active)
- *   4. Type document Licence en Informatique (categorie diplome)
- *   5. Mention       Assez Bien (12-14/20)
- *   6. Etudiant      KAMGA Bertrand (ISTAMA-2023-0001)
+ *   2. Roles metier (admin_istama, responsable_universite, directeur_pedagogique,
+ *      agent_saisie, etudiant, autre_universite, employeur) + leurs permissions
+ *   3. Compte admin  (admin@inubil.com / Admin123!)
+ *   4. Universite    ISTAMA INUBIL (statut active)
+ *   5. Type document Licence en Informatique (categorie diplome)
+ *   6. Mention       Assez Bien (12-14/20)
+ *   7. Etudiant      KAMGA Bertrand (ISTAMA-2023-0001)
  */
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
@@ -97,6 +99,64 @@ const ANCIENNES_PERMISSIONS = [
   'partager_document',
 ];
 
+/**
+ * Roles metier proposes (au-dela de super_admin) — conception issue de l'analyse
+ * RBAC / cahier des charges, a ajuster selon les besoins reels de l'equipe.
+ * Tous crees comme roles globaux (universite_id: null) et systeme (non supprimables) :
+ * ce sont des gabarits partages, pas des roles personnalises par universite.
+ */
+const ROLES_METIER: Array<{ nom: string; description: string; permissions: string[] }> = [
+  {
+    nom: 'admin_istama',
+    description: 'Supervision globale de la plateforme (sans les droits techniques de super_admin : pas de suppression d\'universite ni de gestion des cles API/webhooks/partenariats)',
+    permissions: [
+      'univ:read', 'univ:create', 'univ:edit', 'univ:approve', 'univ:activate', 'univ:suspend', 'univ:reject',
+      'user:read', 'user:edit', 'user:assign_role',
+      'role:read', 'role:create',
+      'stats:read', 'audit:read',
+      'doc:read',
+    ],
+  },
+  {
+    nom: 'responsable_universite',
+    description: 'Gestion complete de son etablissement : staff, emission/validation/revocation de diplomes, integrations (cles API, webhooks, partenariats)',
+    permissions: [
+      'user:read', 'user:edit', 'user:assign_role',
+      'doc:create', 'doc:validate', 'doc:revoke', 'doc:read',
+      'student:read',
+      'api:read', 'api:create', 'api:delete',
+      'webhook:read', 'webhook:create', 'webhook:edit', 'webhook:delete',
+      'partner:read', 'partner:create', 'partner:edit', 'partner:delete',
+      'stats:read',
+    ],
+  },
+  {
+    nom: 'directeur_pedagogique',
+    description: 'Validation academique — cumule les droits de saisie de agent_saisie (peut aussi saisir), plus valider/rejeter/revoquer',
+    permissions: ['doc:create', 'doc:validate', 'doc:revoke', 'doc:read', 'student:read', 'stats:read'],
+  },
+  {
+    nom: 'agent_saisie',
+    description: 'Saisie des diplomes et fiches etudiant — pas de droit de validation ni de revocation',
+    permissions: ['doc:create', 'doc:read', 'student:read'],
+  },
+  {
+    nom: 'etudiant',
+    description: 'Espace personnel de l\'etudiant — agit via /etudiants/moi (JWT seul, sans permission RBAC dediee) ; role cree pour l\'etiquetage et la redirection post-connexion',
+    permissions: [],
+  },
+  {
+    nom: 'autre_universite',
+    description: 'Compte optionnel pour une universite tierce qui verifie des diplomes — agit via les endpoints publics /verify et son historique personnel, sans permission RBAC dediee',
+    permissions: [],
+  },
+  {
+    nom: 'employeur',
+    description: 'Compte optionnel pour un employeur qui verifie des diplomes — agit via les endpoints publics /verify et son historique personnel, sans permission RBAC dediee',
+    permissions: [],
+  },
+];
+
 async function main(): Promise<void> {
   const env = process.env.NODE_ENV;
   if (env === 'production' || env === 'staging') {
@@ -150,6 +210,33 @@ async function main(): Promise<void> {
     });
   }
   console.log(`${PERMISSIONS.length} permissions granulaires accordees a "super_admin".`);
+
+  // ── 3bis. Roles metier + leurs permissions ──────────────────────────────────
+  for (const r of ROLES_METIER) {
+    let roleMetier = await prisma.roles.findFirst({
+      where: { nom: r.nom, universite_id: null },
+    });
+    if (!roleMetier) {
+      roleMetier = await prisma.roles.create({
+        data: { nom: r.nom, description: r.description, est_systeme: true },
+      });
+      console.log(`Role "${r.nom}" cree.`);
+    }
+
+    for (const nomPermission of r.permissions) {
+      const perm = await prisma.permissions.findUnique({ where: { nom: nomPermission } });
+      if (!perm) {
+        console.warn(`  ATTENTION : permission "${nomPermission}" introuvable pour le role "${r.nom}" — ignoree.`);
+        continue;
+      }
+      await prisma.role_permissions.upsert({
+        where: { role_id_permission_id: { role_id: roleMetier.id, permission_id: perm.id } },
+        update: {},
+        create: { role_id: roleMetier.id, permission_id: perm.id },
+      });
+    }
+    console.log(`  "${r.nom}" : ${r.permissions.length} permission(s) accordee(s).`);
+  }
 
   // ── 4. Compte admin de test ─────────────────────────────────────────────────
   let admin = await prisma.utilisateurs.findUnique({ where: { email: adminEmail } });
