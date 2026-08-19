@@ -306,6 +306,17 @@ async function main(): Promise<void> {
         'Taille maximale (en Mo) acceptee pour un upload de PDF (emission de document et verification par upload). ' +
         'Ne peut pas depasser le plafond serveur (20 Mo, non configurable).',
     },
+    {
+      cle: 'presigned_url_duree_min',
+      valeur: '15',
+      description: 'Duree de validite (en minutes) d\'un lien de telechargement presigne de PDF.',
+    },
+    {
+      cle: 'mot_de_passe_longueur_min',
+      valeur: '8',
+      description:
+        'Longueur minimale exigee pour un mot de passe. Ne peut pas descendre sous 8 caracteres (plancher non configurable).',
+    },
   ];
   for (const c of configurationsSysteme) {
     await prisma.configurations.upsert({

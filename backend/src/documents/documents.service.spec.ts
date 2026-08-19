@@ -294,6 +294,39 @@ describe('DocumentsService', () => {
     });
   });
 
+  // ── getPdfUrl ──────────────────────────────────────────────────────────
+
+  describe('getPdfUrl', () => {
+    it('retourne l\'URL présignée avec une expiration de 900s (15 min) par défaut', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'actif', pdf_url: FAKE_PDF_KEY }));
+
+      const result = await service.getPdfUrl(DOC_ID, ACTEUR_ID);
+
+      expect(configurations.get).toHaveBeenCalledWith('presigned_url_duree_min', '15');
+      expect(storage.getPresignedUrl).toHaveBeenCalledWith(FAKE_PDF_KEY, 900);
+      expect(result.expires_in_seconds).toBe(900);
+    });
+
+    it('utilise la durée configurée via presigned_url_duree_min', async () => {
+      configurations.get.mockResolvedValue('5'); // 5 minutes
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'actif', pdf_url: FAKE_PDF_KEY }));
+
+      const result = await service.getPdfUrl(DOC_ID, ACTEUR_ID);
+
+      expect(storage.getPresignedUrl).toHaveBeenCalledWith(FAKE_PDF_KEY, 300);
+      expect(result.expires_in_seconds).toBe(300);
+    });
+
+    it('lève ForbiddenException si le document est révoqué', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'revoque', pdf_url: FAKE_PDF_KEY }));
+
+      await expect(service.getPdfUrl(DOC_ID, ACTEUR_ID)).rejects.toThrow(ForbiddenException);
+    });
+  });
+
   // ── valider ────────────────────────────────────────────────────────────
 
   describe('valider', () => {

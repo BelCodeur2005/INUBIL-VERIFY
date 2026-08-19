@@ -47,6 +47,13 @@ export class DocumentsService {
     return (Number.isFinite(mo) && mo > 0 ? mo : 20) * 1024 * 1024;
   }
 
+  /** Duree de validite (en secondes) d'un lien de telechargement presigne — parametre systeme "presigned_url_duree_min". */
+  private async presignedUrlDureeSecondes(): Promise<number> {
+    const brut = await this.configurations.get('presigned_url_duree_min', '15');
+    const min = Number(brut);
+    return (Number.isFinite(min) && min > 0 ? min : 15) * 60;
+  }
+
   private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id: acteurId },
@@ -513,11 +520,11 @@ export class DocumentsService {
       throw new BadRequestException('Aucun PDF associé à ce document');
     }
 
-    const EXPIRES = 900; // 15 minutes
-    const url = await this.storage.getPresignedUrl(doc.pdf_url, EXPIRES);
+    const expires = await this.presignedUrlDureeSecondes();
+    const url = await this.storage.getPresignedUrl(doc.pdf_url, expires);
     if (!url) throw new BadRequestException('Stockage S3 non configuré');
 
-    return { url, expires_in_seconds: EXPIRES };
+    return { url, expires_in_seconds: expires };
   }
 
   // ─── Blockchain (fire & forget) ──────────────────────────────────────────

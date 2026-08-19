@@ -6,6 +6,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { PASSWORD_MIN_LENGTH_FLOOR } from '../../common/constants/password.constants';
 
 export class RegisterDto {
   @ApiProperty({ example: 'Doe' })
@@ -27,10 +28,11 @@ export class RegisterDto {
   @ApiProperty({
     example: 'MonMotDePasse1!',
     description:
-      'Min 8 caracteres, au moins 1 majuscule, 1 minuscule, 1 chiffre, 1 caractere special.',
+      `Min ${PASSWORD_MIN_LENGTH_FLOOR} caracteres (le parametre systeme mot_de_passe_longueur_min peut exiger plus), ` +
+      'au moins 1 majuscule, 1 minuscule, 1 chiffre, 1 caractere special.',
   })
   @IsString()
-  @MinLength(8, { message: 'Le mot de passe doit contenir au moins 8 caracteres' })
+  @MinLength(PASSWORD_MIN_LENGTH_FLOOR, { message: `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH_FLOOR} caracteres` })
   @MaxLength(128)
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/, {
     message:

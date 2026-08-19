@@ -26,6 +26,7 @@ import { ProfileResponseDto } from './dto/profile-response.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
+import { PASSWORD_MIN_LENGTH_FLOOR } from '../common/constants/password.constants';
 
 // Valeurs par defaut si les parametres systeme correspondants (configurations)
 // sont absents ou invalides — voir gererEchec().
@@ -59,6 +60,8 @@ export class AuthService {
       // Reponse volontairement vague pour ne pas confirmer l'existence du compte.
       return { message: 'Si cette adresse est valide, un email de verification vient d\'etre envoye.' };
     }
+
+    await this.assertMotDePasseAssezLong(dto.mot_de_passe);
 
     const rounds = Number(this.config.get<number>('BCRYPT_SALT_ROUNDS'));
     const motDePasseHache = await bcrypt.hash(dto.mot_de_passe, rounds);
@@ -316,6 +319,8 @@ export class AuthService {
       throw new BadRequestException('Token de reinitialisation invalide ou expire');
     }
 
+    await this.assertMotDePasseAssezLong(nouveauMotDePasse);
+
     const rounds = Number(this.config.get<number>('BCRYPT_SALT_ROUNDS'));
     const hash = await bcrypt.hash(nouveauMotDePasse, rounds);
 
@@ -483,6 +488,8 @@ export class AuthService {
       throw new BadRequestException('Ancien mot de passe incorrect');
     }
 
+    await this.assertMotDePasseAssezLong(dto.nouveau_mot_de_passe);
+
     const rounds = Number(this.config.get<number>('BCRYPT_SALT_ROUNDS'));
     const hash = await bcrypt.hash(dto.nouveau_mot_de_passe, rounds);
 
@@ -565,6 +572,23 @@ export class AuthService {
     const brut = await this.configurations.get(cle, String(defaut));
     const valeur = Number(brut);
     return Number.isFinite(valeur) && valeur > 0 ? valeur : defaut;
+  }
+
+  /**
+   * Longueur minimale de mot de passe effective — parametre systeme "mot_de_passe_longueur_min".
+   * Ne peut jamais descendre sous PASSWORD_MIN_LENGTH_FLOOR (deja garanti par les DTOs),
+   * mais peut etre relevee sans redeploiement.
+   */
+  private async motDePasseLongueurMin(): Promise<number> {
+    const valeur = await this.parametreNumerique('mot_de_passe_longueur_min', PASSWORD_MIN_LENGTH_FLOOR);
+    return Math.max(valeur, PASSWORD_MIN_LENGTH_FLOOR);
+  }
+
+  private async assertMotDePasseAssezLong(motDePasse: string): Promise<void> {
+    const min = await this.motDePasseLongueurMin();
+    if (motDePasse.length < min) {
+      throw new BadRequestException(`Le mot de passe doit contenir au moins ${min} caracteres`);
+    }
   }
 
   private async gererEchec(user: utilisateurs): Promise<void> {

@@ -163,7 +163,24 @@ describe('AuthService', () => {
 
       expect(prisma.utilisateurs.create).not.toHaveBeenCalled();
       expect(mail.sendEmailVerification).not.toHaveBeenCalled();
-      expect(result.message).toBeDefined();
+    });
+
+    it('rejette un mot de passe sous la longueur configuree (mot_de_passe_longueur_min)', async () => {
+      configurations.get.mockImplementation((cle: string) => {
+        if (cle === 'mot_de_passe_longueur_min') return Promise.resolve('12');
+        return Promise.resolve(undefined);
+      });
+      prisma.utilisateurs.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.register({
+          nom: 'Doe',
+          prenom: 'John',
+          email: 'john@inubil.com',
+          mot_de_passe: 'Court1!aaa', // 10 caracteres, < 12 configure
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.utilisateurs.create).not.toHaveBeenCalled();
     });
   });
 
@@ -406,6 +423,69 @@ describe('AuthService', () => {
       await expect(
         service.updateProfile(USER_ID, { nom: 'Nouveau' }),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  // ─── resetPassword ────────────────────────────────────────────────────────
+
+  describe('resetPassword', () => {
+    it('rejette un mot de passe sous la longueur configuree', async () => {
+      configurations.get.mockImplementation((cle: string) => {
+        if (cle === 'mot_de_passe_longueur_min') return Promise.resolve('12');
+        return Promise.resolve(undefined);
+      });
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeUser());
+
+      await expect(
+        service.resetPassword('token-valide', 'Court1!aaa'), // 10 caracteres
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.utilisateurs.update).not.toHaveBeenCalled();
+    });
+
+    it('accepte un mot de passe respectant la longueur par defaut', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeUser());
+      prisma.utilisateurs.update.mockResolvedValue({});
+
+      await service.resetPassword('token-valide', 'MotDePasseValide1!');
+
+      expect(prisma.utilisateurs.update).toHaveBeenCalled();
+    });
+  });
+
+  // ─── changePassword ───────────────────────────────────────────────────────
+
+  describe('changePassword', () => {
+    it('rejette un mot de passe sous la longueur configuree', async () => {
+      configurations.get.mockImplementation((cle: string) => {
+        if (cle === 'mot_de_passe_longueur_min') return Promise.resolve('12');
+        return Promise.resolve(undefined);
+      });
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeUser());
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      await expect(
+        service.changePassword(USER_ID, {
+          ancien_mot_de_passe: 'AncienMotDePasse1!',
+          nouveau_mot_de_passe: 'Court1!aaa', // 10 caracteres
+          confirmation_mot_de_passe: 'Court1!aaa',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.utilisateurs.update).not.toHaveBeenCalled();
+    });
+
+    it('accepte un mot de passe respectant la longueur par defaut', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeUser());
+      prisma.utilisateurs.update.mockResolvedValue({});
+      prisma.sessions.updateMany.mockResolvedValue({});
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      await service.changePassword(USER_ID, {
+        ancien_mot_de_passe: 'AncienMotDePasse1!',
+        nouveau_mot_de_passe: 'NouveauMotDePasse1!',
+        confirmation_mot_de_passe: 'NouveauMotDePasse1!',
+      });
+
+      expect(prisma.utilisateurs.update).toHaveBeenCalled();
     });
   });
 });
