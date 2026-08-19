@@ -35,31 +35,52 @@ export class ClesApiService {
     };
   }
 
-  private async getUniversiteActeur(acteurId: string): Promise<string> {
+  /**
+   * Universite de l'acteur, ou null pour un super-admin (non rattache a une
+   * universite). Utiliser assertMemeUniversite() pour les controles d'acces :
+   * null = pas de restriction (super-admin peut agir sur toutes les universites).
+   */
+  private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id: acteurId },
       select: { universite_id: true },
     });
-    if (!u?.universite_id)
-      throw new ForbiddenException("Vous n'êtes pas associé à une université");
-    return u.universite_id;
+    return u?.universite_id ?? null;
+  }
+
+  /** Universite obligatoire pour creer une ressource rattachee a une universite precise. */
+  private async getUniversiteActeurObligatoire(acteurId: string): Promise<string> {
+    const universiteId = await this.getActeurUniversiteId(acteurId);
+    if (!universiteId)
+      throw new ForbiddenException(
+        "Vous n'êtes pas associé à une université — impossible de déterminer où créer cette ressource",
+      );
+    return universiteId;
+  }
+
+  private assertMemeUniversite(
+    ressourceUniversiteId: string,
+    acteurUniversiteId: string | null,
+  ): void {
+    if (acteurUniversiteId !== null && ressourceUniversiteId !== acteurUniversiteId) {
+      throw new ForbiddenException('Accès refusé');
+    }
   }
 
   async lister(acteurId: string): Promise<CleApiResponseDto[]> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const cles = await this.prisma.cles_api.findMany({
-      where: { universite_id: universiteId },
+      where: universiteId ? { universite_id: universiteId } : undefined,
       orderBy: { created_at: 'desc' },
     });
     return cles.map((c) => this.toDto(c));
   }
 
   async findOne(id: string, acteurId: string): Promise<CleApiResponseDto> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const cle = await this.prisma.cles_api.findFirst({ where: { id } });
     if (!cle) throw new NotFoundException(`Clé API ${id} introuvable`);
-    if (cle.universite_id !== universiteId)
-      throw new ForbiddenException('Accès refusé');
+    this.assertMemeUniversite(cle.universite_id, universiteId);
     return this.toDto(cle);
   }
 
@@ -68,7 +89,7 @@ export class ClesApiService {
     acteurId: string,
     ip?: string,
   ): Promise<CleApiResponseDto> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getUniversiteActeurObligatoire(acteurId);
 
     // Générer une clé sécurisée : prefix visible + secret aléatoire
     const secret = randomBytes(32).toString('base64url');
@@ -109,11 +130,10 @@ export class ClesApiService {
     acteurId: string,
     ip?: string,
   ): Promise<CleApiResponseDto> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const cle = await this.prisma.cles_api.findFirst({ where: { id } });
     if (!cle) throw new NotFoundException(`Clé API ${id} introuvable`);
-    if (cle.universite_id !== universiteId)
-      throw new ForbiddenException('Accès refusé');
+    this.assertMemeUniversite(cle.universite_id, universiteId);
 
     const updated = await this.prisma.cles_api.update({
       where: { id },
@@ -144,11 +164,10 @@ export class ClesApiService {
   }
 
   async revoquer(id: string, acteurId: string, ip?: string): Promise<void> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const cle = await this.prisma.cles_api.findFirst({ where: { id } });
     if (!cle) throw new NotFoundException(`Clé API ${id} introuvable`);
-    if (cle.universite_id !== universiteId)
-      throw new ForbiddenException('Accès refusé');
+    this.assertMemeUniversite(cle.universite_id, universiteId);
 
     await this.prisma.cles_api.delete({ where: { id } });
 

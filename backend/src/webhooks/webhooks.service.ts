@@ -51,31 +51,52 @@ export class WebhooksService {
     };
   }
 
-  private async getUniversiteActeur(acteurId: string): Promise<string> {
+  /**
+   * Universite de l'acteur, ou null pour un super-admin (non rattache a une
+   * universite). Utiliser assertMemeUniversite() pour les controles d'acces :
+   * null = pas de restriction (super-admin peut agir sur toutes les universites).
+   */
+  private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id: acteurId },
       select: { universite_id: true },
     });
-    if (!u?.universite_id)
-      throw new ForbiddenException("Vous n'êtes pas associé à une université");
-    return u.universite_id;
+    return u?.universite_id ?? null;
+  }
+
+  /** Universite obligatoire pour creer une ressource rattachee a une universite precise. */
+  private async getUniversiteActeurObligatoire(acteurId: string): Promise<string> {
+    const universiteId = await this.getActeurUniversiteId(acteurId);
+    if (!universiteId)
+      throw new ForbiddenException(
+        "Vous n'êtes pas associé à une université — impossible de déterminer où créer cette ressource",
+      );
+    return universiteId;
+  }
+
+  private assertMemeUniversite(
+    ressourceUniversiteId: string,
+    acteurUniversiteId: string | null,
+  ): void {
+    if (acteurUniversiteId !== null && ressourceUniversiteId !== acteurUniversiteId) {
+      throw new ForbiddenException('Accès refusé');
+    }
   }
 
   async lister(acteurId: string): Promise<WebhookResponseDto[]> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const webhooks = await this.prisma.webhooks.findMany({
-      where: { universite_id: universiteId },
+      where: universiteId ? { universite_id: universiteId } : undefined,
       orderBy: { created_at: 'desc' },
     });
     return webhooks.map((w) => this.toDto(w));
   }
 
   async findOne(id: string, acteurId: string): Promise<WebhookResponseDto> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const webhook = await this.prisma.webhooks.findFirst({ where: { id } });
     if (!webhook) throw new NotFoundException(`Webhook ${id} introuvable`);
-    if (webhook.universite_id !== universiteId)
-      throw new ForbiddenException('Accès refusé');
+    this.assertMemeUniversite(webhook.universite_id, universiteId);
     return this.toDto(webhook);
   }
 
@@ -84,7 +105,7 @@ export class WebhooksService {
     acteurId: string,
     ip?: string,
   ): Promise<WebhookResponseDto> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getUniversiteActeurObligatoire(acteurId);
     await assertSafeWebhookUrl(dto.url);
     const secret = randomBytes(32).toString('hex');
 
@@ -117,11 +138,10 @@ export class WebhooksService {
     acteurId: string,
     ip?: string,
   ): Promise<WebhookResponseDto> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const webhook = await this.prisma.webhooks.findFirst({ where: { id } });
     if (!webhook) throw new NotFoundException(`Webhook ${id} introuvable`);
-    if (webhook.universite_id !== universiteId)
-      throw new ForbiddenException('Accès refusé');
+    this.assertMemeUniversite(webhook.universite_id, universiteId);
     if (dto.url !== undefined) await assertSafeWebhookUrl(dto.url);
 
     const updated = await this.prisma.webhooks.update({
@@ -148,11 +168,10 @@ export class WebhooksService {
   }
 
   async supprimer(id: string, acteurId: string, ip?: string): Promise<void> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const webhook = await this.prisma.webhooks.findFirst({ where: { id } });
     if (!webhook) throw new NotFoundException(`Webhook ${id} introuvable`);
-    if (webhook.universite_id !== universiteId)
-      throw new ForbiddenException('Accès refusé');
+    this.assertMemeUniversite(webhook.universite_id, universiteId);
 
     await this.prisma.webhooks.delete({ where: { id } });
 
@@ -170,11 +189,10 @@ export class WebhooksService {
     id: string,
     acteurId: string,
   ): Promise<WebhookLivraisonResponseDto[]> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const webhook = await this.prisma.webhooks.findFirst({ where: { id } });
     if (!webhook) throw new NotFoundException(`Webhook ${id} introuvable`);
-    if (webhook.universite_id !== universiteId)
-      throw new ForbiddenException('Accès refusé');
+    this.assertMemeUniversite(webhook.universite_id, universiteId);
 
     const livraisons = await this.prisma.webhook_livraisons.findMany({
       where: { webhook_id: id },
@@ -189,11 +207,10 @@ export class WebhooksService {
     id: string,
     acteurId: string,
   ): Promise<{ succes: boolean; statut_http?: number; message: string }> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const webhook = await this.prisma.webhooks.findFirst({ where: { id } });
     if (!webhook) throw new NotFoundException(`Webhook ${id} introuvable`);
-    if (webhook.universite_id !== universiteId)
-      throw new ForbiddenException('Accès refusé');
+    this.assertMemeUniversite(webhook.universite_id, universiteId);
 
     const payload = JSON.stringify({
       evenement: 'ping',

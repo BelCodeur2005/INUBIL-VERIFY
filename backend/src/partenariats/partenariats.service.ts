@@ -35,20 +35,42 @@ export class PartenariatsService {
     };
   }
 
-  private async getUniversiteActeur(acteurId: string): Promise<string> {
+  /**
+   * Universite de l'acteur, ou null pour un super-admin (non rattache a une
+   * universite). Utiliser assertMemeUniversite() pour les controles d'acces :
+   * null = pas de restriction (super-admin peut agir sur toutes les universites).
+   */
+  private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id: acteurId },
       select: { universite_id: true },
     });
-    if (!u?.universite_id)
-      throw new ForbiddenException("Vous n'êtes pas associé à une université");
-    return u.universite_id;
+    return u?.universite_id ?? null;
+  }
+
+  /** Universite obligatoire pour creer une ressource rattachee a une universite precise. */
+  private async getUniversiteActeurObligatoire(acteurId: string): Promise<string> {
+    const universiteId = await this.getActeurUniversiteId(acteurId);
+    if (!universiteId)
+      throw new ForbiddenException(
+        "Vous n'êtes pas associé à une université — impossible de déterminer où créer cette ressource",
+      );
+    return universiteId;
+  }
+
+  private assertMemeUniversite(
+    ressourceUniversiteId: string,
+    acteurUniversiteId: string | null,
+  ): void {
+    if (acteurUniversiteId !== null && ressourceUniversiteId !== acteurUniversiteId) {
+      throw new ForbiddenException('Accès refusé');
+    }
   }
 
   async lister(acteurId: string): Promise<PartenariatResponseDto[]> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const partenariats = await this.prisma.partenariats_universite.findMany({
-      where: { universite_id: universiteId },
+      where: universiteId ? { universite_id: universiteId } : undefined,
       include: {
         universites_partenariats_universite_universite_liee_idTouniversites: {
           select: { nom: true },
@@ -60,7 +82,7 @@ export class PartenariatsService {
   }
 
   async findOne(id: string, acteurId: string): Promise<PartenariatResponseDto> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const partenariat = await this.prisma.partenariats_universite.findFirst({
       where: { id },
       include: {
@@ -71,8 +93,7 @@ export class PartenariatsService {
     });
     if (!partenariat)
       throw new NotFoundException(`Partenariat ${id} introuvable`);
-    if (partenariat.universite_id !== universiteId)
-      throw new ForbiddenException('Accès refusé');
+    this.assertMemeUniversite(partenariat.universite_id, universiteId);
     return this.toDto(partenariat);
   }
 
@@ -81,7 +102,7 @@ export class PartenariatsService {
     acteurId: string,
     ip?: string,
   ): Promise<PartenariatResponseDto> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getUniversiteActeurObligatoire(acteurId);
 
     if (dto.universite_liee_id === universiteId) {
       throw new ConflictException(
@@ -142,14 +163,13 @@ export class PartenariatsService {
     acteurId: string,
     ip?: string,
   ): Promise<PartenariatResponseDto> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const partenariat = await this.prisma.partenariats_universite.findFirst({
       where: { id },
     });
     if (!partenariat)
       throw new NotFoundException(`Partenariat ${id} introuvable`);
-    if (partenariat.universite_id !== universiteId)
-      throw new ForbiddenException('Accès refusé');
+    this.assertMemeUniversite(partenariat.universite_id, universiteId);
 
     const updated = await this.prisma.partenariats_universite.update({
       where: { id },
@@ -188,14 +208,13 @@ export class PartenariatsService {
   }
 
   async supprimer(id: string, acteurId: string, ip?: string): Promise<void> {
-    const universiteId = await this.getUniversiteActeur(acteurId);
+    const universiteId = await this.getActeurUniversiteId(acteurId);
     const partenariat = await this.prisma.partenariats_universite.findFirst({
       where: { id },
     });
     if (!partenariat)
       throw new NotFoundException(`Partenariat ${id} introuvable`);
-    if (partenariat.universite_id !== universiteId)
-      throw new ForbiddenException('Accès refusé');
+    this.assertMemeUniversite(partenariat.universite_id, universiteId);
 
     await this.prisma.partenariats_universite.delete({ where: { id } });
 
