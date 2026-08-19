@@ -16,7 +16,7 @@
 /* Sidebar */
 .sidebar {
   width: 16rem;
-  background-color: var(--primary);
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
   color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -99,6 +99,66 @@
   font-weight: 600;
 }
 
+.navBottom {
+  padding: 12px 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: transparent;
+}
+
+/* ── Sous-menu en flyout collé au bord droit de la sidebar ── */
+.flyoutWrapper {
+  position: relative;
+}
+
+.flyoutChevron {
+  margin-left: auto;
+  font-size: 1.1rem !important;
+  opacity: 0.6;
+}
+
+.flyoutPanel {
+  position: fixed;
+  min-width: 220px;
+  background-color: #ffffff;
+  border: 1px solid var(--outline-variant);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  z-index: 40;
+}
+
+.flyoutItem {
+  display: flex;
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.4rem;
+  background: transparent;
+  border: none;
+  color: var(--on-surface);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s;
+}
+
+.flyoutItem:hover {
+  background-color: var(--surface-container-low);
+}
+
+.flyoutItemActive {
+  composes: flyoutItem;
+  background-color: var(--surface-container-low);
+  color: var(--primary);
+  font-weight: 700;
+}
+
 /* Zone Principale */
 .mainWrapper {
   flex: 1;
@@ -121,50 +181,108 @@
 }
 
 .searchBox {
+  flex: 1;
+  max-width: 420px;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background-color: var(--surface-container-low);
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  border: 1px solid var(--outline-variant);
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0 14px;
+  height: 38px;
 }
 
 .searchInput {
-  background: transparent;
+  flex: 1;
   border: none;
+  background: transparent;
+  font-size: 0.85rem;
+  color: #334155;
   outline: none;
-  font-size: 0.875rem;
-  width: 16rem;
 }
 
-.userProfile {
+.searchInput::placeholder {
+  color: #94a3b8;
+}
+
+.headerRight {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 12px;
+  margin-left: auto;
 }
 
-.badgeRoot {
-  background-color: #fee2e2;
-  color: var(--error);
-  font-size: 0.65rem;
-  font-weight: 800;
-  padding: 0.25rem 0.6rem;
-  border-radius: 9999px;
+.iconBtn {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s;
+}
+
+.iconBtn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.notifBadge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 12px;
+  border-left: 1px solid #e2e8f0;
+}
+
+.userTexts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.userName {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.userRole {
+  font-size: 0.72rem;
+  color: #64748b;
 }
 
 .avatar {
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 9999px;
-  background-color: var(--primary);
+  background-color: #1e2d45;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   font-size: 0.75rem;
-  border: 2px solid var(--luxury-gold);
 }
 
 .mainContent {

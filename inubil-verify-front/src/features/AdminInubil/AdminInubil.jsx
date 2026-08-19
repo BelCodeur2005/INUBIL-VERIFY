@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useAuth } from '../../core/auth/useAuth';
 import styles from './AdminInubil.module.css';
 import {
   EtablissementModal,
@@ -8,8 +10,79 @@ import {
   AuditLogDetailsModal,
 } from './AdminModals';
 
+const ROLE_LABELS = {
+  super_admin: 'Super Administrateur',
+  admin_istama: 'Administration INUBIL',
+};
+
+// Item de sidebar avec sous-menu en flyout collé au bord droit de la sidebar.
+// Le panneau est positionné en `fixed` (via portail) à partir de la position réelle
+// du bouton : .navSection a overflow-y:auto, ce qui force aussi overflow-x à rogner
+// tout enfant en position absolute qui déborderait à droite de la sidebar.
+function FlyoutNavItem({ label, icon, isOpen, isChildActive, onToggle, children }) {
+  const buttonRef = useRef(null);
+  const panelRef = useRef(null);
+  const [panelPos, setPanelPos] = useState(null);
+
+  const handleToggle = () => {
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPanelPos({ top: rect.top, left: rect.right + 8 });
+    }
+    onToggle();
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e) => {
+      if (buttonRef.current?.contains(e.target) || panelRef.current?.contains(e.target)) return;
+      onToggle();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onToggle]);
+
+  return (
+    <div className={styles.flyoutWrapper}>
+      <button
+        ref={buttonRef}
+        className={isChildActive ? styles.navItemActive : styles.navItem}
+        onClick={handleToggle}
+      >
+        <span className="material-symbols-outlined">{icon}</span>
+        <span>{label}</span>
+        <span className={`material-symbols-outlined ${styles.flyoutChevron}`}>chevron_right</span>
+      </button>
+      {isOpen && panelPos && createPortal(
+        <div ref={panelRef} className={styles.flyoutPanel} style={{ top: panelPos.top, left: panelPos.left }}>
+          {children}
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
+
 export default function AdminInubil() {
   const [activeTab, setActiveTab] = useState('etablissements');
+  const [openFlyout, setOpenFlyout] = useState(null);
+  const { utilisateur, logout } = useAuth();
+
+  const toggleFlyout = (id) => setOpenFlyout((prev) => (prev === id ? null : id));
+  const selectFromFlyout = (tab) => {
+    setActiveTab(tab);
+    setOpenFlyout(null);
+  };
+
+  const prenom = utilisateur?.prenom ?? '';
+  const nom = utilisateur?.nom ?? '';
+  const initiales = `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || '··';
+  const roleNom = utilisateur?.role?.nom;
+  const roleLabel = ROLE_LABELS[roleNom] ?? roleNom ?? '';
+
+  const handleLogout = async () => {
+    await logout();
+  };
 
   // États des Modales
   const [isEtabModalOpen, setIsEtabModalOpen] = useState(false);
@@ -63,13 +136,26 @@ export default function AdminInubil() {
             <span className="material-symbols-outlined">domain</span>
             <span>Établissements</span>
           </button>
-          <button
-            className={activeTab === 'users' ? styles.navItemActive : styles.navItem}
-            onClick={() => setActiveTab('users')}
+          <FlyoutNavItem
+            label="Utilisateurs & Rôles"
+            icon="manage_accounts"
+            isOpen={openFlyout === 'users-roles'}
+            isChildActive={activeTab === 'users' || activeTab === 'roles'}
+            onToggle={() => toggleFlyout('users-roles')}
           >
-            <span className="material-symbols-outlined">manage_accounts</span>
-            <span>Utilisateurs & Rôles</span>
-          </button>
+            <button
+              className={activeTab === 'users' ? styles.flyoutItemActive : styles.flyoutItem}
+              onClick={() => selectFromFlyout('users')}
+            >
+              Utilisateurs
+            </button>
+            <button
+              className={activeTab === 'roles' ? styles.flyoutItemActive : styles.flyoutItem}
+              onClick={() => selectFromFlyout('roles')}
+            >
+              Rôles & Permissions
+            </button>
+          </FlyoutNavItem>
           <button
             className={activeTab === 'nodes' ? styles.navItemActive : styles.navItem}
             onClick={() => setActiveTab('nodes')}
@@ -87,19 +173,70 @@ export default function AdminInubil() {
             <span>Logs d'Audit Globaux</span>
           </button>
         </nav>
+
+        {/* Navigation bas — épinglée au fond de la sidebar, comme /universite */}
+        <nav className={styles.navBottom}>
+          <FlyoutNavItem
+            label="Administration"
+            icon="admin_panel_settings"
+            isOpen={openFlyout === 'admin'}
+            isChildActive={activeTab === 'settings' || activeTab === 'backup'}
+            onToggle={() => toggleFlyout('admin')}
+          >
+            <button
+              className={activeTab === 'settings' ? styles.flyoutItemActive : styles.flyoutItem}
+              onClick={() => selectFromFlyout('settings')}
+            >
+              Paramètres Système
+            </button>
+            <button
+              className={activeTab === 'backup' ? styles.flyoutItemActive : styles.flyoutItem}
+              onClick={() => selectFromFlyout('backup')}
+            >
+              Sauvegarde Manuelle
+            </button>
+          </FlyoutNavItem>
+        </nav>
       </aside>
 
       {/* Zone Principale */}
       <div className={styles.mainWrapper}>
         <header className={styles.header}>
           <div className={styles.searchBox}>
-            <span className="material-symbols-outlined" style={{ color: 'var(--outline)' }}>search</span>
-            <input type="text" placeholder="Rechercher énumération, utilisateur, IP..." className={styles.searchInput} />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="search" placeholder="Rechercher énumération, utilisateur, IP..." className={styles.searchInput} />
           </div>
 
-          <div className={styles.userProfile}>
-            <span className={styles.badgeRoot}>SUPER ADMIN PLATFORME</span>
-            <div className={styles.avatar}>SA</div>
+          <div className={styles.headerRight}>
+            <button className={styles.iconBtn}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <span className={styles.notifBadge}>3</span>
+            </button>
+            <button className={styles.iconBtn}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="1 4 1 10 7 10"/>
+                <path d="M3.51 15a9 9 0 1 0 .49-4"/>
+              </svg>
+            </button>
+            <div className={styles.userInfo}>
+              <div className={styles.userTexts}>
+                <span className={styles.userName}>{`${prenom} ${nom}`.trim() || 'Utilisateur'}</span>
+                <span className={styles.userRole}>{roleLabel}</span>
+              </div>
+              <div className={styles.avatar}>{initiales}</div>
+              <button type="button" onClick={handleLogout} className={styles.iconBtn} title="Se déconnecter">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </button>
+            </div>
           </div>
         </header>
 
@@ -182,8 +319,8 @@ export default function AdminInubil() {
             <section className={styles.tableCard}>
               <div className={styles.tableHeader}>
                 <div>
-                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Gestion des Utilisateurs & Rôles (RBAC)</h3>
-                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Contrôle des accès des opérateurs de saisie et des signataires.</p>
+                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Gestion des Utilisateurs</h3>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Comptes actifs sur la plateforme, toutes universités confondues.</p>
                 </div>
                 <button className={styles.btnPrimary} onClick={() => setIsUserModalOpen(true)}>
                   <span className="material-symbols-outlined">person_add</span> Nouvel Utilisateur
@@ -267,6 +404,85 @@ export default function AdminInubil() {
                   ))}
                 </tbody>
               </table>
+            </section>
+          )}
+
+          {/* VUE 5 : RÔLES & PERMISSIONS */}
+          {activeTab === 'roles' && (
+            <section className={styles.tableCard}>
+              <div className={styles.tableHeader}>
+                <div>
+                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Rôles & Permissions</h3>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Catalogue des rôles métier et de leurs permissions RBAC.</p>
+                </div>
+              </div>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Rôle</th>
+                    <th>Description</th>
+                    <th style={{ textAlign: 'right' }}>Permissions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span className={styles.roleBadge}>responsable_universite</span></td>
+                    <td style={{ fontSize: '0.8rem' }}>Direction de l'établissement</td>
+                    <td style={{ textAlign: 'right' }}>14</td>
+                  </tr>
+                  <tr>
+                    <td><span className={styles.roleBadge}>directeur_pedagogique</span></td>
+                    <td style={{ fontSize: '0.8rem' }}>Validation, rejet, révocation des diplômes</td>
+                    <td style={{ textAlign: 'right' }}>6</td>
+                  </tr>
+                  <tr>
+                    <td><span className={styles.roleBadge}>agent_saisie</span></td>
+                    <td style={{ fontSize: '0.8rem' }}>Saisie quotidienne des diplômes</td>
+                    <td style={{ textAlign: 'right' }}>3</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+          )}
+
+          {/* VUE 6 : PARAMÈTRES SYSTÈME */}
+          {activeTab === 'settings' && (
+            <section className={styles.tableCard}>
+              <div className={styles.tableHeader}>
+                <div>
+                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Paramètres Système</h3>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Clés de configuration globales de la plateforme.</p>
+                </div>
+              </div>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Clé</th>
+                    <th style={{ textAlign: 'right' }}>Valeur</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td className={styles.mono}>partage_duree_jours</td><td style={{ textAlign: 'right' }}>30</td></tr>
+                  <tr><td className={styles.mono}>max_tentatives_connexion</td><td style={{ textAlign: 'right' }}>5</td></tr>
+                  <tr><td className={styles.mono}>duree_blocage_min</td><td style={{ textAlign: 'right' }}>15</td></tr>
+                  <tr><td className={styles.mono}>pdf_max_taille_mo</td><td style={{ textAlign: 'right' }}>10</td></tr>
+                  <tr><td className={styles.mono}>presigned_url_duree_min</td><td style={{ textAlign: 'right' }}>15</td></tr>
+                  <tr><td className={styles.mono}>mot_de_passe_longueur_min</td><td style={{ textAlign: 'right' }}>8</td></tr>
+                </tbody>
+              </table>
+            </section>
+          )}
+
+          {/* VUE 7 : SAUVEGARDE MANUELLE */}
+          {activeTab === 'backup' && (
+            <section className={styles.bentoGrid}>
+              <div className={styles.bentoCard} style={{ gridColumn: 'span 6' }}>
+                <h3 style={{ color: 'var(--primary)', margin: '0 0 0.5rem 0' }}>Sauvegarde Manuelle</h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Déclenche un backup immédiat de la base vers le stockage FTP configuré.</p>
+                <button className={styles.btnPrimary} style={{ marginTop: '1rem' }}>
+                  <span className="material-symbols-outlined">backup</span> Lancer une sauvegarde
+                </button>
+              </div>
             </section>
           )}
         </main>

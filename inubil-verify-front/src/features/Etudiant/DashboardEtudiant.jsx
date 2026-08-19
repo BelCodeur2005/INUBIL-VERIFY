@@ -1,22 +1,28 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../core/auth/useAuth';
 import Logo_Inubil from '../../assets/Logo_Inubil.png';
 import styles from './DashboardEtudiant.module.css';
 import VerificationModal from './Visualisation.jsx';
 
 export default function DashboardEtudiant() {
-  const navigate = useNavigate();
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [copied, setCopied] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { utilisateur, logout } = useAuth();
 
-  // Données dynamiques de l'étudiant
+  const prenom = utilisateur?.prenom ?? '';
+  const nom = utilisateur?.nom ?? '';
   const user = {
-    name: "Alain Koffi",
-    address: "0x9e3f42...da8c2e11a0982f55c2",
-    shortAddress: "0x...82f",
-    level: "Étudiant en Master",
-    initials: "AK"
+    name: `${prenom} ${nom}`.trim() || 'Utilisateur',
+    // TODO: pas d'équivalent backend pour une adresse de wallet perso — placeholder conservé (voir hashCode plus bas).
+    address: '0x9e3f42...da8c2e11a0982f55c2',
+    shortAddress: '0x...82f',
+    level: 'Étudiant INUBIL',
+    initials: `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || '··',
+  };
+
+  const handleLogout = async () => {
+    await logout();
   };
 
   const handleCopyHash = (hash) => {
@@ -68,7 +74,15 @@ export default function DashboardEtudiant() {
             <span>Mes Diplômes</span>
           </button>
 
-          <button 
+          <button
+            onClick={() => setActiveMenu('partages')}
+            className={`${styles.navBtn} ${activeMenu === 'partages' ? styles.navBtnActive : ''}`}
+          >
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: activeMenu === 'partages' ? "'FILL' 1" : "'FILL' 0" }}>share</span>
+            <span>Mes Partages</span>
+          </button>
+
+          <button
             onClick={() => setActiveMenu('views')}
             className={`${styles.navBtn} ${activeMenu === 'views' ? styles.navBtnActive : ''}`}
           >
@@ -95,7 +109,7 @@ export default function DashboardEtudiant() {
 
         {/* Bottom Actions */}
         <div className={styles.sidebarFooter}>
-          <button onClick={() => navigate('/login')} className={styles.logoutBtn}>
+          <button onClick={handleLogout} className={styles.logoutBtn}>
             <span className="material-symbols-outlined">logout</span>
             <span className={styles.logoutText}>Déconnexion</span>
           </button>
@@ -106,10 +120,16 @@ export default function DashboardEtudiant() {
       <main className={styles.main}>
         {/* TopAppBar */}
         <header className={styles.header}>
-          <div></div>
+          <div className={styles.searchBox}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="search" placeholder="Rechercher un diplôme, une vérification..." className={styles.searchInput} />
+          </div>
           <div className={styles.headerActions}>
             <button className={styles.notifBtn}>
               <span className="material-symbols-outlined">notifications</span>
+              <span className={styles.notifBadge}>3</span>
             </button>
             <div className={styles.divider}></div>
             <div className={styles.profileIndicator}>

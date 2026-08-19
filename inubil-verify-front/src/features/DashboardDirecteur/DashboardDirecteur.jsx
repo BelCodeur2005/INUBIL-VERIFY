@@ -1,8 +1,20 @@
 import { useState } from 'react';
+import { useAuth } from '../../core/auth/useAuth';
 import styles from './DashboardDirecteur.module.css';
 
 export default function DashboardDirecteur() {
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [signingStates, setSigningStates] = useState({});
+  const { utilisateur, logout } = useAuth();
+
+  const prenom = utilisateur?.prenom ?? '';
+  const nom = utilisateur?.nom ?? '';
+  const initiales = `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || '··';
+  const roleLabel = utilisateur?.role?.nom === 'directeur_pedagogique' ? 'Directeur Pédagogique' : (utilisateur?.role?.nom ?? '');
+
+  const handleLogout = async () => {
+    await logout();
+  };
   const [selectedManifeste, setSelectedManifeste] = useState(null);
   const [previewDiplome, setPreviewDiplome] = useState(null);
 
@@ -52,27 +64,58 @@ export default function DashboardDirecteur() {
 
         <nav className={styles.navSection}>
           <p className={styles.sectionTitle}>Menu Principal</p>
-          <a href="#vue-ensemble" className={styles.navItemActive}>
+          <button
+            className={activeTab === 'dashboard' ? styles.navItemActive : styles.navItem}
+            onClick={() => setActiveTab('dashboard')}
+          >
             <span className="material-symbols-outlined">dashboard</span>
             <span>Vue d'Ensemble</span>
-          </a>
-          <a href="#manifestes" className={styles.navItem}>
+          </button>
+          <button
+            className={activeTab === 'etudiants' ? styles.navItemActive : styles.navItem}
+            onClick={() => setActiveTab('etudiants')}
+          >
+            <span className="material-symbols-outlined">school</span>
+            <span>Fiche Étudiant</span>
+          </button>
+          <button
+            className={activeTab === 'emission' ? styles.navItemActive : styles.navItem}
+            onClick={() => setActiveTab('emission')}
+          >
+            <span className="material-symbols-outlined">add_circle</span>
+            <span>Émission de Diplôme</span>
+          </button>
+          <button
+            className={activeTab === 'documents' ? styles.navItemActive : styles.navItem}
+            onClick={() => setActiveTab('documents')}
+          >
+            <span className="material-symbols-outlined">description</span>
+            <span>Liste des Documents</span>
+          </button>
+          <button
+            className={activeTab === 'validation' ? styles.navItemActive : styles.navItem}
+            onClick={() => setActiveTab('validation')}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <span className="material-symbols-outlined">pending_actions</span>
-              <span>File des Manifestes</span>
+              <span>File de Validation</span>
             </div>
             <span className={styles.badgeGold}>01</span>
-          </a>
-          <a href="#journal" className={styles.navItem}>
-            <span className="material-symbols-outlined">history_edu</span>
-            <span>Journal des Ancrages</span>
-          </a>
-
-          <p className={styles.sectionTitle}>Administration</p>
-          <a href="#parametres" className={styles.navItem}>
-            <span className="material-symbols-outlined">settings</span>
-            <span>Configuration HSM</span>
-          </a>
+          </button>
+          <button
+            className={activeTab === 'revocations' ? styles.navItemActive : styles.navItem}
+            onClick={() => setActiveTab('revocations')}
+          >
+            <span className="material-symbols-outlined">block</span>
+            <span>Révocations</span>
+          </button>
+          <button
+            className={activeTab === 'referentiels' ? styles.navItemActive : styles.navItem}
+            onClick={() => setActiveTab('referentiels')}
+          >
+            <span className="material-symbols-outlined">tune</span>
+            <span>Référentiels</span>
+          </button>
         </nav>
       </aside>
 
@@ -80,20 +123,46 @@ export default function DashboardDirecteur() {
       <div className={styles.mainWrapper}>
         <header className={styles.header}>
           <div className={styles.searchBox}>
-            <span className="material-symbols-outlined" style={{ color: 'var(--outline)', fontSize: '1.1rem' }}>search</span>
-            <input type="text" placeholder="Rechercher un certificat, lot, matricule..." className={styles.searchInput} />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="search" placeholder="Rechercher un certificat, lot, matricule..." className={styles.searchInput} />
           </div>
 
-          <div className={styles.userProfile}>
-            <div className={styles.avatar}>AD</div>
-            <div>
-              <p style={{ fontSize: '0.9rem', fontWeight: 'bold', margin: 0 }}>Admin Root</p>
-              <p style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', margin: 0 }}>Superviseur</p>
+          <div className={styles.headerRight}>
+            <button className={styles.iconBtn}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <span className={styles.notifBadge}>3</span>
+            </button>
+            <button className={styles.iconBtn}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="1 4 1 10 7 10"/>
+                <path d="M3.51 15a9 9 0 1 0 .49-4"/>
+              </svg>
+            </button>
+            <div className={styles.userInfo}>
+              <div className={styles.userTexts}>
+                <span className={styles.userName}>{`${prenom} ${nom}`.trim() || 'Utilisateur'}</span>
+                <span className={styles.userRole}>{roleLabel}</span>
+              </div>
+              <div className={styles.avatar}>{initiales}</div>
+              <button type="button" onClick={handleLogout} className={styles.iconBtn} title="Se déconnecter">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </button>
             </div>
           </div>
         </header>
 
         <main className={styles.mainContent}>
+          {activeTab === 'dashboard' && (
+          <>
           {/* Bandeau de Statut Intégrité */}
           <div className={styles.statusBanner}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -102,11 +171,11 @@ export default function DashboardDirecteur() {
               </div>
               <div>
                 <h2 style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Intégrité Cryptographique Active</h2>
-                <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: 0 }}>Infrastructure HSM synchronisée. Tous les visas sont horodatés par bloc.</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: 0 }}>Ancrage blockchain opérationnel. Chaque diplôme validé est horodaté individuellement.</p>
               </div>
             </div>
             <div className={styles.badgeActive}>
-              <span className={styles.pulseDot}></span> HSM LOCAL / CLÉ ACTIVE
+              <span className={styles.pulseDot}></span> RÉSEAU BLOCKCHAIN OPÉRATIONNEL
             </div>
           </div>
 
@@ -118,40 +187,29 @@ export default function DashboardDirecteur() {
                   Action Immédiate
                 </span>
                 <p style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--on-surface-variant)', textTransform: 'uppercase', marginTop: '0.75rem' }}>
-                  LOTS EN ATTENTE DE VISA AUTORITAIRE
+                  DIPLÔMES EN ATTENTE DE VALIDATION
                 </p>
-                <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--primary)', margin: '0.25rem 0' }}>01 Manifeste</h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>(150 Certificats Académiques)</p>
+                <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--primary)', margin: '0.25rem 0' }}>1 Diplôme</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>(Licence Pro DAWII)</p>
               </div>
 
               <button
-                className={signingStates['bento'] === 'signed' ? styles.btnSigned : styles.btnSign}
-                onClick={() => setSelectedManifeste({ id: 'BATCH-2026-UD-DAWII-043', filiere: 'Licence Pro DAWII', etablissement: 'IUT de Douala' })}
+                className={styles.btnSign}
+                onClick={() => setActiveTab('validation')}
               >
-                {signingStates['bento'] === 'signed' ? (
-                  <>
-                    <span className="material-symbols-outlined">verified</span> Signé & Ancré ✓
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined">visibility</span> Inspecter & Traiter le Lot
-                  </>
-                )}
+                <span className="material-symbols-outlined">visibility</span> Voir la File de Validation
               </button>
             </div>
 
             <div className={styles.bentoCard} style={{ gridColumn: 'span 4' }}>
               <div>
                 <p style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--on-surface-variant)', textTransform: 'uppercase', margin: 0 }}>
-                  QUOTA BLOCKCHAIN ANNUEL
+                  DOCUMENTS VALIDÉS CE MOIS
                 </p>
                 <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)', margin: '0.5rem 0 0.25rem 0' }}>
-                  3,750 <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--on-surface-variant)' }}>/ 5,000 Crédits</span>
+                  450
                 </h3>
-                <div className={styles.progressBar} style={{ margin: '0.75rem 0 0.4rem 0' }}>
-                  <div className={styles.progressFill} style={{ width: '75%' }}></div>
-                </div>
-                <p style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', margin: 0 }}>Capacité restante : <strong>1,250 signatures</strong></p>
+                <p style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', margin: 0 }}>Taux de rejet : <strong>2,1%</strong></p>
               </div>
             </div>
 
@@ -170,45 +228,84 @@ export default function DashboardDirecteur() {
               </div>
             </div>
           </section>
+          </>
+          )}
 
-          {/* Tableau Principale */}
+          {/* Fiche Étudiant */}
+          {activeTab === 'etudiants' && (
+            <section className={styles.tableCard}>
+              <div className={styles.tableHeader}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Fiche Étudiant</h3>
+              </div>
+              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
+                Recherche et création inline de la fiche étudiant (GET/POST/PATCH/DELETE /etudiants-admin).
+              </div>
+            </section>
+          )}
+
+          {/* Émission de Diplôme */}
+          {activeTab === 'emission' && (
+            <section className={styles.tableCard}>
+              <div className={styles.tableHeader}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Émission de Diplôme</h3>
+              </div>
+              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
+                Stepper d'émission (POST /documents puis POST /documents/:id/pdf).
+              </div>
+            </section>
+          )}
+
+          {/* Liste des Documents */}
+          {activeTab === 'documents' && (
+            <section className={styles.tableCard}>
+              <div className={styles.tableHeader}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Liste des Documents</h3>
+              </div>
+              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
+                Ensemble des documents de l'établissement (GET /documents).
+              </div>
+            </section>
+          )}
+
+          {/* File de Validation */}
+          {activeTab === 'validation' && (
           <section className={styles.tableCard}>
             <div className={styles.tableHeader}>
-              <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>File d'Attente & Historique des Manifestes</h3>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>File d'Attente & Historique de Validation</h3>
             </div>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>ID Manifeste</th>
+                  <th>ID Document</th>
                   <th>Filière / Promotion</th>
-                  <th>Nombre de Diplômes</th>
+                  <th>Étudiant</th>
                   <th>Statut Ancrage</th>
                   <th style={{ textAlign: 'right' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><span className={styles.mono}>BATCH-2026-UD-DAWII-043</span></td>
+                  <td><span className={styles.mono}>DOC-2026-UD-DAWII-043</span></td>
                   <td>Licence Professionnelle (DAWII)</td>
-                  <td>150 Diplômes</td>
+                  <td>KOUAM Jean</td>
                   <td>
                     {signingStates['bento'] === 'signed' ? (
-                      <span className={styles.statusSealed}>SCELLÉ & ANCRÉ</span>
+                      <span className={styles.statusSealed}>VALIDÉ & ANCRÉ</span>
                     ) : (
-                      <span className={styles.statusPending}>EN ATTENTE DE VISA</span>
+                      <span className={styles.statusPending}>EN ATTENTE DE VALIDATION</span>
                     )}
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    <button className={styles.btnAction} onClick={() => setSelectedManifeste({ id: 'BATCH-2026-UD-DAWII-043', filiere: 'Licence Pro DAWII', etablissement: 'IUT de Douala' })}>
+                    <button className={styles.btnAction} onClick={() => setSelectedManifeste({ id: 'DOC-2026-UD-DAWII-043', filiere: 'Licence Pro DAWII', etablissement: 'IUT de Douala' })}>
                       Inspecter
                     </button>
                   </td>
                 </tr>
                 <tr>
-                  <td><span className={styles.mono}>BATCH-2026-UD-GL-012</span></td>
+                  <td><span className={styles.mono}>DOC-2026-UD-GL-012</span></td>
                   <td>Master Genie Logiciel</td>
-                  <td>85 Diplômes</td>
-                  <td><span className={styles.statusSealed}>SCELLÉ & ANCRÉ</span></td>
+                  <td>MBALLA Sandrine</td>
+                  <td><span className={styles.statusSealed}>VALIDÉ & ANCRÉ</span></td>
                   <td style={{ textAlign: 'right' }}>
                     <button className={styles.btnAction} style={{ opacity: 0.5 }} disabled>Ancré</button>
                   </td>
@@ -216,6 +313,31 @@ export default function DashboardDirecteur() {
               </tbody>
             </table>
           </section>
+          )}
+
+          {/* Révocations */}
+          {activeTab === 'revocations' && (
+            <section className={styles.tableCard}>
+              <div className={styles.tableHeader}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Révocations</h3>
+              </div>
+              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
+                Révocation de diplômes déjà émis (POST /documents/:id/revoquer).
+              </div>
+            </section>
+          )}
+
+          {/* Référentiels */}
+          {activeTab === 'referentiels' && (
+            <section className={styles.tableCard}>
+              <div className={styles.tableHeader}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Référentiels</h3>
+              </div>
+              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
+                Types de documents et mentions (GET/POST/PATCH/DELETE /types-document, /mentions).
+              </div>
+            </section>
+          )}
         </main>
       </div>
 
@@ -291,7 +413,7 @@ export default function DashboardDirecteur() {
                 <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>cancel</span> Refuser & Renvoyer
               </button>
               <button className={styles.btnApprove} onClick={() => handleSign('bento')}>
-                <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>verified</span> Apposer le Visa (Signer & Ancrer)
+                <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>verified</span> Valider & Ancrer
               </button>
             </div>
           </div>

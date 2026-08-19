@@ -21,14 +21,12 @@
 }
 
 
-/* Conteneur principal centré */
+/* Conteneur principal centré (AuthLayout gère déjà la hauteur pleine page + le centrage) */
 .loginWrapper {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background-color:linear-gradient(135deg, #0350bd 0%, #062362 100%);
-  padding: 20px;
+  width: 100%;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
@@ -37,8 +35,8 @@
   display: flex;
   width: 100%;
   max-width: 880px;
-  min-height: 520px;
-  background-color: linear-gradient(135deg, #0350bd 0%, #062362 100%);;
+  max-height: calc(100dvh - 60px - 48px);
+  background-color: #ffffff;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid #e2e8f0;
@@ -334,6 +332,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  overflow-y: auto;
   /* Animation d'entrée */
   animation: fadeInSlide 0.6s ease-out forwards;
 }
@@ -509,5 +508,23 @@
 @media (max-width: 768px) {
   .leftPanel {
     display: none;
+  }
+
+  .authCard {
+    max-height: calc(100dvh - 60px - 48px);
+  }
+
+  .rightPanel {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 420px) {
+  .rightPanel {
+    padding: 20px;
+  }
+
+  .formStack {
+    gap: 16px;
   }
 }

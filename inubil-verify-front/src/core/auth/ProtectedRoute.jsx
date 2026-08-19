@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../../core/auth/useAuth';
+import { useAuth } from './useAuth';
+import styles from './ProtectedRoute.module.css';
 
 export default function ProtectedRoute({ children, rolesAutorises }) {
   const { utilisateur, estConnecte, loading } = useAuth();
@@ -8,8 +9,8 @@ export default function ProtectedRoute({ children, rolesAutorises }) {
   // 1. En cours de chargement de la session (vérification du localStorage)
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+      <div className={styles.loadingScreen}>
+        <div className={styles.spinner}></div>
       </div>
     );
   }

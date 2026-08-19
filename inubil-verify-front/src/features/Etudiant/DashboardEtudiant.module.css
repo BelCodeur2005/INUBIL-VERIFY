@@ -16,7 +16,7 @@
   top: 0;
   height: 100vh;
   width: 256px;
-  background-color: #002c53;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
   border-right: 1px solid rgba(194, 198, 209, 0.2);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   display: flex;
@@ -194,7 +194,34 @@
   gap: 16px;
 }
 
+.searchBox {
+  flex: 1;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0 14px;
+  height: 38px;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 0.85rem;
+  color: #334155;
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: #94a3b8;
+}
+
 .notifBtn {
+  position: relative;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -208,13 +235,29 @@
 }
 
 .notifBtn:hover {
-  background-color: #edeeef;
+  background-color: #f1f5f9;
+}
+
+.notifBadge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .divider {
   height: 32px;
   width: 1px;
-  background-color: #c2c6d1;
+  background-color: #e2e8f0;
   margin: 0 8px;
 }
 
@@ -232,14 +275,14 @@
 }
 
 .profileName {
-  color: #191c1d;
+  color: #1e293b;
   font-weight: bold;
   font-size: 14px;
   line-height: 1.2;
 }
 
 .profileRole {
-  color: #42474f;
+  color: #64748b;
   font-size: 12px;
 }
 
@@ -247,7 +290,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #002c53;
+  background-color: #1e2d45;
   color: #ffffff;
   font-weight: bold;
   font-size: 14px;
