@@ -73,8 +73,18 @@ describe('TypesDocumentService', () => {
       expect(result).toHaveLength(1);
     });
 
+    it('un utilisateur sans université ET sans rôle super_admin est refusé, pas bypassé (pas de fail-open)', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({
+        universite_id: null,
+        roles_utilisateurs_role_idToroles: { nom: 'agent_saisie' },
+      });
+
+      await expect(service.lister({}, ADMIN_ID)).rejects.toThrow(ForbiddenException);
+      expect(prisma.types_document.findMany).not.toHaveBeenCalled();
+    });
+
     it('super-admin voit tous les types sans filtre par defaut', async () => {
-      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null });
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null, roles_utilisateurs_role_idToroles: { nom: 'super_admin' } });
       await service.lister({}, ADMIN_ID);
       const where = prisma.types_document.findMany.mock.calls[0][0].where;
       expect(where.universite_id).toBeUndefined();

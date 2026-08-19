@@ -52,7 +52,10 @@ const makeConfigurations = () => ({
   get: jest.fn().mockImplementation((_cle: string, defaut?: string) => Promise.resolve(defaut)),
 });
 
-const makeActeur   = (univId: string | null = UNIV_ID) => ({ universite_id: univId });
+const makeActeur   = (univId: string | null = UNIV_ID) => ({
+  universite_id: univId,
+  roles_utilisateurs_role_idToroles: { nom: univId === null ? 'super_admin' : 'agent_saisie' },
+});
 
 const makeDocument = (overrides: any = {}) => ({
   id: DOC_ID,
@@ -134,6 +137,16 @@ describe('DocumentsService', () => {
       expect(prisma.documents.create).toHaveBeenCalled();
       expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'DOCUMENT_CREER' }));
       expect(result.statut).toBe('brouillon');
+    });
+
+    it('un utilisateur sans université ET sans rôle super_admin est refusé, pas bypassé (pas de fail-open)', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue({
+        universite_id: null,
+        roles_utilisateurs_role_idToroles: { nom: 'agent_saisie' },
+      });
+
+      await expect(service.creer(dto, ACTEUR_ID)).rejects.toThrow(ForbiddenException);
+      expect(prisma.documents.create).not.toHaveBeenCalled();
     });
 
     it('lève ForbiddenException si l\'acteur est d\'une autre université', async () => {
