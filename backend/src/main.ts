@@ -35,17 +35,23 @@ async function bootstrap(): Promise<void> {
   );
 
   // CORS : autorise le frontend declare + Swagger UI en dev (cahier §9.1)
-  const frontendUrl = config.get<string>('FRONTEND_URL') ?? 'http://localhost:4200';
+  const nodeEnv = config.get<string>('NODE_ENV', 'development');
+  const frontendUrl = config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
   const allowedOrigins = [
     frontendUrl,
     'http://localhost:3000', // Swagger UI (même hôte que l'API)
     'http://127.0.0.1:3000',
   ];
+  // Vite prend le port suivant (5174, 5175...) si 5173 est deja occupe sur la
+  // machine du dev — tolere toute la plage usuelle en dev pour eviter de
+  // devoir mettre a jour FRONTEND_URL a chaque fois. Reste strict en production.
+  const portViteDev = /^http:\/\/localhost:517[0-9]$/;
   app.enableCors({
     origin: (origin, callback) => {
       // Requêtes sans Origin (curl, Postman, mobile) → autorisées
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (nodeEnv !== 'production' && portViteDev.test(origin)) return callback(null, true);
       callback(new Error(`CORS: origine non autorisée — ${origin}`));
     },
     credentials: true,
