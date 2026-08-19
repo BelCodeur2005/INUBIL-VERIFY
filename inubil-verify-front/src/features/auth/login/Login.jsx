@@ -37,7 +37,7 @@ export default function Login() {
 
     try {
       navigate('/universite');
-    } catch (err) {
+    } catch {
       setErreur('Identifiants invalides. Veuillez réessayer.');
     }
   };

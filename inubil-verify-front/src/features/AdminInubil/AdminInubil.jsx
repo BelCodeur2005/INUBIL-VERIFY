@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import styles from './AdminInubil.module.css';
 import {
   EtablissementModal,
@@ -20,14 +20,14 @@ export default function AdminInubil() {
   const [selectedLog, setSelectedLog] = useState(null);
 
   // Données de démonstration : Établissements
-  const [etablissements, setEtablissements] = useState([
+  const [etablissements] = useState([
     { id: 1, nom: 'Université de Douala - IUT', code: 'UD-IUT', type: 'Public', statut: 'ACTIF', quotas: 5000, consomme: 3750, admins: 3, directeurs: 2 },
     { id: 2, nom: 'Université de Yaoundé I - Polytechnique', code: 'UY1-ENSPY', type: 'Public', statut: 'ACTIF', quotas: 10000, consomme: 8200, admins: 5, directeurs: 4 },
     { id: 3, nom: 'Institut Saint-Jérôme', code: 'IU-SJ', type: 'Privé', statut: 'SUSPENDU', quotas: 2000, consomme: 2000, admins: 1, directeurs: 1 },
   ]);
 
   // Données de démonstration : Utilisateurs
-  const [users, setUsers] = useState([
+  const [users] = useState([
     { id: 1, nom: 'Admin Root', email: 'admin@inubil.cm', role: 'SUPER_ADMIN', etablissement: 'INUBIL Central', statut: 'ACTIF', derniereConnexion: '30/07/2026 14:22' },
     { id: 2, nom: 'Marie Ngo', email: 'm.ngo@univ-douala.cm', role: 'AGENT_SAISIE', etablissement: 'UD-IUT', statut: 'ACTIF', derniereConnexion: '30/07/2026 09:15' },
     { id: 3, nom: 'Prof. Kamga', email: 'kamga@univ-douala.cm', role: 'DIRECTEUR_SIGNATAIRE', etablissement: 'UD-IUT', statut: 'ACTIF', derniereConnexion: '29/07/2026 16:40' },

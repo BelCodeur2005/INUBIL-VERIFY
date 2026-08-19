@@ -1,16 +1,35 @@
-# React + Vite
+# INUBIL Verify — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interface web de la plateforme de certification de diplômes sur blockchain pour ISTAMA INUBIL (Douala, Cameroun). React 19 + Vite.
 
-Currently, two official plugins are available:
+## Lancer le projet
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev       # serveur de dev, http://localhost:5173
+npm run build     # build de production dans dist/
+npm run lint      # verifie le code avec ESLint
+npm run preview   # sert le build de production en local
+```
 
-## React Compiler
+## État actuel
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Ce frontend est **en cours de refonte** — l'interface existe pour la plupart des pages mais **aucune n'est encore reliée au backend** (données factices, authentification simulée). Voir `../docs/ROLES_ET_PAGES.md` à la racine du dépôt pour :
 
-## Expanding the ESLint configuration
+- la liste complète des pages à construire, classées par rôle,
+- les endpoints backend exacts que chaque page doit consommer,
+- la hiérarchie des rôles (`admin_istama`, `responsable_universite`, `directeur_pedagogique`, `agent_saisie`, `etudiant`, `autre_universite`, `employeur`).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Voir aussi `../CLAUDE.md` (racine `INUBIL-VERIFY/`) pour l'architecture générale du projet (backend NestJS, blockchain Polygon).
+
+## Structure
+
+```
+src/
+├── core/auth/        # contexte d'authentification, hook useAuth, garde de route
+├── features/          # une page/fonctionnalité par dossier
+├── shared/            # composants et layouts partagés entre plusieurs pages
+└── assets/             # images, logo
+```
+
+Pas de client HTTP ni de gestion d'état global pour l'instant — à mettre en place en même temps que le branchement au backend (`VITE_API_URL`, voir `docs/ROLES_ET_PAGES.md`).

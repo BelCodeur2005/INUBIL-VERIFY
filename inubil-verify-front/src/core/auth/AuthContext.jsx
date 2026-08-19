@@ -1,20 +1,18 @@
-import { createContext, useState, useEffect } from 'react';
-
-// Ajout de "export" ici pour que useAuth puisse y accéder
-export const AuthContext = createContext(null);
+import { useState } from 'react';
+import { AuthContext } from './auth-context';
 
 export function AuthProvider({ children }) {
-  const [utilisateur, setUtilisateur] = useState(null);
-  const [loading, setLoading] = useState(false); 
-
-  useEffect(() => {
+  const [utilisateur, setUtilisateur] = useState(() => {
     const savedUser = localStorage.getItem('inubil_session');
-    if (savedUser) {
-      setUtilisateur(JSON.parse(savedUser));
-    }
-  }, []);
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [loading] = useState(false);
 
   const login = (email, password) => {
+    if (!email || !password) {
+      throw new Error('Email et mot de passe requis');
+    }
+
     const fauxUtilisateur = {
       id: '1',
       email: email,
