@@ -19,6 +19,7 @@ import Parametres_Agent from './features/Parametres_Agent/Parametres_Agent';
 import Support_Agent from './features/Support_Agent/Support';
 import JournalActivites from './features/JournalActivites/JournalActivites';
 import MonComptePage from './features/universite/mon-compte/MonComptePage';
+import EmissionDiplome from './shared/components/EmissionDiplome/EmissionDiplome';
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
         {/*2. L'ESPACE UNIVERSITÉ */}
         <Route path="/universite" element={<AppLayout />}>
           <Route index element={<DashboardEtablissement />} />
+          <Route path="ajout" element={<EmissionDiplome />} />
           <Route path="registre" element={<RegistreLocal />} />
           <Route path="revocations" element={<Revocations />} />
           <Route path="parametres" element={<Parametres_Agent />} />

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../../core/auth/useAuth';
 import AccountMenu from '../../shared/components/AccountMenu/AccountMenu';
 import MonCompte from '../../shared/components/MonCompte/MonCompte';
+import EmissionDiplome from '../../shared/components/EmissionDiplome/EmissionDiplome';
 import styles from './DashboardDirecteur.module.css';
 
 export default function DashboardDirecteur() {
@@ -244,16 +245,7 @@ export default function DashboardDirecteur() {
           )}
 
           {/* Émission de Diplôme */}
-          {activeTab === 'emission' && (
-            <section className={styles.tableCard}>
-              <div className={styles.tableHeader}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Émission de Diplôme</h3>
-              </div>
-              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
-                Stepper d'émission (POST /documents puis POST /documents/:id/pdf).
-              </div>
-            </section>
-          )}
+          {activeTab === 'emission' && <EmissionDiplome />}
 
           {/* Liste des Documents */}
           {activeTab === 'documents' && (

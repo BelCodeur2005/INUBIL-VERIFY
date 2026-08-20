@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../core/auth/useAuth';
 import AccountMenu from '../../components/AccountMenu/AccountMenu';
@@ -109,7 +108,6 @@ const bottomNavItems = [
 ];
 
 export default function AppLayout() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { utilisateur, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -121,13 +119,6 @@ export default function AppLayout() {
   const prenom = utilisateur?.prenom ?? '';
   const nom = utilisateur?.nom ?? '';
   const roleLabel = ROLE_LABELS[roleNom] ?? roleNom ?? '';
-
-  const handleNavClick = (e, item) => {
-    if (item.path === '/universite/ajout') {
-      e.preventDefault();
-      setIsModalOpen(true);
-    }
-  };
 
   const handleLogout = async () => {
     await logout();
@@ -154,9 +145,8 @@ export default function AppLayout() {
               key={item.path}
               to={item.path}
               end={item.path === '/universite'}
-              onClick={(e) => handleNavClick(e, item)}
               className={({ isActive }) =>
-                `${styles.navItem} ${isActive && item.path !== '/universite/ajout' ? styles.navItemActive : ''}`
+                `${styles.navItem} ${isActive ? styles.navItemActive : ''}`
               }
             >
               <span className={styles.navIcon}>{item.icon}</span>
@@ -244,7 +234,7 @@ export default function AppLayout() {
 
         {/* Contenu injecté */}
         <main className={styles.main}>
-          <Outlet context={{ isModalOpen, setIsModalOpen }} />
+          <Outlet />
         </main>
       </div>
     </div>
