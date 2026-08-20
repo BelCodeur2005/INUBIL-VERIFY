@@ -1,10 +1,10 @@
-/* Layout Principal global */
+/* Layout Principal global (anti-scroll strict) */
 .page {
   display: flex;
   background-color: #F4F6F9;
   color: #191c1d;
-  min-height: 100vh;
-  width: 100%;
+  height: 100vh;
+  width: 100vw;
   overflow: hidden;
   font-family: 'Inter', sans-serif;
 }
@@ -21,25 +21,26 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
-  padding-top: 32px;
+  padding-top: 16px;
   z-index: 50;
   transition: all 0.3s ease;
+  justify-content: space-between;
 }
 
 .brandGroup {
-  padding: 24px 24px;
-  margin-bottom: 40px;
+  padding: 16px 24px;
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
-  justify-content: center; /* Centre le logo */
-  background-color: #ffffff; /* Fond blanc */
+  justify-content: center;
+  background-color: #ffffff;
   border-bottom: 1px solid rgba(194, 198, 209, 0.2);
-  margin-top: -32px;
+  margin-top: -16px;
 }
 
 .logoBox {
-  width: 120px;
-  height: 50px;
+  width: 100px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -47,27 +48,27 @@
 
 .logo {
   width: 100%;
-  height: 200%;
+  height: 100%;
   object-fit: contain;
 }
 
 .userContextWrapper {
-  padding: 0 24px;
-  margin-bottom: 32px;
+  padding: 0 20px;
+  margin-bottom: 16px;
 }
 
 .userContextBox {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 10px 12px;
   background-color: #0a4275;
   border-radius: 12px;
 }
 
 .avatarInitials {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background-color: #68abff;
   color: #003e73;
@@ -87,7 +88,7 @@
 .userName {
   color: #ffffff;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -95,11 +96,10 @@
 
 .userWallet {
   color: #a3c9ff;
-  font-size: 12px;
+  font-size: 11px;
   opacity: 0.8;
 }
 
-/* Liens de Navigation menu side */
 .navigation {
   flex: 1;
   padding: 0 16px;
@@ -113,12 +113,12 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-radius: 8px;
   background: transparent;
   border: none;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   text-align: left;
   transition: all 0.2s;
@@ -136,56 +136,58 @@
 }
 
 .sidebarFooter {
-  padding: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px 16px 20px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin-top: auto;
 }
 
 .logoutBtn {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.5);
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #ffffff;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all 0.2s;
 }
 
 .logoutBtn:hover {
-  color: #ffffff;
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
 }
 
 .logoutText {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-/* ---------------- CONTENU CENTRAL ---------------- */
+/* CONTENU CENTRAL */
 .main {
   margin-left: 256px;
   flex: 1;
   display: flex;
   flex-direction: column;
   height: 100vh;
+  /*overflow: hidden;*/
   overflow-y: auto;
 }
 
-/* Header horizontal sup */
 .header {
-  height: 64px;
+  height: 56px;
   background-color: #ffffff;
-  border-bottom: 1px solid #e1e3e4;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
-  position: sticky;
-  top: 0;
-  z-index: 40;
+  padding: 0 20px;
+  flex-shrink: 0;
 }
 
 .headerActions {
@@ -204,26 +206,23 @@
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 0 14px;
-  height: 38px;
+  height: 34px;
 }
 
 .searchInput {
   flex: 1;
   border: none;
   background: transparent;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: #334155;
   outline: none;
-}
-
-.searchInput::placeholder {
-  color: #94a3b8;
+  font-family: 'Inter', sans-serif;
 }
 
 .notifBtn {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: transparent;
   border: none;
@@ -231,11 +230,6 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s;
-}
-
-.notifBtn:hover {
-  background-color: #f1f5f9;
 }
 
 .notifBadge {
@@ -244,10 +238,10 @@
   right: 2px;
   background: #ef4444;
   color: white;
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   font-weight: 700;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -255,16 +249,15 @@
 }
 
 .divider {
-  height: 32px;
+  height: 24px;
   width: 1px;
   background-color: #e2e8f0;
-  margin: 0 8px;
 }
 
 .profileIndicator {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   cursor: pointer;
 }
 
@@ -276,162 +269,144 @@
 
 .profileName {
   color: #1e293b;
-  font-weight: bold;
-  font-size: 14px;
-  line-height: 1.2;
+  font-weight: 600;
+  font-size: 12px;
 }
 
 .profileRole {
   color: #64748b;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .headerAvatar {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background-color: #1e2d45;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
   color: #ffffff;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  border: 2px solid #ffffff;
 }
 
-/* Canvas global intérieur */
+/* Canvas intérieur */
 .canvas {
-  padding: 32px;
+  padding: 12px 20px;
   max-width: 1280px;
   width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 10px;
+  height: calc(100vh - 56px);
+  justify-content: space-between;
+  box-sizing: border-box;
 }
 
 /* Bannière de Bienvenue */
 .welcomeBanner {
-  position: relative;
-  overflow: hidden;
-  background-color: #002c53;
-  border-radius: 12px;
-  padding: 40px;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  border-radius: 10px;
+  padding: 12px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(3, 80, 189, 0.15);
 }
 
 .bannerContent {
-  position: relative;
-  z-index: 10;
-  max-width: 512px;
+  max-width: 600px;
 }
 
 .bannerTitle {
-  font-size: 30px;
+  font-size: 18px;
   color: #ffffff;
-  margin-bottom: 8px;
-  font-weight: bold;
+  margin-bottom: 2px;
+  font-weight: 700;
 }
 
 .bannerDesc {
-  color: #a3c9ff;
-  font-size: 16px;
-  font-weight: 300;
-  opacity: 0.9;
-  line-height: 1.5;
-}
-
-.bannerActionGroup {
-  margin-top: 24px;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.95;
+  line-height: 1.3;
 }
 
 .shareProfileBtn {
   background-color: #ffffff;
-  color: #002c53;
-  font-weight: bold;
-  padding: 10px 24px;
-  border-radius: 8px;
-  font-size: 14px;
+  color: #0350bd;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: filter 0.2s;
+  gap: 6px;
+  transition: opacity 0.2s;
+  white-space: nowrap;
 }
 
 .shareProfileBtn:hover {
-  filter: brightness(1.1);
+  opacity: 0.9;
 }
 
-/* ---------------- GRILLE DES STATISTIQUES ---------------- */
+/* Grille des statistiques */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 24px;
-}
-
-@media (min-width: 768px) {
-  .statsGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .statCard {
   background-color: #ffffff;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #e1e3e4;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
-  gap: 20px;
-  transition: box-shadow 0.2s;
-}
-
-.statCard:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  gap: 12px;
 }
 
 .statIconContainer {
-  width: 56px;
-  height: 56px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .iconCertified { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
-.iconPending { background-color: rgba(0, 96, 172, 0.1); color: #0060ac; }
-.iconViews { background-color: rgba(179, 143, 77, 0.1); color: #B38F4D; }
+.iconPending { background-color: rgba(3, 80, 189, 0.1); color: #0350bd; }
+.iconViews { background-color: rgba(179, 143, 77, 0.15); color: #B38F4D; }
 
 .statLabel {
-  color: #42474f;
-  font-size: 12px;
+  color: #64748b;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-weight: bold;
+  font-weight: 600;
 }
 
 .statCount {
-  font-size: 30px;
-  font-weight: 900;
-  color: #191c1d;
-  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 0px;
 }
 
-/* ---------------- SECTION DIPLÔMES ---------------- */
+/* Section Diplômes */
 .degreesSection {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 8px;
+  flex: 1;
 }
 
 .sectionHeader {
@@ -441,416 +416,331 @@
 }
 
 .sectionTitle {
-  font-size: 20px;
-  color: #191c1d;
-  font-weight: bold;
+  font-size: 15px;
+  color: #0f172a;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .titleIndicator {
-  width: 6px;
-  height: 32px;
-  background-color: #002c53;
-  border-radius: 9999px;
+  width: 4px;
+  height: 16px;
+  background: #0350bd;
+  border-radius: 4px;
 }
 
 .seeAllLink {
-  color: #0060ac;
-  font-weight: bold;
+  color: #0350bd;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 4px;
   text-decoration: none;
-  font-size: 14px;
-}
-
-.seeAllLink:hover {
-  text-decoration: underline;
+  font-size: 12px;
 }
 
 .degreesGrid {
   display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 32px;
-}
-
-@media (min-width: 1280px) {
-  .degreesGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  flex: 1;
 }
 
 /* Carte diplôme */
 .degreeCard {
   background-color: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e1e3e4;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   position: relative;
-  transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
 }
 
-.degreeCard:hover {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
 .cardTopIndicator {
-  height: 6px;
+  height: 3px;
   width: 100%;
   background-color: #10b981;
 }
 
 .cardBody {
-  padding: 32px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   flex: 1;
-  
-}
-
-.cardActionGroup {
-  margin-top: auto;
-  padding-top: 20px; 
-  display: flex;
-  gap: 12px;
-  z-index: 10;
+  gap: 8px;
 }
 
 .cardMainRow {
   display: flex;
   justify-content: space-between;
-  align-items: start;
-  margin-bottom: 24px;
+  align-items: flex-start;
 }
 
 .degreeTitles {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  z-index: 10;
+  gap: 2px;
+  z-index: 2;
 }
 
 .degreeName {
-  font-size: 18px;
-  color: #002c53;
-  font-weight: bold;
-  line-height: 1.3;
+  font-size: 13px;
+  color: #062362;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .degreeInstitution {
-  color: #42474f;
+  color: #64748b;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 11px;
 }
 
 .goldText {
   color: #B38F4D;
-  font-weight: bold;
+  font-weight: 700;
 }
 
 .statusBadge {
   background-color: rgba(16, 185, 129, 0.1);
   color: #047857;
-  font-size: 10px;
-  font-weight: 900;
+  font-size: 9px;
+  font-weight: 700;
   text-transform: uppercase;
-  padding: 4px 12px;
+  padding: 2px 6px;
   border-radius: 9999px;
   border: 1px solid rgba(16, 185, 129, 0.2);
-  letter-spacing: 0.1em;
-  z-index: 10;
+  letter-spacing: 0.05em;
+  z-index: 2;
 }
 
 .metadataGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 32px;
-  z-index: 10;
+  gap: 8px;
+  z-index: 2;
 }
 
 .metaBlock {
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 .metaLabel {
-  font-size: 12px;
-  color: #737780;
+  font-size: 9px;
+  color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .metaValue {
-  font-size: 14px;
-  font-weight: bold;
-  color: #2e3132;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1e293b;
 }
 
-/* Bloc de hachage crypto */
 .hashBlock {
-  background-color: #F8F9FA;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(115, 119, 128, 0.2);
+  background-color: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: border-color 0.2s;
-  z-index: 10;
-}
-
-.hashBlock:hover {
-  border-color: rgba(179, 143, 77, 0.5);
+  z-index: 2;
 }
 
 .hashLeft {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   overflow: hidden;
 }
 
 .hashLeft span {
-  color: #737780;
-  font-size: 18px;
+  color: #94a3b8;
+  font-size: 14px;
 }
 
 .hashCode {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: #42474f;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-family: monospace;
+  font-size: 10px;
+  color: #475569;
 }
 
 .copyHashBtn {
   background: transparent;
   border: none;
-  padding: 8px;
-  border-radius: 4px;
+  padding: 2px;
   cursor: pointer;
-  color: #002c53;
+  color: #0350bd;
   display: flex;
   align-items: center;
-  transition: background 0.2s;
-}
-
-.copyHashBtn:hover {
-  background-color: #ffffff;
 }
 
 .cardActionGroup {
-  margin-top: auto;
-  padding-top: 32px;
   display: flex;
-  gap: 12px;
-  z-index: 10;
+  gap: 8px;
+  z-index: 2;
+  margin-top: 2px;
 }
 
 .viewDegreeBtn {
   flex: 1;
-  background-color: #002c53;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
   color: #ffffff;
-  font-weight: bold;
-  padding: 12px 0;
-  border-radius: 8px;
+  font-weight: 600;
+  padding: 6px 0;
+  border-radius: 6px;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 44, 83, 0.2);
-  transition: background 0.2s;
+  gap: 6px;
+  font-size: 11px;
+  transition: opacity 0.2s;
 }
 
 .viewDegreeBtn:hover {
-  background-color: #0a4275;
+  opacity: 0.9;
 }
 
 .shareCardBtn {
-  width: 48px;
-  height: 48px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e1e3e4;
-  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
   background-color: #ffffff;
-  color: #002c53;
+  color: #0350bd;
   cursor: pointer;
-  transition: all 0.2s;
 }
 
-.shareCardBtn:hover {
-  background-color: #edeeef;
-}
-
-/* Filigrane (Sceau de fond) */
 .sealWatermark {
   opacity: 0.03;
   pointer-events: none;
   position: absolute;
-  right: -20px;
-  bottom: -20px;
+  right: -15px;
+  bottom: -15px;
   transform: rotate(-15deg);
 }
 
 .sealWatermark span {
-  font-size: 180px !important;
+  font-size: 120px !important;
 }
 
 /* Case "Ajouter un certificat" */
 .addCardPlaceholder {
-  border: 2px dashed #c2c6d1;
-  border-radius: 12px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px;
+  padding: 12px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.2s;
-}
-
-.addCardPlaceholder:hover {
-  border-color: rgba(179, 143, 77, 0.5);
   background-color: #ffffff;
 }
 
 .addIconBox {
-  width: 64px;
-  height: 64px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background-color: #edeeef;
-  color: #737780;
+  background-color: #f1f5f9;
+  color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
-  transition: all 0.2s;
-}
-
-.addCardPlaceholder:hover .addIconBox {
-  background-color: rgba(179, 143, 77, 0.1);
-  color: #B38F4D;
+  margin-bottom: 4px;
 }
 
 .addTitle {
-  font-weight: bold;
-  color: #191c1d;
-  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 12px;
+  color: #0f172a;
+  margin-bottom: 2px;
 }
 
 .addDesc {
-  font-size: 14px;
-  color: #42474f;
-  max-width: 240px;
-  line-height: 1.4;
+  font-size: 10px;
+  color: #64748b;
+  max-width: 200px;
+  line-height: 1.2;
 }
 
 .startProcessBtn {
-  margin-top: 24px;
+  margin-top: 6px;
   background: transparent;
   border: none;
-  color: #002c53;
-  font-weight: bold;
-  font-size: 14px;
+  color: #0350bd;
+  font-weight: 600;
+  font-size: 11px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   cursor: pointer;
-  transition: transform 0.2s;
 }
 
-.addCardPlaceholder:hover .startProcessBtn {
-  transform: translateY(-2px);
-}
-
-/* ---------------- FOOTER SÉCURITÉ BAS ---------------- */
+/* Footer Sécurité */
 .securityTipFooter {
-  background-color: #e7e8e9;
-  border-radius:xl;
-  border-radius: 12px;
-  padding: 24px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 8px 16px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 24px;
-  border: 1px solid #e1e3e4;
-}
-
-@media (min-width: 640px) {
-  .securityTipFooter {
-    flex-direction: row;
-  }
+  gap: 12px;
+  border: 1px solid #e2e8f0;
 }
 
 .securityTipIconBox {
-  width: 64px;
-  height: 64px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
-  background-color: #ffffff;
-  border-radius: 8px;
+  background-color: rgba(179, 143, 77, 0.1);
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .securityTipIconBox span {
-  font-size: 30px;
+  font-size: 18px;
   color: #B38F4D;
 }
 
 .securityTipTexts {
   flex: 1;
-  text-align: center;
-}
-
-@media (min-width: 640px) {
-  .securityTipTexts {
-    text-align: left;
-  }
 }
 
 .securityTipTitle {
-  font-size: 14px;
-  font-weight: bold;
-  color: #191c1d;
-  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 1px;
 }
 
 .securityTipDesc {
-  font-size: 12px;
-  color: #42474f;
-  line-height: 1.4;
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.2;
 }
 
 .learnMoreBtn {
-  font-weight: bold;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 8px 16px;
-  border-radius: 4px;
+  font-weight: 600;
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 6px;
   border: none;
-  background-color: #002c53;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
   color: #ffffff;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.2s;
-}
-
-.learnMoreBtn:hover {
-  background-color: #0a4275;
 }
