@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../core/auth/useAuth';
+import AccountMenu from '../../components/AccountMenu/AccountMenu';
 import styles from './AppLayout.module.css';
 import Logo_Inubil from '../../../assets/Logo_Inubil.png';
 
@@ -110,6 +111,7 @@ const bottomNavItems = [
 export default function AppLayout() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { utilisateur, logout } = useAuth();
+  const navigate = useNavigate();
 
   const roleNom = utilisateur?.role?.nom;
   const visible = (item) => !item.roles || roleNom === undefined || item.roles.includes(roleNom);
@@ -118,7 +120,6 @@ export default function AppLayout() {
 
   const prenom = utilisateur?.prenom ?? '';
   const nom = utilisateur?.nom ?? '';
-  const initiales = `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || '··';
   const roleLabel = ROLE_LABELS[roleNom] ?? roleNom ?? '';
 
   const handleNavClick = (e, item) => {
@@ -220,25 +221,24 @@ export default function AppLayout() {
             </button>
 
             {/* Profil */}
-            <div className={styles.userInfo}>
-              <div className={styles.userTexts}>
-                <span className={styles.userName}>{`${prenom} ${nom}`.trim() || 'Utilisateur'}</span>
-                <span className={styles.userRole}>{roleLabel}</span>
-              </div>
-              <div className={styles.avatar}>{initiales}</div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className={styles.iconBtn}
-                title="Se déconnecter"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
-                </svg>
-              </button>
-            </div>
+            <AccountMenu
+              prenom={prenom}
+              nom={nom}
+              roleLabel={roleLabel}
+              onOpenAccount={() => navigate('/universite/mon-compte')}
+            />
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={styles.iconBtn}
+              title="Se déconnecter"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
           </div>
         </header>
 

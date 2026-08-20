@@ -18,6 +18,7 @@ import Revocations from './features/ListeRevocations_Agent/ListeRevocations_Agen
 import Parametres_Agent from './features/Parametres_Agent/Parametres_Agent';
 import Support_Agent from './features/Support_Agent/Support';
 import JournalActivites from './features/JournalActivites/JournalActivites';
+import MonComptePage from './features/universite/mon-compte/MonComptePage';
 
 export default function App() {
   return (
@@ -40,7 +41,8 @@ export default function App() {
           <Route path="parametres" element={<Parametres_Agent />} />
           <Route path="support" element={<Support_Agent />} />
           <Route path="journal" element={<JournalActivites />} />
-          
+          <Route path="mon-compte" element={<MonComptePage />} />
+
         </Route>
 
       
