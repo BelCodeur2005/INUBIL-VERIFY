@@ -201,6 +201,11 @@
   color: #94a3b8;
 }
 
+.searchInputWrap .spinnerIcon {
+  position: absolute;
+  right: 12px;
+}
+
 .searchInput {
   width: 100%;
   padding: 10px 14px 10px 38px;
@@ -228,6 +233,37 @@
   font-size: 0.85rem;
   color: #94a3b8;
   padding: 12px 4px;
+}
+
+.errorText {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
+.spinnerIcon {
+  animation: spin 0.8s linear infinite;
+  color: #0350bd;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.hashInline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
 }
 
 .resultCard {

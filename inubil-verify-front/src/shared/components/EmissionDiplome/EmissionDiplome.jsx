@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Search,
   UserPlus,
@@ -11,14 +11,22 @@ import {
   X,
   ClipboardCheck,
   Sparkles,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react';
+import { useAuth } from '../../../core/auth/useAuth';
+import { rechercherEtudiants, creerEtudiant } from '../../../core/etudiants/etudiants.api';
+import { listerTypesDocument } from '../../../core/types-document/types-document.api';
+import { listerMentions } from '../../../core/mentions/mentions.api';
+import { creerDocument, uploaderPdf } from '../../../core/documents/documents.api';
+import { ApiError } from '../../../core/api/client';
 import styles from './EmissionDiplome.module.css';
 
-// Stepper d'émission de diplôme — remplace l'ancienne modale (Ajout_Unitaire.jsx)
-// qui ne rendait pas justice au flux réel du backend, intrinsèquement séquentiel :
-// POST /etudiants-admin (si nouvel étudiant) -> POST /documents -> POST /documents/:id/pdf.
-// Contenu mock pour l'instant (docs/ROLES_ET_PAGES.md page #17) : pas d'appel API,
-// seulement la structure et l'UX du flux en 4 étapes.
+// Stepper d'emission de diplome — branche sur le backend reel :
+// [creation etudiant si nouveau] -> POST /documents -> POST /documents/:id/pdf.
+// Le document reste en statut "brouillon" a l'issue de ce flux : la validation
+// (ancrage blockchain, QR, activation) est une etape separee (POST /documents/:id/valider),
+// reservee a directeur_pedagogique/responsable_universite (docs/ROLES_ET_PAGES.md).
 
 const STEPS = [
   { id: 1, label: 'Étudiant', icon: UserPlus },
@@ -27,53 +35,155 @@ const STEPS = [
   { id: 4, label: 'Récapitulatif', icon: ClipboardCheck },
 ];
 
-const MOCK_ETUDIANTS = [
-  { id: 1, nom: 'KOUAM', prenom: 'Jean', matricule: 'INUB-2023-0412', filiere: 'Licence Pro DAWII' },
-  { id: 2, nom: 'MBALLA', prenom: 'Sandrine', matricule: 'INUB-2023-0388', filiere: 'Licence Pro DAWII' },
-  { id: 3, nom: 'TCHOUA', prenom: 'Paul', matricule: 'INUB-2022-0221', filiere: 'Master Réseaux & Sécurité' },
-  { id: 4, nom: 'EBONE', prenom: 'Christine', matricule: 'INUB-2023-0455', filiere: 'Licence Pro DAWII' },
-];
-
-const TYPES_DOCUMENT = ['Licence / Bachelor', 'Master / Ingénieur', 'Doctorat / PhD', 'Attestation de Réussite'];
-const MENTIONS = ['Très Bien', 'Bien', 'Assez Bien', 'Passable'];
-
 export default function EmissionDiplome() {
+  const { utilisateur } = useAuth();
+  const universiteId = utilisateur?.universite?.id;
+
   const [currentStep, setCurrentStep] = useState(1);
-  const [submitted, setSubmitted] = useState(false);
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  // ── Étudiant ──
   const [studentMode, setStudentMode] = useState('search');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [newStudent, setNewStudent] = useState({ nom: '', prenom: '', matricule: '', dateNaissance: '', sexe: '' });
+  const [newStudent, setNewStudent] = useState({ nom: '', prenom: '', numero_etudiant: '', date_naissance: '' });
 
-  const [diplome, setDiplome] = useState({ type: '', specialite: '', mention: '', dateObtention: '', anneeAcademique: '' });
+  useEffect(() => {
+    if (studentMode !== 'search') return;
+    const q = searchQuery.trim();
+    const timeout = setTimeout(async () => {
+      if (q.length < 2) {
+        setSearchResults([]);
+        setSearchError(null);
+        return;
+      }
+      setSearching(true);
+      setSearchError(null);
+      try {
+        const res = await rechercherEtudiants(q);
+        setSearchResults(res.data ?? []);
+      } catch (err) {
+        setSearchError(err instanceof ApiError ? err.message : 'Recherche impossible — réessayez.');
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+    return () => clearTimeout(timeout);
+  }, [searchQuery, studentMode]);
 
-  const [selectedFile, setSelectedFile] = useState(null);
-
-  const etudiant = studentMode === 'search' ? selectedStudent : (
-    newStudent.nom && newStudent.prenom ? { ...newStudent, id: 'new' } : null
-  );
+  const etudiant = studentMode === 'search'
+    ? selectedStudent
+    : (newStudent.nom && newStudent.prenom ? newStudent : null);
 
   const step1Valid = studentMode === 'search'
     ? !!selectedStudent
-    : Boolean(newStudent.nom && newStudent.prenom && newStudent.matricule && newStudent.dateNaissance && newStudent.sexe);
-  const step2Valid = Boolean(diplome.type && diplome.specialite && diplome.mention && diplome.dateObtention && diplome.anneeAcademique);
+    : Boolean(newStudent.nom && newStudent.prenom && newStudent.numero_etudiant);
+
+  // ── Diplôme (référentiels réels) ──
+  const [typesDocument, setTypesDocument] = useState([]);
+  const [mentions, setMentions] = useState([]);
+  const [loadingReferentiels, setLoadingReferentiels] = useState(true);
+  const [referentielsError, setReferentielsError] = useState(null);
+
+  useEffect(() => {
+    let annule = false;
+    Promise.all([
+      listerTypesDocument({ universiteId }),
+      listerMentions({ universiteId }),
+    ])
+      .then(([types, mentionsRes]) => {
+        if (annule) return;
+        setTypesDocument(types ?? []);
+        setMentions(mentionsRes ?? []);
+      })
+      .catch((err) => {
+        if (annule) return;
+        setReferentielsError(err instanceof ApiError ? err.message : 'Impossible de charger les référentiels.');
+      })
+      .finally(() => {
+        if (!annule) setLoadingReferentiels(false);
+      });
+    return () => { annule = true; };
+  }, [universiteId]);
+
+  const [diplome, setDiplome] = useState({ type_document_id: '', filiere: '', mention_id: '', date_emission: '', annee_academique: '' });
+  const step2Valid = Boolean(diplome.type_document_id && diplome.filiere && diplome.date_emission);
+
+  // ── Document ──
+  const [selectedFile, setSelectedFile] = useState(null);
   const step3Valid = Boolean(selectedFile);
 
   const stepValidity = { 1: step1Valid, 2: step2Valid, 3: step3Valid, 4: true };
 
-  const filteredEtudiants = MOCK_ETUDIANTS.filter((e) => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return true;
-    return `${e.nom} ${e.prenom} ${e.matricule}`.toLowerCase().includes(q);
-  });
+  // ── Soumission ──
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [submitResult, setSubmitResult] = useState(null);
+
+  const resetWizard = () => {
+    setSubmitResult(null);
+    setSubmitError(null);
+    setCurrentStep(1);
+    setStudentMode('search');
+    setSelectedStudent(null);
+    setSearchQuery('');
+    setSearchResults([]);
+    setNewStudent({ nom: '', prenom: '', numero_etudiant: '', date_naissance: '' });
+    setDiplome({ type_document_id: '', filiere: '', mention_id: '', date_emission: '', annee_academique: '' });
+    setSelectedFile(null);
+  };
+
+  const soumettreDossier = async () => {
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      let etudiantId = selectedStudent?.id;
+
+      if (studentMode === 'create') {
+        if (!universiteId) {
+          throw new Error("Impossible de déterminer votre établissement — reconnectez-vous et réessayez.");
+        }
+        const cree = await creerEtudiant({
+          numero_etudiant: newStudent.numero_etudiant,
+          nom: newStudent.nom,
+          prenom: newStudent.prenom,
+          universite_id: universiteId,
+          ...(newStudent.date_naissance ? { date_naissance: newStudent.date_naissance } : {}),
+        });
+        etudiantId = cree.id;
+      }
+
+      const document = await creerDocument({
+        etudiant_id: etudiantId,
+        type_document_id: diplome.type_document_id,
+        date_emission: diplome.date_emission,
+        filiere: diplome.filiere,
+        ...(diplome.annee_academique ? { annee_academique: diplome.annee_academique } : {}),
+        ...(diplome.mention_id ? { mention_id: diplome.mention_id } : {}),
+      });
+
+      const documentAvecPdf = await uploaderPdf(document.id, selectedFile);
+
+      setSubmitResult({
+        etudiantNom: `${etudiant?.prenom ?? ''} ${etudiant?.nom ?? ''}`.trim(),
+        numeroUnique: documentAvecPdf.numero_unique,
+        hash: documentAvecPdf.hash_sha256,
+      });
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : (err.message || 'Une erreur est survenue lors de l\'émission.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const goNext = () => {
     if (!stepValidity[currentStep]) return;
     if (currentStep === 4) {
-      setSubmitted(true);
+      soumettreDossier();
       return;
     }
     setCurrentStep((s) => Math.min(s + 1, 4));
@@ -97,33 +207,22 @@ export default function EmissionDiplome() {
     1: 'Continuer vers les détails académiques',
     2: 'Continuer vers le document',
     3: 'Vérifier avant émission',
-    4: 'Émettre le diplôme',
+    4: submitting ? 'Émission en cours...' : 'Émettre le diplôme',
   }[currentStep];
 
-  if (submitted) {
+  if (submitResult) {
     return (
       <div className={styles.page}>
         <div className={styles.successCard}>
           <div className={styles.successIcon}><Sparkles size={28} /></div>
-          <h2 className={styles.successTitle}>Dossier prêt pour émission</h2>
+          <h2 className={styles.successTitle}>Diplôme enregistré</h2>
           <p className={styles.successText}>
-            Le diplôme de <strong>{etudiant?.prenom} {etudiant?.nom}</strong> a été préparé.
-            La création réelle (ancrage blockchain + génération PDF) sera branchée à l'étape suivante.
+            Le dossier de <strong>{submitResult.etudiantNom}</strong> a été créé
+            ({submitResult.numeroUnique}). Le hash d'intégrité a été calculé
+            (<code className={styles.hashInline}>{submitResult.hash?.slice(0, 16)}…</code>).
+            Il reste en attente de validation avant ancrage blockchain.
           </p>
-          <button
-            type="button"
-            className={styles.primaryBtn}
-            onClick={() => {
-              setSubmitted(false);
-              setCurrentStep(1);
-              setStudentMode('search');
-              setSelectedStudent(null);
-              setSearchQuery('');
-              setNewStudent({ nom: '', prenom: '', matricule: '', dateNaissance: '', sexe: '' });
-              setDiplome({ type: '', specialite: '', mention: '', dateObtention: '', anneeAcademique: '' });
-              setSelectedFile(null);
-            }}
-          >
+          <button type="button" className={styles.primaryBtn} onClick={resetWizard}>
             Émettre un autre diplôme
           </button>
         </div>
@@ -188,17 +287,24 @@ export default function EmissionDiplome() {
                   <Search size={16} className={styles.searchIcon} />
                   <input
                     type="text"
-                    placeholder="Nom, prénom ou matricule..."
+                    placeholder="Nom, prénom ou matricule (2 caractères min.)..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => { setSearchQuery(e.target.value); setSelectedStudent(null); }}
                     className={styles.searchInput}
                   />
+                  {searching && <Loader2 size={16} className={styles.spinnerIcon} />}
                 </div>
+
+                {searchError && <p className={styles.errorText}><AlertTriangle size={14} /> {searchError}</p>}
+
                 <div className={styles.resultsList}>
-                  {filteredEtudiants.length === 0 && (
+                  {!searching && searchQuery.trim().length >= 2 && searchResults.length === 0 && !searchError && (
                     <p className={styles.noResults}>Aucun étudiant trouvé — essayez « Créer un nouveau dossier ».</p>
                   )}
-                  {filteredEtudiants.map((e) => (
+                  {searchQuery.trim().length < 2 && (
+                    <p className={styles.noResults}>Tapez au moins 2 caractères pour lancer la recherche.</p>
+                  )}
+                  {searchResults.map((e) => (
                     <button
                       type="button"
                       key={e.id}
@@ -208,7 +314,7 @@ export default function EmissionDiplome() {
                       <div className={styles.resultAvatar}>{e.prenom.charAt(0)}{e.nom.charAt(0)}</div>
                       <div className={styles.resultTexts}>
                         <strong>{e.prenom} {e.nom}</strong>
-                        <span>{e.matricule} — {e.filiere}</span>
+                        <span>{e.numero_etudiant}{e.universite_nom ? ` — ${e.universite_nom}` : ''}</span>
                       </div>
                       {selectedStudent?.id === e.id && <Check size={18} className={styles.resultCheck} />}
                     </button>
@@ -227,19 +333,11 @@ export default function EmissionDiplome() {
                 </div>
                 <div className={styles.inputGroup}>
                   <label>Matricule</label>
-                  <input type="text" value={newStudent.matricule} onChange={(e) => setNewStudent({ ...newStudent, matricule: e.target.value })} placeholder="INUB-2026-XXXX" />
+                  <input type="text" value={newStudent.numero_etudiant} onChange={(e) => setNewStudent({ ...newStudent, numero_etudiant: e.target.value })} placeholder="INUB-2026-XXXX" />
                 </div>
                 <div className={styles.inputGroup}>
                   <label>Date de naissance</label>
-                  <input type="date" value={newStudent.dateNaissance} onChange={(e) => setNewStudent({ ...newStudent, dateNaissance: e.target.value })} />
-                </div>
-                <div className={styles.inputGroup}>
-                  <label>Sexe</label>
-                  <select value={newStudent.sexe} onChange={(e) => setNewStudent({ ...newStudent, sexe: e.target.value })}>
-                    <option value="" disabled>Sélectionner...</option>
-                    <option value="M">Masculin</option>
-                    <option value="F">Féminin</option>
-                  </select>
+                  <input type="date" value={newStudent.date_naissance} onChange={(e) => setNewStudent({ ...newStudent, date_naissance: e.target.value })} />
                 </div>
               </div>
             )}
@@ -248,32 +346,41 @@ export default function EmissionDiplome() {
 
         {currentStep === 2 && (
           <section className={styles.card}>
+            {referentielsError && <p className={styles.errorText}><AlertTriangle size={14} /> {referentielsError}</p>}
             <div className={styles.formGrid}>
               <div className={styles.inputGroup}>
                 <label>Type de diplôme</label>
-                <select value={diplome.type} onChange={(e) => setDiplome({ ...diplome, type: e.target.value })}>
-                  <option value="" disabled>Choisir...</option>
-                  {TYPES_DOCUMENT.map((t) => <option key={t} value={t}>{t}</option>)}
+                <select
+                  value={diplome.type_document_id}
+                  onChange={(e) => setDiplome({ ...diplome, type_document_id: e.target.value })}
+                  disabled={loadingReferentiels}
+                >
+                  <option value="" disabled>{loadingReferentiels ? 'Chargement...' : 'Choisir...'}</option>
+                  {typesDocument.map((t) => <option key={t.id} value={t.id}>{t.nom}</option>)}
                 </select>
               </div>
               <div className={`${styles.inputGroup} ${styles.colSpan2}`}>
                 <label>Domaine d'études / Spécialité</label>
-                <input type="text" value={diplome.specialite} onChange={(e) => setDiplome({ ...diplome, specialite: e.target.value })} placeholder="ex : Génie Logiciel et Systèmes d'Information" />
+                <input type="text" value={diplome.filiere} onChange={(e) => setDiplome({ ...diplome, filiere: e.target.value })} placeholder="ex : Génie Logiciel et Systèmes d'Information" />
               </div>
               <div className={styles.inputGroup}>
                 <label>Mention</label>
-                <select value={diplome.mention} onChange={(e) => setDiplome({ ...diplome, mention: e.target.value })}>
-                  <option value="" disabled>Choisir...</option>
-                  {MENTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
+                <select
+                  value={diplome.mention_id}
+                  onChange={(e) => setDiplome({ ...diplome, mention_id: e.target.value })}
+                  disabled={loadingReferentiels}
+                >
+                  <option value="">{loadingReferentiels ? 'Chargement...' : 'Aucune'}</option>
+                  {mentions.map((m) => <option key={m.id} value={m.id}>{m.nom}</option>)}
                 </select>
               </div>
               <div className={styles.inputGroup}>
-                <label>Date d'obtention</label>
-                <input type="date" value={diplome.dateObtention} onChange={(e) => setDiplome({ ...diplome, dateObtention: e.target.value })} />
+                <label>Date d'émission</label>
+                <input type="date" value={diplome.date_emission} onChange={(e) => setDiplome({ ...diplome, date_emission: e.target.value })} />
               </div>
               <div className={styles.inputGroup}>
                 <label>Année académique</label>
-                <input type="text" value={diplome.anneeAcademique} onChange={(e) => setDiplome({ ...diplome, anneeAcademique: e.target.value })} placeholder="ex : 2025-2026" />
+                <input type="text" value={diplome.annee_academique} onChange={(e) => setDiplome({ ...diplome, annee_academique: e.target.value })} placeholder="ex : 2025-2026" />
               </div>
             </div>
           </section>
@@ -315,13 +422,16 @@ export default function EmissionDiplome() {
               <div className={styles.recapBlock}>
                 <h3 className={styles.recapTitle}><UserPlus size={16} /> Étudiant</h3>
                 <p><strong>{etudiant?.prenom} {etudiant?.nom}</strong></p>
-                <p className={styles.recapMuted}>{etudiant?.matricule}{etudiant?.filiere ? ` — ${etudiant.filiere}` : ''}</p>
+                <p className={styles.recapMuted}>{etudiant?.numero_etudiant}{etudiant?.universite_nom ? ` — ${etudiant.universite_nom}` : ''}</p>
               </div>
               <div className={styles.recapBlock}>
                 <h3 className={styles.recapTitle}><GraduationCap size={16} /> Diplôme</h3>
-                <p><strong>{diplome.type}</strong></p>
-                <p className={styles.recapMuted}>{diplome.specialite}</p>
-                <p className={styles.recapMuted}>Mention {diplome.mention} — {diplome.anneeAcademique}</p>
+                <p><strong>{typesDocument.find((t) => t.id === diplome.type_document_id)?.nom}</strong></p>
+                <p className={styles.recapMuted}>{diplome.filiere}</p>
+                <p className={styles.recapMuted}>
+                  {diplome.mention_id ? `Mention ${mentions.find((m) => m.id === diplome.mention_id)?.nom} — ` : ''}
+                  {diplome.annee_academique}
+                </p>
               </div>
               <div className={styles.recapBlock}>
                 <h3 className={styles.recapTitle}><FileText size={16} /> Document</h3>
@@ -332,16 +442,18 @@ export default function EmissionDiplome() {
             <p className={styles.legalNotice}>
               En soumettant, vous certifiez l'exactitude des données vis-à-vis du registre institutionnel.
             </p>
+            {submitError && <p className={styles.errorText}><AlertTriangle size={14} /> {submitError}</p>}
           </section>
         )}
       </div>
 
       {/* Navigation */}
       <div className={styles.footer}>
-        <button type="button" className={styles.backBtn} onClick={goBack} disabled={currentStep === 1}>
+        <button type="button" className={styles.backBtn} onClick={goBack} disabled={currentStep === 1 || submitting}>
           <ChevronLeft size={16} /> Retour
         </button>
-        <button type="button" className={styles.primaryBtn} onClick={goNext} disabled={!stepValidity[currentStep]}>
+        <button type="button" className={styles.primaryBtn} onClick={goNext} disabled={!stepValidity[currentStep] || submitting}>
+          {submitting && <Loader2 size={16} className={styles.spinnerIcon} />}
           {nextLabel} {currentStep < 4 && <ChevronRight size={16} />}
         </button>
       </div>

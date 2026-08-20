@@ -77,8 +77,11 @@ async function rafraichirJetons() {
  * @param {boolean} [options.auth] - false pour un appel public (endpoints /verify, /auth/login...)
  */
 export async function apiRequest(path, { method = 'GET', body, auth = true, ...reste } = {}) {
+  const estFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+
   const executer = async () => {
-    const headers = { 'Content-Type': 'application/json', ...reste.headers };
+    // FormData : laisser le navigateur poser son propre Content-Type (avec la boundary multipart).
+    const headers = estFormData ? { ...reste.headers } : { 'Content-Type': 'application/json', ...reste.headers };
     if (auth) {
       const token = getAccessToken();
       if (token) headers.Authorization = `Bearer ${token}`;
@@ -88,7 +91,7 @@ export async function apiRequest(path, { method = 'GET', body, auth = true, ...r
       ...reste,
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : estFormData ? body : JSON.stringify(body),
     });
   };
 
