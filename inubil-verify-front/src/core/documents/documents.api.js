@@ -27,3 +27,13 @@ export function uploaderPdf(documentId, fichier) {
   formData.append('fichier', fichier);
   return apiRequest(`/documents/${documentId}/pdf`, { method: 'POST', body: formData });
 }
+
+/** POST /documents/:id/valider — ancrage blockchain + activation (brouillon|en_validation -> actif). */
+export function validerDocument(documentId) {
+  return api.post(`/documents/${documentId}/valider`, {});
+}
+
+/** POST /documents/:id/rejeter — brouillon|en_validation -> rejete, motif obligatoire. */
+export function rejeterDocument(documentId, motif) {
+  return api.post(`/documents/${documentId}/rejeter`, { motif });
+}
