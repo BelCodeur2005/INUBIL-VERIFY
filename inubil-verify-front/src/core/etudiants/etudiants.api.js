@@ -11,3 +11,8 @@ export function rechercherEtudiants(search, { page = 1, limit = 20 } = {}) {
 export function creerEtudiant(donnees) {
   return api.post('/admin/etudiants', donnees);
 }
+
+/** GET /admin/etudiants/:id — fiche complete (utilise pour resoudre nom/matricule dans les listes de documents). */
+export function getEtudiant(id) {
+  return api.get(`/admin/etudiants/${id}`);
+}
