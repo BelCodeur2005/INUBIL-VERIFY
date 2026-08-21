@@ -37,3 +37,8 @@ export function validerDocument(documentId) {
 export function rejeterDocument(documentId, motif) {
   return api.post(`/documents/${documentId}/rejeter`, { motif });
 }
+
+/** POST /documents/:id/revoquer — actif -> revoque, irreversible, raison obligatoire (10 car. min). */
+export function revoquerDocument(documentId, raison) {
+  return api.post(`/documents/${documentId}/revoquer`, { raison });
+}

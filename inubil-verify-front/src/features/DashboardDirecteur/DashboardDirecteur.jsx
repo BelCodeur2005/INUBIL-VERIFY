@@ -5,6 +5,7 @@ import MonCompte from '../../shared/components/MonCompte/MonCompte';
 import EmissionDiplome from '../../shared/components/EmissionDiplome/EmissionDiplome';
 import ListeDocuments from '../../shared/components/ListeDocuments/ListeDocuments';
 import FileValidation from '../../shared/components/FileValidation/FileValidation';
+import Revocations from '../../shared/components/Revocations/Revocations';
 import { listerDocuments } from '../../core/documents/documents.api';
 import styles from './DashboardDirecteur.module.css';
 
@@ -235,16 +236,7 @@ export default function DashboardDirecteur() {
           {activeTab === 'validation' && <FileValidation />}
 
           {/* Révocations */}
-          {activeTab === 'revocations' && (
-            <section className={styles.tableCard}>
-              <div className={styles.tableHeader}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Révocations</h3>
-              </div>
-              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
-                Révocation de diplômes déjà émis (POST /documents/:id/revoquer).
-              </div>
-            </section>
-          )}
+          {activeTab === 'revocations' && <Revocations />}
 
           {/* Référentiels */}
           {activeTab === 'referentiels' && (
