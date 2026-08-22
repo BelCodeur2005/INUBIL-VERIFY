@@ -432,6 +432,24 @@
   font-weight: 700;
 }
 
+.statusRevoked {
+  background-color: rgba(186, 26, 26, 0.1);
+  color: var(--error);
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.statusExpired {
+  background-color: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
 .btnAction {
   background-color: var(--primary);
   color: #ffffff;
