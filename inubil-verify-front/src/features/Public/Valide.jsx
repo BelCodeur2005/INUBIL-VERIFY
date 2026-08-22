@@ -1,198 +1,194 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { 
+  FiCheckCircle, 
+  FiDownload, 
+  FiAward, 
+  FiShield, 
+  FiCopy, 
+  FiCheck, 
+  FiX, 
+  FiExternalLink 
+} from 'react-icons/fi';
 import styles from './Valide.module.css';
-import Logo_Inubil from '../../assets/Logo_Inubil.png'
-
+import Logo_Inubil from '../../assets/Logo_Inubil.png';
+  
 export default function Valide() {
-  const [copied, setCopied] = useState(false);
-  const navigate = useNavigate();
-  const txHash = "0x74a2f893c5d7b8e92a1f4b3d7e5c9a2f1b39b2";
+  const [isExplorerOpen, setIsExplorerOpen] = useState(false);
+  const [copiedField, setCopiedField] = useState(null);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(txHash);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const publicTxData = {
+    network: "Polygon Mainnet",
+    status: "Confirmé",
+    txHash: "0x8f3a...b92e",
+    fullTxHash: "0x8f3a4192bc7e4d2110594e9f3b145829a8f352a104928173619284910281b92e",
+    contractAddress: "0x2a91...4e10",
+    fullContractAddress: "0x2a91928410294820193820192840192830194e10",
+    issuerWallet: "INUBIL Official Signer (0x12...9a)",
+    timestamp: "24/10/2025 à 14:32:05 UTC"
+  };
+
+  const handleCopy = (text, field) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   return (
     <div className={styles.page}>
-      {/* TopAppBar ISOLÉE ET PARFAITEMENT ALIGNÉE */}
+      {/* NAVBAR */}
       <header className={styles.header}>
         <div className={styles.headerContainer}>
           <div className={styles.brandGroup}>
-            <img 
-              alt="INUBIL Logo" 
-              className={styles.logo} 
-              src={Logo_Inubil}
-            />
-            
+            <img src={Logo_Inubil} alt="INUBIL Logo" className={styles.logo} />
           </div>
-          
+
           <div className={styles.navGroup}>
-            <nav className="hidden md:flex">
-              <span className={styles.navLinkActive}>Vérification</span>
-              <a className={styles.navLink} href="#">Explorer</a>
-              <a className={styles.navLink} href="#">Blockchain</a>
+            <nav>
+              <a href="/valide" className={styles.navLinkActive}>Vérification</a>
+              <button 
+                type="button"
+                className={styles.navLinkBtn} 
+                onClick={() => setIsExplorerOpen(true)}
+              >
+                Explorer
+              </button>
             </nav>
-            <button className={styles.connexionBtn} onClick={() => navigate('/login')}>
+            <Link to="/login" className={styles.connexionBtn}>
               Connexion
-            </button>
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* CONTENU DU SUCCÈS */}
+      {/* CONTENU PRINCIPAL */}
       <main className={styles.main}>
         <div className={styles.mainContainer}>
           
-          {/* SUCCESS ALERT BANNER */}
+          {/* BANNIÈRE SUCCÈS */}
           <div className={styles.banner}>
             <div className={styles.bannerIconContainer}>
-              <span className="material-symbols-outlined !text-3xl" style={{ fontVariationSettings: '"FILL" 1' }}>
-                check_circle
-              </span>
+              <FiCheckCircle size={32} />
             </div>
-            <div className="text-center md:text-left">
-              <h2 className={styles.bannerTitle}>DOCUMENT AUTHENTIQUE & VALIDE</h2>
-              <p className={styles.bannerDesc}>
-                Ce document académique a été certifié conforme par l'institution émettrice et ancré avec succès sur la blockchain Polygon.
-              </p>
+            <div>
+              <div className={styles.bannerTitle}>Document Authentique & Valide</div>
+              <div className={styles.bannerDesc}>
+                Ce diplôme a été certifié par l'établissement d'enseignement et son empreinte numérique est ancrée de manière immuable dans la blockchain.
+              </div>
             </div>
           </div>
 
-          {/* GRILLE DES COMPOSANTS */}
+          {/* GRILLE D'INFORMATION */}
           <div className={styles.grid}>
             
-            {/* Gauche: Données Certifiées */}
+            {/* CARTE GAUCHE : DONNÉES DU DIPLÔME */}
             <div className={styles.leftCard}>
               <div className={styles.watermark}>
-                <span className={`material-symbols-outlined ${styles.watermarkIcon}`}>verified</span>
+                <FiAward className={styles.watermarkIcon} />
               </div>
-              
-              <div className="relative z-10">
-                <div className={styles.cardHeader}>
-                  <h3 className={styles.cardTitle}>
-                    <span className="material-symbols-outlined">description</span>
-                    Données Certifiées
-                  </h3>
-                  <span className={styles.badge}>Licencié</span>
-                </div>
 
-                <div className={styles.dataGrid}>
-                  <div className={styles.field}>
-                    <span className={styles.label}>Titulaire</span>
-                    <span className={styles.valueBold}>Jean-Baptiste KOUAM</span>
-                  </div>
-                  <div className={styles.field}>
-                    <span className={styles.label}>Établissement</span>
-                    <span className={styles.valueBold}>INUBIL / ISTAMA</span>
-                  </div>
-                  <div className={styles.field}>
-                    <span className={styles.label}>Type de Document</span>
-                    <span className={styles.valueNormal}>Licence Professionnelle Métiers de l'Informatique</span>
-                  </div>
-                  <div className={styles.field}>
-                    <span className={styles.label}>Filière / Parcours</span>
-                    <span className={styles.valueNormal}>DAWII - Web Internet et Intranet</span>
-                  </div>
-                  <div className={styles.field}>
-                    <span className={styles.label}>Année Académique</span>
-                    <span className={styles.valueNormal}>2025-2026</span>
-                  </div>
-                  <div className={styles.field}>
-                    <span className={styles.label}>Mention</span>
-                    <span className={styles.valueAccent}>Bien</span>
-                  </div>
-                  <div className={styles.field}>
-                    <span className={styles.label}>Date d'Émission</span>
-                    <span className={styles.valueNormal}>15 Juin 2026</span>
-                  </div>
-                  <div className={styles.field}>
-                    <span className={styles.label}>Numéro Unique</span>
-                    <span className={styles.valueCode}>IV-2026-894-X</span>
-                  </div>
+              <div className={styles.cardHeader}>
+                <div className={styles.cardTitle}>
+                  <FiAward size={22} />
+                  Données Certifiées
                 </div>
-
-                <button className={styles.downloadBtn} onClick={() => window.print()}>
-                  <span className="material-symbols-outlined">picture_as_pdf</span>
-                  Télécharger le rapport de vérification (PDF)
-                </button>
+                <span className={styles.badge}>Authentifié</span>
               </div>
+
+              <div className={styles.dataGrid}>
+                <div className={styles.field}>
+                  <span className={styles.label}>Titulaire</span>
+                  <span className={styles.valueBold}>NGANGUE TSAFACK Belvie Scindie</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Intitulé du Diplôme</span>
+                  <span className={styles.valueNormal}>Licence Professionnelle DAWII</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>ÉtablissementÉmetteur</span>
+                  <span className={styles.valueAccent}>ISTAMA - INUBIL</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Date d'Émission</span>
+                  <span className={styles.valueNormal}>15 Juillet 2025</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Identifiant Unique</span>
+                  <span className={styles.valueCode}>DIP-2025-8942</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Mentions</span>
+                  <span className={styles.valueNormal}>Très Bien</span>
+                </div>
+              </div>
+
+              <button className={styles.downloadBtn}>
+                <FiDownload size={18} />
+                Télécharger le Certificat PDF Officlel
+              </button>
             </div>
 
-            {/* Droite: Preuves de Traçabilité */}
+            {/* CARTE DROITE : PRÉVISUALISATION & QR CODE */}
             <div className={styles.rightCard}>
-              <h3 className={styles.cardTitle} style={{ marginBottom: '24px' }}>Preuves de Traçabilité</h3>
               <div className={styles.previewBox}>
-                <img 
-                  className={styles.previewImg} 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvmcwcS--TPYlOl5qkwuzmP8_UEz_Tj1DLjVAnYQryqVQ5l7wwHVsrmbaScNQi2hP_Cp_ORgsTxJYqMD-LmucuPKIMGcr6HtH2y-s0MYxbKY0AqSaRuJx-1J88MtA3vT2eknTHGX4aP8lm-7OvvoXSi_Bgr_E-2tzI3alZjTlZekGnspu5xYpH8H_UZO7qFbq2hyjsAVlmiAAZrZuVCCxMzrrJysxl-VG-T4Yo0IXEOfH6QinaNA3aWKq4o-nYi2n50YyGgBxD7fLo" 
-                  alt="Aperçu du diplôme"
-                />
+                <img src="/placeholder-diploma.png" alt="Aperçu diplôme" className={styles.previewImg} />
                 <div className={styles.previewOverlay}>
-                  <span className="material-symbols-outlined !text-6xl text-primary/40 mb-2" style={{ color: 'rgba(0,44,83,0.4)' }}>
-                    visibility
-                  </span>
-                  <p className={styles.navLinkActive} style={{ borderBottom: 'none' }}>Prévisualisation Document</p>
+                  <FiAward size={48} color="#062362" />
                 </div>
               </div>
-              
+
               <div className={styles.qrContainer}>
                 <div className={styles.qrBox}>
                   <div className={styles.qrMock}></div>
                 </div>
-                <p className={styles.label} style={{ textTransform: 'none', color: '#42474f' }}>
-                  Scannez ce QR Code pour auditer ce document sur un appareil mobile.
-                </p>
+                <span className={styles.label}>Scannez pour vérifier l'originalité</span>
               </div>
             </div>
 
-            {/* Bas Gauche: Preuves Cryptographiques */}
+            {/* SECTION CRYPTOGRAPHIQUE */}
             <div className={styles.cryptoCard}>
               <div className={styles.cryptoTitleGroup}>
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>lock</span>
-                <h3 className={styles.cardTitle} style={{ color: 'inherit' }}>Preuves Cryptographiques (Immuables)</h3>
+                <FiShield size={22} />
+                <h3>Preuves Cryptographiques</h3>
               </div>
-              
+
               <div className={styles.cryptoList}>
                 <div className={styles.hashRow}>
                   <div>
-                    <span className={styles.hashLabel}>Transaction Hash</span>
-                    <code className={styles.hashCode}>{txHash}</code>
+                    <div className={styles.hashLabel}>Empreinte Numérique du Document (SHA-256)</div>
+                    <div className={styles.hashCode}>{publicTxData.fullTxHash}</div>
                   </div>
                   <button 
-                    className={`${styles.copyBtn} ${copied ? styles.copyBtnSuccess : ''}`} 
-                    onClick={handleCopy}
-                    title="Copier le hash"
+                    className={`${styles.copyBtn} ${copiedField === 'docHash' ? styles.copyBtnSuccess : ''}`}
+                    onClick={() => handleCopy(publicTxData.fullTxHash, 'docHash')}
                   >
-                    <span className="material-symbols-outlined">
-                      {copied ? 'check' : 'content_copy'}
-                    </span>
+                    {copiedField === 'docHash' ? <FiCheck size={16} /> : <FiCopy size={16} />}
                   </button>
                 </div>
 
                 <div className={styles.subCryptoGrid}>
                   <div className={styles.cryptoBlock}>
-                    <span className={styles.hashLabel}>Réseau Blockchain</span>
+                    <div className={styles.hashLabel}>Ancrage Blockchain</div>
                     <div className={styles.networkStatus}>
                       <span className={styles.pulseDot}></span>
-                      <span className={styles.valueBold} style={{ fontSize: '16px' }}>Polygon Mainnet (Amoy Testnet)</span>
+                      <span>Polygon Mainnet (Bloc #6192841)</span>
                     </div>
                   </div>
                   <div className={styles.cryptoBlock}>
-                    <span className={styles.hashLabel}>Stockage Décentralisé</span>
+                    <div className={styles.hashLabel}>Stockage Décentralisé</div>
                     <div className={styles.ipfsStatus}>
-                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>cloud_done</span>
-                      <span className={styles.valueBold} style={{ fontSize: '16px', color: 'inherit' }}>IPFS / Pinata (CID Valide)</span>
+                      <FiCheckCircle size={14} />
+                      <span>Stocké sur IPFS</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Bas Droite: Historique Audit */}
+            {/* HISTORIQUE D'AUDIT */}
             <div className={styles.auditCard}>
-              <h4 className={styles.auditTitle}>Historique d'Audit</h4>
+              <div className={styles.auditTitle}>Piste d'Audit Horodatée</div>
+              
               <div className={styles.timeline}>
                 <div className={styles.timelineItem}>
                   <div className={styles.timelineAxis}>
@@ -200,8 +196,8 @@ export default function Valide() {
                     <div className={styles.timelineLine}></div>
                   </div>
                   <div>
-                    <p className={styles.timelineNodeTitle}>Certifié par ISTAMA</p>
-                    <p className={styles.label} style={{ textTransform: 'none', color: '#42474f', fontWeight: '400' }}>15 Juin 2026 - 10:24 AM</p>
+                    <div className={styles.timelineNodeTitle}>Émission & Signature</div>
+                    <div className={styles.timestampText}>15/07/2025 par le Secrétariat ISTAMA</div>
                   </div>
                 </div>
 
@@ -211,8 +207,8 @@ export default function Valide() {
                     <div className={styles.timelineLine}></div>
                   </div>
                   <div>
-                    <p className={styles.timelineNodeTitle}>Ancrage Blockchain</p>
-                    <p className={styles.label} style={{ textTransform: 'none', color: '#42474f', fontWeight: '400' }}>15 Juin 2026 - 10:26 AM</p>
+                    <div className={styles.timelineNodeTitle}>Ancrage Blockchain</div>
+                    <div className={styles.timestampText}>15/07/2025 à 10:14:22 UTC</div>
                   </div>
                 </div>
 
@@ -221,17 +217,106 @@ export default function Valide() {
                     <div className={styles.timelineDotOutline}></div>
                   </div>
                   <div>
-                    <p className={styles.timelineNodeTitleActive}>Consultation actuelle</p>
-                    <p className={styles.label} style={{ textTransform: 'none', color: '#42474f', fontWeight: '400' }}>Aujourd'hui</p>
+                    <div className={styles.timelineNodeTitleActive}>Dernière Vérification</div>
+                    <div className={styles.timestampText}>Aujourd'hui (Accès public)</div>
                   </div>
                 </div>
               </div>
             </div>
 
           </div>
-
         </div>
       </main>
+
+      {/* MODALE EXPLORATEUR BLOCKCHAIN */}
+      {isExplorerOpen && (
+        <div className={styles.modalOverlay} onClick={() => setIsExplorerOpen(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalTitleGroup}>
+                <span className={styles.modalBadge}>Public</span>
+                <h2>Explorateur de registre</h2>
+              </div>
+              <button 
+                className={styles.closeBtn} 
+                onClick={() => setIsExplorerOpen(false)}
+                aria-label="Fermer"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <p className={styles.modalSubtitle}>
+                Aperçu public de la transaction enregistrée sur le registre décentralisé.
+              </p>
+
+              <div className={styles.txStatusCard}>
+                <div className={styles.txStatusHeader}>
+                  <span className={styles.networkBadge}>
+                    <span className={styles.pulseDot}></span>
+                    {publicTxData.network}
+                  </span>
+                  <span className={styles.confirmedTag}>
+                    <FiCheckCircle size={14} /> {publicTxData.status}
+                  </span>
+                </div>
+                <div className={styles.timestampText}>
+                  Horodatage : {publicTxData.timestamp}
+                </div>
+              </div>
+
+              <div className={styles.infoList}>
+                <div className={styles.infoRow}>
+                  <div>
+                    <span className={styles.infoLabel}>Hash de transaction (TxHash)</span>
+                    <div className={styles.infoValue}>{publicTxData.txHash}</div>
+                  </div>
+                  <button 
+                    className={styles.copyIconButton}
+                    onClick={() => handleCopy(publicTxData.fullTxHash, 'tx')}
+                    title="Copier le hash complet"
+                  >
+                    {copiedField === 'tx' ? <FiCheck color="#16a34a" /> : <FiCopy />}
+                  </button>
+                </div>
+
+                <div className={styles.infoRow}>
+                  <div>
+                    <span className={styles.infoLabel}>Smart Contract (Certificate Registry)</span>
+                    <div className={styles.infoValue}>{publicTxData.contractAddress}</div>
+                  </div>
+                  <button 
+                    className={styles.copyIconButton}
+                    onClick={() => handleCopy(publicTxData.fullContractAddress, 'contract')}
+                    title="Copier l'adresse du contrat"
+                  >
+                    {copiedField === 'contract' ? <FiCheck color="#16a34a" /> : <FiCopy />}
+                  </button>
+                </div>
+
+                <div className={styles.infoRow}>
+                  <div>
+                    <span className={styles.infoLabel}>Émetteur certifié</span>
+                    <div className={styles.infoValue}>{publicTxData.issuerWallet}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/*<div className={styles.modalFooter}>
+              <a 
+                href={`https://polygonscan.com/tx/${publicTxData.fullTxHash}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className={styles.externalScanLink}
+              >
+                Voir sur l'explorateur Polygonscan <FiExternalLink size={14} />
+              </a>
+            </div> */}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

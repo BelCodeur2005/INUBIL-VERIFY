@@ -328,7 +328,7 @@ export default function DashboardDirecteur() {
           )}
 
           {/* Référentiels */}
-          {activeTab === 'referentiels' && (
+          {/*{activeTab === 'referentiels' && (
             <section className={styles.tableCard}>
               <div className={styles.tableHeader}>
                 <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Référentiels</h3>
@@ -337,7 +337,7 @@ export default function DashboardDirecteur() {
                 Types de documents et mentions (GET/POST/PATCH/DELETE /types-document, /mentions).
               </div>
             </section>
-          )}
+          )}  */}
         </main>
       </div>
 

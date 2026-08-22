@@ -466,7 +466,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* Ajoute ces styles à la fin de ton fichier .module.css */
 
 /* Badges d'état dans le tableau de la modale */
 .badgeInclus {

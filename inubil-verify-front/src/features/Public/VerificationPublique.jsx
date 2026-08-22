@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import styles from './VerificationPublique.module.css';
-import Logo_Inubil from '../../assets/Logo_Inubil.png'
+import Logo_Inubil from '../../assets/Logo_Inubil.png';
 
 export default function VerificationPublique() {
   const [isDragActive, setIsDragActive] = useState(false);
@@ -8,14 +8,12 @@ export default function VerificationPublique() {
   const [fileName, setFileName] = useState('');
   const fileInputRef = useRef(null);
 
-  // Déclenche l'explorateur de fichiers au clic sur la zone
   const handleDropzoneClick = () => {
     if (!isLoading && fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Traitement du fichier importé
   const processFile = (file) => {
     if (!file) return;
 
@@ -27,7 +25,6 @@ export default function VerificationPublique() {
     setFileName(file.name);
     setIsLoading(true);
 
-    // Simulation de l'analyse cryptographique sur la blockchain
     setTimeout(() => {
       alert(`Simulation : L'empreinte cryptographique du fichier "${file.name}" a été comparée et validée avec succès sur le registre INUBIL.`);
       setIsLoading(false);
@@ -35,7 +32,6 @@ export default function VerificationPublique() {
     }, 2500);
   };
 
-  // Gestionnaires de Drag & Drop
   const handleDragOver = (e) => {
     e.preventDefault();
     if (!isLoading) setIsDragActive(true);
@@ -65,15 +61,14 @@ export default function VerificationPublique() {
       <div className={styles.blurBg1}></div>
       <div className={styles.blurBg2}></div>
 
-      {/* HEADER ISOLÉ */}
+      {/* HEADER RESTAURÉ À L'ORIGINAL */}
       <header className={styles.header}>
         <div className={styles.headerContainer}>
-          {/* Assurez-vous d'avoir le logo dans votre dossier public ou importé à cet endroit */}
-        <img 
-                      src={Logo_Inubil} 
-                      alt="INUBIL Verify" 
-                      style={{ height: '80px', width: 'auto', objectFit: 'contain' }} 
-        /> 
+          <img 
+            src={Logo_Inubil} 
+            alt="INUBIL Verify" 
+            style={{ height: '80px', width: 'auto', objectFit: 'contain' }} 
+          /> 
         </div>
       </header>
 
@@ -113,7 +108,7 @@ export default function VerificationPublique() {
             {!isLoading ? (
               <>
                 <div className={styles.iconContainer}>
-                  <span className="material-symbols-outlined styles.uploadIcon">cloud_upload</span>
+                  <span className={`material-symbols-outlined ${styles.uploadIcon}`}>cloud_upload</span>
                 </div>
                 
                 <p className={styles.dropTextMain}>
@@ -124,9 +119,8 @@ export default function VerificationPublique() {
                 </p>
               </>
             ) : (
-              /* Écran d'analyse réactif */
               <div className={styles.loaderContainer}>
-                <span className="material-symbols-outlined styles.spinIcon">sync</span>
+                <span className={`material-symbols-outlined ${styles.spinIcon}`}>sync</span>
                 <p className={styles.dropTextMain}>Analyse et extraction de l'empreinte...</p>
                 <p className={styles.loaderFileBadge}>{fileName}</p>
               </div>
@@ -134,7 +128,7 @@ export default function VerificationPublique() {
           </div>
 
           <div className={styles.footerVerified}>
-            <span className="material-symbols-outlined styles.verifiedIcon">verified</span>
+            <span className={`material-symbols-outlined ${styles.verifiedIcon}`}>verified</span>
             <span className={styles.verifiedText}>Technologie Inubil Ledger Protégée</span>
           </div>
         </div>
