@@ -429,18 +429,6 @@ export default function DashboardDirecteur() {
           {/* Révocations */}
           {activeTab === 'revocations' && <Revocations />}
 
-          {/* Référentiels */}
-          {activeTab === 'referentiels' && (
-            <section className={styles.tableCard}>
-              <div className={styles.tableHeader}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Référentiels</h3>
-              </div>
-              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
-                Types de documents et mentions (GET/POST/PATCH/DELETE /types-document, /mentions).
-              </div>
-            </section>
-          )}
-
           {/* MON COMPTE — accessible via le menu de l'avatar, hors navigation principale */}
           {activeTab === 'mon-compte' && <MonCompte roleLabel={roleLabel} />}
         </main>
