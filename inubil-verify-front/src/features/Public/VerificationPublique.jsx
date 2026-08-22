@@ -1,49 +1,86 @@
 import { useState, useRef } from 'react';
 import styles from './VerificationPublique.module.css';
-import Logo_Inubil from '../../assets/Logo_Inubil.png'
+import Logo_Inubil from '../../assets/Logo_Inubil.png';
+import { verifierParUpload, verifierParHash } from '../../core/verify/verify.api';
+import Valide from './Valide';
+import Revoque from './Revoque';
+
+const REGEX_HASH = /^[0-9a-f]{64}$/;
 
 export default function VerificationPublique() {
+  const [mode, setMode] = useState('upload'); // 'upload' | 'hash'
   const [isDragActive, setIsDragActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [hashSaisi, setHashSaisi] = useState('');
+  const [hashVerifie, setHashVerifie] = useState(null);
+  const [erreur, setErreur] = useState(null);
+  const [resultat, setResultat] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Déclenche l'explorateur de fichiers au clic sur la zone
+  const reinitialiser = () => {
+    setResultat(null);
+    setErreur(null);
+    setFileName('');
+    setHashSaisi('');
+    setHashVerifie(null);
+  };
+
   const handleDropzoneClick = () => {
     if (!isLoading && fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Traitement du fichier importé
-  const processFile = (file) => {
+  const processFile = async (file) => {
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      alert('Veuillez sélectionner un fichier PDF uniquement.');
+      setErreur('Veuillez sélectionner un fichier PDF uniquement.');
       return;
     }
 
+    setErreur(null);
     setFileName(file.name);
+    setHashVerifie(null); // le hash est calcule cote serveur, jamais expose au client pour ce flux
     setIsLoading(true);
-
-    // Simulation de l'analyse cryptographique sur la blockchain
-    setTimeout(() => {
-      alert(`Simulation : L'empreinte cryptographique du fichier "${file.name}" a été comparée et validée avec succès sur le registre INUBIL.`);
+    try {
+      const res = await verifierParUpload(file);
+      setResultat(res);
+    } catch (err) {
+      setErreur(err.message ?? 'La vérification a échoué. Réessayez.');
+    } finally {
       setIsLoading(false);
       setFileName('');
-    }, 2500);
+    }
   };
 
-  // Gestionnaires de Drag & Drop
+  const soumettreHash = async (e) => {
+    e.preventDefault();
+    const h = hashSaisi.trim().toLowerCase();
+    if (!REGEX_HASH.test(h)) {
+      setErreur('Le hash doit être un SHA-256 hexadécimal de 64 caractères.');
+      return;
+    }
+    setErreur(null);
+    setHashVerifie(h);
+    setIsLoading(true);
+    try {
+      const res = await verifierParHash(h);
+      setResultat(res);
+    } catch (err) {
+      setErreur(err.message ?? 'La vérification a échoué. Réessayez.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleDragOver = (e) => {
     e.preventDefault();
     if (!isLoading) setIsDragActive(true);
   };
 
-  const handleDragLeave = () => {
-    setIsDragActive(false);
-  };
+  const handleDragLeave = () => setIsDragActive(false);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -59,28 +96,35 @@ export default function VerificationPublique() {
     }
   };
 
+  if (resultat) {
+    return resultat.resultat === 'authentique' ? (
+      <Valide document={resultat.document} blockchain={resultat.blockchain} verifieLe={resultat.verifie_le} onNouvelleVerification={reinitialiser} />
+    ) : (
+      <Revoque
+        resultat={resultat.resultat}
+        message={resultat.message}
+        hashSoumis={hashVerifie}
+        blockchain={resultat.blockchain}
+        verifieLe={resultat.verifie_le}
+        onRetry={reinitialiser}
+        onNouvelleVerification={reinitialiser}
+      />
+    );
+  }
+
   return (
     <div className={styles.page}>
-      {/* Effets lumineux d'arrière-plan */}
       <div className={styles.blurBg1}></div>
       <div className={styles.blurBg2}></div>
 
-      {/* HEADER ISOLÉ */}
       <header className={styles.header}>
         <div className={styles.headerContainer}>
-          {/* Assurez-vous d'avoir le logo dans votre dossier public ou importé à cet endroit */}
-        <img 
-                      src={Logo_Inubil} 
-                      alt="INUBIL Verify" 
-                      style={{ height: '80px', width: 'auto', objectFit: 'contain' }} 
-        /> 
+          <img src={Logo_Inubil} alt="INUBIL Verify" style={{ height: '80px', width: 'auto', objectFit: 'contain' }} />
         </div>
       </header>
 
-      {/* CONTENU PRINCIPAL */}
       <main className={styles.main}>
-        
-        {/* Module de vérification */}
+
         <div className={styles.card}>
           <div className={styles.textCenter}>
             <div className={styles.badge}>
@@ -89,59 +133,94 @@ export default function VerificationPublique() {
             </div>
             <h1 className={styles.title}>Vérification de Diplôme</h1>
             <p className={styles.subtitle}>
-              Déposez une attestation numérique ou un diplôme au format PDF pour vérifier instantanément son authenticité et son ancrage immuable.
+              Déposez une attestation numérique au format PDF, ou collez directement son empreinte SHA-256,
+              pour vérifier instantanément son authenticité et son ancrage immuable.
             </p>
           </div>
 
-          {/* DROPZONE DYNAMIQUE */}
-          <div 
-            className={`${styles.dropzone} ${isDragActive ? styles.dropzoneActive : ''}`}
-            onClick={handleDropzoneClick}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <input 
-              type="file"
-              accept=".pdf" 
-              className={styles.fileInputHidden} 
-              ref={fileInputRef}
-              onChange={handleInputChange}
-              disabled={isLoading}
-            />
-            
-            {!isLoading ? (
-              <>
-                <div className={styles.iconContainer}>
-                  <span className="material-symbols-outlined styles.uploadIcon">cloud_upload</span>
-                </div>
-                
-                <p className={styles.dropTextMain}>
-                  Glissez votre fichier PDF ici ou <span className={styles.browseText}>parcourez vos fichiers</span>
-                </p>
-                <p className={styles.dropTextSub}>
-                  Fichiers PDF officiels signés uniquement (Max. 10 Mo)
-                </p>
-              </>
-            ) : (
-              /* Écran d'analyse réactif */
-              <div className={styles.loaderContainer}>
-                <span className="material-symbols-outlined styles.spinIcon">sync</span>
-                <p className={styles.dropTextMain}>Analyse et extraction de l'empreinte...</p>
-                <p className={styles.loaderFileBadge}>{fileName}</p>
-              </div>
-            )}
+          <div className={styles.modeToggle}>
+            <button
+              type="button"
+              className={mode === 'upload' ? styles.modeBtnActive : styles.modeBtn}
+              onClick={() => { setMode('upload'); setErreur(null); }}
+            >
+              Téléverser un PDF
+            </button>
+            <button
+              type="button"
+              className={mode === 'hash' ? styles.modeBtnActive : styles.modeBtn}
+              onClick={() => { setMode('hash'); setErreur(null); }}
+            >
+              Coller un hash SHA-256
+            </button>
           </div>
 
+          {erreur && <div className={styles.errorBanner}>
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>error</span>
+            {erreur}
+          </div>}
+
+          {mode === 'upload' ? (
+            <div
+              className={`${styles.dropzone} ${isDragActive ? styles.dropzoneActive : ''}`}
+              onClick={handleDropzoneClick}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <input
+                type="file"
+                accept=".pdf"
+                className={styles.fileInputHidden}
+                ref={fileInputRef}
+                onChange={handleInputChange}
+                disabled={isLoading}
+              />
+
+              {!isLoading ? (
+                <>
+                  <div className={styles.iconContainer}>
+                    <span className={`material-symbols-outlined ${styles.uploadIcon}`}>cloud_upload</span>
+                  </div>
+                  <p className={styles.dropTextMain}>
+                    Glissez votre fichier PDF ici ou <span className={styles.browseText}>parcourez vos fichiers</span>
+                  </p>
+                  <p className={styles.dropTextSub}>
+                    Fichiers PDF officiels signés uniquement (Max. 20 Mo)
+                  </p>
+                </>
+              ) : (
+                <div className={styles.loaderContainer}>
+                  <span className={`material-symbols-outlined ${styles.spinIcon}`}>sync</span>
+                  <p className={styles.dropTextMain}>Analyse et extraction de l'empreinte...</p>
+                  <p className={styles.loaderFileBadge}>{fileName}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <form className={styles.hashForm} onSubmit={soumettreHash}>
+              <input
+                type="text"
+                className={styles.hashInput}
+                placeholder="a3f9c2d1e8b74f560ab12c3d4e5f6789..."
+                value={hashSaisi}
+                onChange={(e) => setHashSaisi(e.target.value)}
+                disabled={isLoading}
+                maxLength={64}
+              />
+              <button type="submit" className={styles.hashSubmitBtn} disabled={isLoading || !hashSaisi.trim()}>
+                {isLoading ? 'Vérification en cours…' : 'Vérifier ce hash'}
+              </button>
+            </form>
+          )}
+
           <div className={styles.footerVerified}>
-            <span className="material-symbols-outlined styles.verifiedIcon">verified</span>
+            <span className={`material-symbols-outlined ${styles.verifiedIcon}`}>verified</span>
             <span className={styles.verifiedText}>Technologie Inubil Ledger Protégée</span>
           </div>
         </div>
 
-        {/* SECTION EXPLICATIVE DES ÉTAPES */}
         <div className={styles.stepsGrid}>
-          {/* Étape 1 */}
           <div className={styles.stepCard}>
             <div className={styles.stepNumber}>01</div>
             <div className={styles.stepIconBox}>
@@ -150,8 +229,7 @@ export default function VerificationPublique() {
             <h3 className={styles.stepTitle}>Déposer le PDF</h3>
             <p className={styles.stepDesc}>Glissez l'attestation numérique reçue de l'établissement.</p>
           </div>
-          
-          {/* Étape 2 */}
+
           <div className={styles.stepCard}>
             <div className={styles.stepNumber}>02</div>
             <div className={styles.stepIconBox}>
@@ -160,8 +238,7 @@ export default function VerificationPublique() {
             <h3 className={styles.stepTitle}>Calcul de l'Empreinte</h3>
             <p className={styles.stepDesc}>Extraction immédiate du hachage cryptographique du document.</p>
           </div>
-          
-          {/* Étape 3 (Mise en avant) */}
+
           <div className={styles.stepCardDark}>
             <div className={styles.stepNumberDark}>03</div>
             <div className={styles.stepIconBoxDark}>
@@ -174,7 +251,6 @@ export default function VerificationPublique() {
 
       </main>
 
-      {/* FOOTER */}
       <footer className={styles.footer}>
         <div className={styles.footerContainer}>
           <p>© 2026 INUBIL Verify. Tous droits réservés.</p>

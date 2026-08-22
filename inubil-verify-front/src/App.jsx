@@ -8,8 +8,7 @@ import ForgotPassword from "./features/auth/forgot-password/ForgotPassword";
 import ResetPassword from './features/auth/reset-password/ResetPassword';
 import DashboardEtablissement from './features/universite/dashboard/DashboardEtablissement'; 
 import VerificationPublique from './features/Public/VerificationPublique';
-import Revoque from './features/Public/Revoque';
-import Valide from './features/Public/Valide';
+import Verification from './features/Public/Verification';
 import DashboardEtudiant from './features/Etudiant/DashboardEtudiant';
 import DashboardDirecteur from './features/DashboardDirecteur/DashboardDirecteur';
 import AdminInubil from './features/AdminInubil/AdminInubil';
@@ -57,10 +56,9 @@ export default function App() {
         {/* 4. DASHBOARD ADMIN INUBIL */}
         <Route path="/admin-inubil" element={<AdminInubil />} />
 
-        {/* Route isolée pour accéder directement à la vérification publique    */}
-        <Route path="/verification-publique" element={<VerificationPublique />} /> {/* http://localhost:5173/verification-publique */}
-        <Route path="/revoque" element={<Revoque />} />  {/*http://localhost:5173/verification-publique */}
-        <Route path="/valide" element={<Valide />} />    {/* http://localhost:5173/valide*/}
+        {/* Vérification publique — formulaire upload/hash + résultat par lien/QR (GET /verify/:identifiant) */}
+        <Route path="/verification-publique" element={<VerificationPublique />} />
+        <Route path="/d/:identifiant" element={<Verification />} />
         <Route path="/dashboard-etudiant" element={<DashboardEtudiant />} />
 
 

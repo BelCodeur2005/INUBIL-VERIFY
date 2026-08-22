@@ -52,9 +52,9 @@
 }
 
 .navLinkActive {
-  color: #0a4275;
+  color: #002c53;
   font-weight: 700;
-  border-bottom: 2px solid #0a4275;
+  border-bottom: 2px solid #002c53;
   padding-top: 4px;
   padding-bottom: 4px;
   text-decoration: none;
@@ -71,14 +71,14 @@
 }
 
 .connexionBtn {
-  background-color: #0a4275;
+  background-color: #002c53;
   color: #ffffff;
   padding: 8px 24px;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  border-radius: 8px;
+  border-radius: 4px;
   border: none;
   cursor: pointer;
   transition: opacity 0.2s;
@@ -156,7 +156,7 @@
 .leftCol {
   background-color: #ffffff;
   border: 1px solid rgba(194, 198, 209, 0.3);
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 40px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   position: relative;
@@ -212,7 +212,7 @@
 .reportTitle {
   font-size: 20px;
   font-weight: 600;
-  color: #0a4275;
+  color: #002c53;
 }
 
 .statusBadge {
@@ -310,7 +310,7 @@
 .hashContainer {
   background-color: #f3f4f5;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 4px;
   border: 1px solid #c2c6d1;
   display: flex;
   align-items: center;
@@ -326,7 +326,7 @@
 }
 
 .copyBtn {
-  color: #0a4275;
+  color: #002c53;
   background: none;
   border: none;
   cursor: pointer;
@@ -363,11 +363,11 @@
 .retryBtn {
   width: 100%;
   padding: 12px 40px;
-  border: 2px solid #0a4275;
+  border: 2px solid #002c53;
   background-color: transparent;
-  color: #0a4275;
+  color: #002c53;
   font-weight: 700;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -379,7 +379,7 @@
 }
 
 .retryBtn:hover {
-  background-color: #0a4275;
+  background-color: #002c53;
   color: #ffffff;
 }
 
@@ -391,7 +391,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #0a4275;
+  color: #002c53;
   font-weight: 700;
   text-decoration: none;
 }
@@ -415,7 +415,7 @@
 
 .explanationBox {
   background-color: #edeeef;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 40px;
   border: 1px solid rgba(194, 198, 209, 0.3);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -425,7 +425,7 @@
 .explanationTitle {
   font-size: 20px;
   font-weight: 600;
-  color: #0a4275;
+  color: #002c53;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -448,7 +448,7 @@
 
 .cardTitle {
   font-weight: 700;
-  color: #0a4275;
+  color: #002c53;
   margin-bottom: 4px;
 }
 

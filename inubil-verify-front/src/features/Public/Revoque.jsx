@@ -1,36 +1,67 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Revoque.module.css';
-import Logo_Inubil from '../../assets/Logo_Inubil.png'
+import Logo_Inubil from '../../assets/Logo_Inubil.png';
 
-export default function VerificationEchec() {
-  const [copied, setCopied] = useState(false);
+const LABELS_RESEAU = {
+  polygon_amoy: 'Polygon Amoy (Testnet)',
+  polygon_mainnet: 'Polygon Mainnet',
+};
+
+const TITRES_RESULTAT = {
+  revoque: 'DOCUMENT RÉVOQUÉ',
+  non_trouve: 'DOCUMENT INTROUVABLE',
+  falsifie: 'DOCUMENT NON AUTHENTIQUE',
+};
+
+const STATUTS_RESULTAT = {
+  revoque: 'RÉVOQUÉ',
+  non_trouve: 'INTROUVABLE',
+  falsifie: 'NON AUTHENTIQUE',
+};
+
+function fmtDateHeure(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('fr-FR', {
+    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+/**
+ * Rendu des resultats "revoque" / "non_trouve" / "falsifie" de la verification publique.
+ * onRetry par defaut renvoie vers le formulaire ; on peut le remplacer (ex: reset local
+ * quand ce composant est affiche en ligne apres un upload/hash raté).
+ */
+export default function Revoque({ resultat, message, hashSoumis, blockchain, verifieLe, onRetry, onNouvelleVerification }) {
+  const [copie, setCopie] = useState(false);
   const navigate = useNavigate();
-  const fileHash = "0x3f89a77b129c55d04823194098273b9c12a8932";
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(fileHash);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (!hashSoumis) return;
+    navigator.clipboard.writeText(hashSoumis);
+    setCopie(true);
+    setTimeout(() => setCopie(false), 2000);
   };
+
+  const reessayer = () => (onRetry ? onRetry() : navigate('/verification-publique'));
 
   return (
     <div className={styles.page}>
-      {/* TopAppBar NATIVE ET ISOLÉE */}
       <header className={styles.header}>
         <div className={styles.headerContainer}>
           <div className="flex items-start">
-            <img 
-                                  src={Logo_Inubil} 
-                                  alt="INUBIL Verify" 
-                                  style={{ height: '80px', width: 'auto', objectFit: 'contain' }} 
-            />
+            <img src={Logo_Inubil} alt="INUBIL Verify" style={{ height: '80px', width: 'auto', objectFit: 'contain' }} />
           </div>
-          <div className={styles.navGroup} id="header-nav-group">
-            <nav className="hidden md:flex items-center gap-6">
-              <span className={styles.navLinkActive}>Vérification</span>
-              <a className={styles.navLink} href="#">Explorer</a>
-              <a className={styles.navLink} href="#">Services</a>
+          <div className={styles.navGroup}>
+            <nav>
+              <button
+                type="button"
+                className={styles.navLink}
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                onClick={() => (onNouvelleVerification ? onNouvelleVerification() : navigate('/verification-publique'))}
+              >
+                Nouvelle vérification
+              </button>
             </nav>
             <button className={styles.connexionBtn} onClick={() => navigate('/login')}>
               Connexion
@@ -39,34 +70,26 @@ export default function VerificationEchec() {
         </div>
       </header>
 
-      {/* CONTENU CENTRAL DE L'ÉCHEC */}
       <main className={styles.main}>
         <div className={styles.mainContainer}>
-          
-          {/* Bannière d'Alerte Générale */}
+
           <div className={styles.banner}>
             <span className={`material-symbols-outlined ${styles.bannerIcon}`} style={{ fontVariationSettings: '"FILL" 1' }}>
               warning
             </span>
-            <div className="space-y-1">
-              <h2 className={styles.bannerTitle}>
-                ATTENTION : DOCUMENT NON AUTHENTIQUE OU RÉVOQUÉ
-              </h2>
-              <p className={styles.bannerDesc}>
-                Le système n'a trouvé aucune correspondance blockchain valide pour cette empreinte, ou ce diplôme a été invalidé par l'administration émettrice.
-              </p>
+            <div>
+              <h2 className={styles.bannerTitle}>{TITRES_RESULTAT[resultat] ?? 'DOCUMENT NON AUTHENTIQUE'}</h2>
+              <p className={styles.bannerDesc}>{message}</p>
             </div>
           </div>
 
-          {/* Grille principale à deux colonnes */}
           <div className={styles.grid}>
-            
-            {/* Colonne Gauche: Rapport détaillé */}
+
             <div className={styles.leftCol}>
               <div className={styles.sealWatermark}>
                 <span className={`material-symbols-outlined ${styles.sealIcon}`}>gpp_maybe</span>
               </div>
-              
+
               <div className={styles.reportContent}>
                 <div className={styles.reportHeader}>
                   <h3 className={styles.reportTitle}>Rapport d'Analyse d'Intégrité</h3>
@@ -81,44 +104,47 @@ export default function VerificationEchec() {
                     <div className={styles.infoGroup}>
                       <div>
                         <span className={styles.label}>Statut du Traitement</span>
-                        <span className={styles.valueAlert}>ÉCHOUÉ / INVALIDE</span>
+                        <span className={styles.valueAlert}>{STATUTS_RESULTAT[resultat] ?? 'ÉCHOUÉ'}</span>
                       </div>
                       <div>
                         <span className={styles.label}>Date d'Analyse</span>
-                        <span className={styles.valueText}>24 Mai 2024 - 14:32:10 GMT</span>
+                        <span className={styles.valueText}>{fmtDateHeure(verifieLe)}</span>
                       </div>
                     </div>
-                    <div className={styles.infoGroup}>
-                      <div>
-                        <span className={styles.label}>Réseau de Vérification</span>
-                        <span className={styles.networkValue}>
-                          <span className={`material-symbols-outlined ${styles.networkIcon}`}>hub</span>
-                          Polygon Proof of Stake (Mainnet)
-                        </span>
+                    {blockchain && (
+                      <div className={styles.infoGroup}>
+                        <div>
+                          <span className={styles.label}>Réseau de Vérification</span>
+                          <span className={styles.networkValue}>
+                            <span className={`material-symbols-outlined ${styles.networkIcon}`}>hub</span>
+                            {LABELS_RESEAU[blockchain.reseau] ?? blockchain.reseau}
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  <div>
-                    <span className={styles.label}>Empreinte Numérique (Hash SHA-256)</span>
-                    <div className={styles.hashContainer}>
-                      <code className={styles.hashCode}>{fileHash}</code>
-                      <button 
-                        className={`${styles.copyBtn} ${copied ? styles.copyBtnSuccess : ''}`} 
-                        onClick={handleCopy} 
-                        title="Copier le hash"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                          {copied ? 'check' : 'content_copy'}
-                        </span>
-                      </button>
+                  {hashSoumis && (
+                    <div>
+                      <span className={styles.label}>Empreinte Numérique (Hash SHA-256)</span>
+                      <div className={styles.hashContainer}>
+                        <code className={styles.hashCode}>{hashSoumis}</code>
+                        <button
+                          className={`${styles.copyBtn} ${copie ? styles.copyBtnSuccess : ''}`}
+                          onClick={handleCopy}
+                          title="Copier le hash"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                            {copie ? 'check' : 'content_copy'}
+                          </span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
-                {/* Actions contextuelles */}
                 <div className={styles.actionsBar}>
-                  <button className={styles.retryBtn} onClick={() => navigate('/verification-publique')}>
+                  <button className={styles.retryBtn} onClick={reessayer}>
                     Réessayer la vérification
                   </button>
                   <a className={styles.supportLink} href="mailto:support@inubil-verify.ac">
@@ -129,7 +155,6 @@ export default function VerificationEchec() {
               </div>
             </div>
 
-            {/* Colonne Droite: Raisons de l'échec */}
             <div className={styles.rightCol}>
               <div className={styles.explanationBox}>
                 <h4 className={styles.explanationTitle}>
@@ -155,7 +180,6 @@ export default function VerificationEchec() {
 
           </div>
 
-          {/* Journalisation de sécurité en bas */}
           <div className={styles.bottomContainer}>
             <p className={styles.bottomText}>
               <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>lock_clock</span>
