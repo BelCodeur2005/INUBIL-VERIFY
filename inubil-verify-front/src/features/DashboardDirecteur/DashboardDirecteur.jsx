@@ -1,52 +1,162 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../core/auth/useAuth';
+import AccountMenu from '../../shared/components/AccountMenu/AccountMenu';
+import MonCompte from '../../shared/components/MonCompte/MonCompte';
+import EmissionDiplome from '../../shared/components/EmissionDiplome/EmissionDiplome';
+import FicheEtudiant from '../../shared/components/FicheEtudiant/FicheEtudiant';
+import ListeDocuments from '../../shared/components/ListeDocuments/ListeDocuments';
+import FileValidation from '../../shared/components/FileValidation/FileValidation';
+import Revocations from '../../shared/components/Revocations/Revocations';
+import { listerDocuments } from '../../core/documents/documents.api';
+import { getStatistiquesGlobales } from '../../core/admin/admin.api';
+import { listerTypesDocument } from '../../core/types-document/types-document.api';
+import { getEtudiant } from '../../core/etudiants/etudiants.api';
 import styles from './DashboardDirecteur.module.css';
+
+const LABELS_STATUT = {
+  brouillon: 'Brouillon',
+  en_validation: 'En validation',
+  actif: 'Validé',
+  revoque: 'Révoqué',
+  rejete: 'Rejeté',
+  expire: 'Expiré',
+};
+
+const CLASSES_STATUT = {
+  brouillon: styles.statusPending,
+  en_validation: styles.statusPending,
+  actif: styles.statusSealed,
+  revoque: styles.statusRevoked,
+  rejete: styles.statusRevoked,
+  expire: styles.statusExpired,
+};
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function fmtNombre(n) {
+  if (n === null || n === undefined) return '—';
+  return n.toLocaleString('fr-FR');
+}
 
 export default function DashboardDirecteur() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [signingStates, setSigningStates] = useState({});
   const { utilisateur, logout } = useAuth();
 
   const prenom = utilisateur?.prenom ?? '';
   const nom = utilisateur?.nom ?? '';
-  const initiales = `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || '··';
   const roleLabel = utilisateur?.role?.nom === 'directeur_pedagogique' ? 'Directeur Pédagogique' : (utilisateur?.role?.nom ?? '');
 
   const handleLogout = async () => {
     await logout();
   };
-  const [selectedManifeste, setSelectedManifeste] = useState(null);
-  const [previewDiplome, setPreviewDiplome] = useState(null);
 
-  const [etudiantsList, setEtudiantsList] = useState([
-    { id: 1, nom: 'KOUAM Jean', matricule: '21U043', dateNaissance: '12/04/2001', diplome: 'Licence Pro DAWII', mention: 'Bien', moyenne: '15.5/20', hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', statut: 'INCLUS' },
-    { id: 2, nom: 'MBALLA Sandrine', matricule: '21U044', dateNaissance: '05/09/2002', diplome: 'Licence Pro DAWII', mention: 'Assez Bien', moyenne: '14.2/20', hash: '8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4', statut: 'INCLUS' },
-    { id: 3, nom: 'TCHOUA Paul', matricule: '21U045', dateNaissance: '18/11/2000', diplome: 'Licence Pro DAWII', mention: 'Très Bien', moyenne: '16.0/20', hash: 'a132470870f7a79e6022e339174092b77a94154b73e86c05a109a13b482d8c3c', statut: 'INCLUS' },
-    { id: 4, nom: 'EBONE Christine', matricule: '21U046', dateNaissance: '30/01/2002', diplome: 'Licence Pro DAWII', mention: 'Passable', moyenne: '13.8/20', hash: '6c58793b58602b11d8847842e47805126f3e0988523ef21f92e92c22253303fa', statut: 'INCLUS' },
-  ]);
+  // Compte reel des documents en attente de validation, pour le badge de la sidebar.
+  const [enAttenteCount, setEnAttenteCount] = useState(0);
+  useEffect(() => {
+    Promise.all([
+      listerDocuments({ statut: 'brouillon', limit: 1 }),
+      listerDocuments({ statut: 'en_validation', limit: 1 }),
+    ])
+      .then(([a, b]) => setEnAttenteCount((a.total ?? 0) + (b.total ?? 0)))
+      .catch(() => {});
+  }, [activeTab]);
 
-  const toggleStudentStatus = (id) => {
-    setEtudiantsList((prev) =>
-      prev.map((etud) =>
-        etud.id === id
-          ? { ...etud, statut: etud.statut === 'INCLUS' ? 'EXCLU' : 'INCLUS' }
-          : etud
-      )
-    );
-  };
+  // Donnees reelles de la Vue d'Ensemble (KPIs + activite recente) — remplace les chiffres fictifs.
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [validesCeMois, setValidesCeMois] = useState(0);
+  const [rejetesCeMois, setRejetesCeMois] = useState(0);
+  const [premierEnAttente, setPremierEnAttente] = useState(null);
+  const [activitesRecentes, setActivitesRecentes] = useState([]);
+  const [activitesLoading, setActivitesLoading] = useState(true);
 
-  const handleSign = (id) => {
-    setSigningStates((prev) => ({ ...prev, [id]: 'loading' }));
-    setTimeout(() => {
-      setSigningStates((prev) => ({ ...prev, [id]: 'signed' }));
-      setSelectedManifeste(null);
-    }, 1500);
-  };
+  useEffect(() => {
+    if (activeTab !== 'dashboard') return;
+    let annule = false;
 
-  const handleRefuse = (id) => {
-    setSigningStates((prev) => ({ ...prev, [id]: 'refused' }));
-    setSelectedManifeste(null);
-  };
+    (async () => {
+      setStatsLoading(true);
+      setActivitesLoading(true);
+
+      const debutMois = new Date();
+      debutMois.setDate(1);
+      const debutMoisIso = debutMois.toISOString().slice(0, 10);
+
+      try {
+        const [statsGlobales, valides, rejetes, enValidation, recents, typesDoc] = await Promise.all([
+          getStatistiquesGlobales(),
+          listerDocuments({ statut: 'actif', dateDebut: debutMoisIso, limit: 1 }),
+          listerDocuments({ statut: 'rejete', dateDebut: debutMoisIso, limit: 1 }),
+          listerDocuments({ statut: 'en_validation', limit: 1 }),
+          listerDocuments({ limit: 5 }),
+          listerTypesDocument(),
+        ]);
+        if (annule) return;
+
+        setStats(statsGlobales);
+        setValidesCeMois(valides.total ?? 0);
+        setRejetesCeMois(rejetes.total ?? 0);
+
+        const typesParId = Object.fromEntries(typesDoc.map((t) => [t.id, t.nom]));
+
+        let candidat = enValidation.items?.[0] ?? null;
+        if (!candidat) {
+          const brouillons = await listerDocuments({ statut: 'brouillon', limit: 1 });
+          candidat = brouillons.items?.[0] ?? null;
+        }
+
+        const idsEtudiants = new Set(recents.items.map((d) => d.etudiant_id));
+        if (candidat) idsEtudiants.add(candidat.etudiant_id);
+
+        const etudiantsParId = {};
+        await Promise.all(
+          [...idsEtudiants].map(async (id) => {
+            const e = await getEtudiant(id).catch(() => null);
+            if (e) etudiantsParId[id] = e;
+          }),
+        );
+        if (annule) return;
+
+        const nomEtudiant = (id) =>
+          etudiantsParId[id] ? `${etudiantsParId[id].prenom} ${etudiantsParId[id].nom}` : '—';
+
+        setPremierEnAttente(
+          candidat
+            ? { type: typesParId[candidat.type_document_id] ?? 'Document', etudiant: nomEtudiant(candidat.etudiant_id) }
+            : null,
+        );
+
+        setActivitesRecentes(
+          recents.items.map((d) => ({
+            id: d.id,
+            numero: d.numero_unique,
+            statut: d.statut,
+            type: typesParId[d.type_document_id] ?? 'Document',
+            etudiant: nomEtudiant(d.etudiant_id),
+            date: d.created_at,
+          })),
+        );
+      } catch {
+        // La vue reste sur ses valeurs par defaut (0 / listes vides) si un appel echoue.
+      } finally {
+        if (!annule) {
+          setStatsLoading(false);
+          setActivitesLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      annule = true;
+    };
+  }, [activeTab]);
+
+  const tauxRejet = validesCeMois + rejetesCeMois > 0
+    ? ((rejetesCeMois / (validesCeMois + rejetesCeMois)) * 100).toFixed(1)
+    : null;
 
   return (
     <div className={styles.dashboardContainer}>
@@ -100,7 +210,7 @@ export default function DashboardDirecteur() {
               <span className="material-symbols-outlined">pending_actions</span>
               <span>File de Validation</span>
             </div>
-            <span className={styles.badgeGold}>01</span>
+            {enAttenteCount > 0 && <span className={styles.badgeGold}>{enAttenteCount}</span>}
           </button>
           <button
             className={activeTab === 'revocations' ? styles.navItemActive : styles.navItem}
@@ -135,7 +245,6 @@ export default function DashboardDirecteur() {
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
               </svg>
-              <span className={styles.notifBadge}>3</span>
             </button>
             <button className={styles.iconBtn}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -143,20 +252,19 @@ export default function DashboardDirecteur() {
                 <path d="M3.51 15a9 9 0 1 0 .49-4"/>
               </svg>
             </button>
-            <div className={styles.userInfo}>
-              <div className={styles.userTexts}>
-                <span className={styles.userName}>{`${prenom} ${nom}`.trim() || 'Utilisateur'}</span>
-                <span className={styles.userRole}>{roleLabel}</span>
-              </div>
-              <div className={styles.avatar}>{initiales}</div>
-              <button type="button" onClick={handleLogout} className={styles.iconBtn} title="Se déconnecter">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
-                </svg>
-              </button>
-            </div>
+            <AccountMenu
+              prenom={prenom}
+              nom={nom}
+              roleLabel={roleLabel}
+              onOpenAccount={() => setActiveTab('mon-compte')}
+            />
+            <button type="button" onClick={handleLogout} className={styles.iconBtn} title="Se déconnecter">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
           </div>
         </header>
 
@@ -179,26 +287,49 @@ export default function DashboardDirecteur() {
             </div>
           </div>
 
-          {/* Grille Bento */}
+          {/* Grille Bento — donnees reelles (GET /admin/statistiques + GET /documents) */}
           <section className={styles.bentoGrid}>
             <div className={styles.bentoCard} style={{ gridColumn: 'span 5' }}>
               <div>
-                <span style={{ padding: '0.25rem 0.75rem', backgroundColor: 'rgba(186, 26, 26, 0.1)', color: 'var(--error)', fontSize: '0.65rem', fontWeight: 'bold', borderRadius: '9999px', textTransform: 'uppercase' }}>
-                  Action Immédiate
-                </span>
+                {enAttenteCount > 0 ? (
+                  <span style={{ padding: '0.25rem 0.75rem', backgroundColor: 'rgba(186, 26, 26, 0.1)', color: 'var(--error)', fontSize: '0.65rem', fontWeight: 'bold', borderRadius: '9999px', textTransform: 'uppercase' }}>
+                    Action Immédiate
+                  </span>
+                ) : (
+                  <span style={{ padding: '0.25rem 0.75rem', backgroundColor: 'rgba(74, 223, 158, 0.15)', color: 'var(--on-tertiary-container)', fontSize: '0.65rem', fontWeight: 'bold', borderRadius: '9999px', textTransform: 'uppercase' }}>
+                    À Jour
+                  </span>
+                )}
                 <p style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--on-surface-variant)', textTransform: 'uppercase', marginTop: '0.75rem' }}>
                   DIPLÔMES EN ATTENTE DE VALIDATION
                 </p>
-                <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--primary)', margin: '0.25rem 0' }}>1 Diplôme</h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>(Licence Pro DAWII)</p>
+                {enAttenteCount > 0 ? (
+                  <>
+                    <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--primary)', margin: '0.25rem 0' }}>
+                      {enAttenteCount} diplôme{enAttenteCount > 1 ? 's' : ''}
+                    </h3>
+                    {premierEnAttente && (
+                      <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
+                        Le plus ancien : {premierEnAttente.type} — {premierEnAttente.etudiant}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--primary)', margin: '0.25rem 0' }}>Aucun en attente</h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>Tous les documents soumis ont été traités.</p>
+                  </>
+                )}
               </div>
 
-              <button
-                className={styles.btnSign}
-                onClick={() => setActiveTab('validation')}
-              >
-                <span className="material-symbols-outlined">visibility</span> Voir la File de Validation
-              </button>
+              {enAttenteCount > 0 && (
+                <button
+                  className={styles.btnSign}
+                  onClick={() => setActiveTab('validation')}
+                >
+                  <span className="material-symbols-outlined">visibility</span> Voir la File de Validation
+                </button>
+              )}
             </div>
 
             <div className={styles.bentoCard} style={{ gridColumn: 'span 4' }}>
@@ -207,251 +338,101 @@ export default function DashboardDirecteur() {
                   DOCUMENTS VALIDÉS CE MOIS
                 </p>
                 <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)', margin: '0.5rem 0 0.25rem 0' }}>
-                  450
+                  {statsLoading ? '…' : fmtNombre(validesCeMois)}
                 </h3>
-                <p style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', margin: 0 }}>Taux de rejet : <strong>2,1%</strong></p>
+                <p style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', margin: 0 }}>
+                  Taux de rejet : <strong>{tauxRejet !== null ? `${tauxRejet}%` : '—'}</strong>
+                </p>
               </div>
             </div>
 
             <div className={styles.bentoCard} style={{ gridColumn: 'span 3' }}>
               <div>
                 <p style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--on-surface-variant)', textTransform: 'uppercase', margin: 0 }}>
-                  DIPLÔMES ÉMIS
+                  DIPLÔMES ÉMIS (TOTAL)
                 </p>
                 <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--primary)', margin: '0.5rem 0 0.25rem 0' }}>
-                  14,250
+                  {statsLoading ? '…' : fmtNombre(stats?.documents?.actifs)}
                 </h3>
-                <p style={{ fontSize: '0.7rem', color: 'var(--on-tertiary-container)', fontWeight: 'bold', margin: 0 }}>+450 ce mois-ci</p>
+                <p style={{ fontSize: '0.7rem', color: 'var(--on-tertiary-container)', fontWeight: 'bold', margin: 0 }}>
+                  +{fmtNombre(validesCeMois)} ce mois-ci
+                </p>
               </div>
               <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', borderTop: '1px solid var(--outline-variant)', paddingTop: '0.5rem' }}>
-                Taux de vérification publique : <strong>98.4%</strong>
+                Vérifications publiques : <strong>{fmtNombre(stats?.verifications?.total)}</strong>
+                {' '}({fmtNombre(stats?.verifications?.ce_mois)} ce mois-ci)
               </div>
             </div>
+          </section>
+
+          {/* Activité récente — 5 derniers documents créés (GET /documents?limit=5) */}
+          <section className={styles.tableCard}>
+            <div className={styles.tableHeader}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Activité Récente</h3>
+              <button
+                type="button"
+                onClick={() => setActiveTab('documents')}
+                style={{ background: 'none', border: 'none', color: 'var(--secondary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Voir tous les documents →
+              </button>
+            </div>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Document</th>
+                  <th>Étudiant</th>
+                  <th>Date</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activitesLoading && (
+                  <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--on-surface-variant)' }}>Chargement…</td></tr>
+                )}
+                {!activitesLoading && activitesRecentes.length === 0 && (
+                  <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--on-surface-variant)' }}>Aucun document n'a encore été créé.</td></tr>
+                )}
+                {!activitesLoading && activitesRecentes.map((a) => (
+                  <tr key={a.id}>
+                    <td>
+                      <div>{a.type}</div>
+                      <div className={styles.mono} style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)' }}>{a.numero}</div>
+                    </td>
+                    <td>{a.etudiant}</td>
+                    <td>{fmtDate(a.date)}</td>
+                    <td>
+                      <span className={CLASSES_STATUT[a.statut] ?? styles.statusPending}>
+                        {LABELS_STATUT[a.statut] ?? a.statut}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </section>
           </>
           )}
 
           {/* Fiche Étudiant */}
-          {activeTab === 'etudiants' && (
-            <section className={styles.tableCard}>
-              <div className={styles.tableHeader}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Fiche Étudiant</h3>
-              </div>
-              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
-                Recherche et création inline de la fiche étudiant (GET/POST/PATCH/DELETE /etudiants-admin).
-              </div>
-            </section>
-          )}
+          {activeTab === 'etudiants' && <FicheEtudiant />}
 
           {/* Émission de Diplôme */}
-          {activeTab === 'emission' && (
-            <section className={styles.tableCard}>
-              <div className={styles.tableHeader}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Émission de Diplôme</h3>
-              </div>
-              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
-                Stepper d'émission (POST /documents puis POST /documents/:id/pdf).
-              </div>
-            </section>
-          )}
+          {activeTab === 'emission' && <EmissionDiplome />}
 
           {/* Liste des Documents */}
-          {activeTab === 'documents' && (
-            <section className={styles.tableCard}>
-              <div className={styles.tableHeader}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Liste des Documents</h3>
-              </div>
-              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
-                Ensemble des documents de l'établissement (GET /documents).
-              </div>
-            </section>
-          )}
+          {activeTab === 'documents' && <ListeDocuments />}
 
           {/* File de Validation */}
-          {activeTab === 'validation' && (
-          <section className={styles.tableCard}>
-            <div className={styles.tableHeader}>
-              <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>File d'Attente & Historique de Validation</h3>
-            </div>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>ID Document</th>
-                  <th>Filière / Promotion</th>
-                  <th>Étudiant</th>
-                  <th>Statut Ancrage</th>
-                  <th style={{ textAlign: 'right' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><span className={styles.mono}>DOC-2026-UD-DAWII-043</span></td>
-                  <td>Licence Professionnelle (DAWII)</td>
-                  <td>KOUAM Jean</td>
-                  <td>
-                    {signingStates['bento'] === 'signed' ? (
-                      <span className={styles.statusSealed}>VALIDÉ & ANCRÉ</span>
-                    ) : (
-                      <span className={styles.statusPending}>EN ATTENTE DE VALIDATION</span>
-                    )}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button className={styles.btnAction} onClick={() => setSelectedManifeste({ id: 'DOC-2026-UD-DAWII-043', filiere: 'Licence Pro DAWII', etablissement: 'IUT de Douala' })}>
-                      Inspecter
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td><span className={styles.mono}>DOC-2026-UD-GL-012</span></td>
-                  <td>Master Genie Logiciel</td>
-                  <td>MBALLA Sandrine</td>
-                  <td><span className={styles.statusSealed}>VALIDÉ & ANCRÉ</span></td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button className={styles.btnAction} style={{ opacity: 0.5 }} disabled>Ancré</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
-          )}
+          {activeTab === 'validation' && <FileValidation />}
 
           {/* Révocations */}
-          {activeTab === 'revocations' && (
-            <section className={styles.tableCard}>
-              <div className={styles.tableHeader}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Révocations</h3>
-              </div>
-              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
-                Révocation de diplômes déjà émis (POST /documents/:id/revoquer).
-              </div>
-            </section>
-          )}
+          {activeTab === 'revocations' && <Revocations />}
 
-          {/* Référentiels */}
-          {/*{activeTab === 'referentiels' && (
-            <section className={styles.tableCard}>
-              <div className={styles.tableHeader}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Référentiels</h3>
-              </div>
-              <div style={{ padding: '1.5rem', fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
-                Types de documents et mentions (GET/POST/PATCH/DELETE /types-document, /mentions).
-              </div>
-            </section>
-          )}  */}
+          {/* MON COMPTE — accessible via le menu de l'avatar, hors navigation principale */}
+          {activeTab === 'mon-compte' && <MonCompte roleLabel={roleLabel} />}
         </main>
       </div>
-
-      {/* MODALE D'INSPECTION DÉTAILLÉE */}
-      {selectedManifeste && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContainerLarge}>
-            <div className={styles.modalHeader}>
-              <div>
-                <h3 style={{ margin: 0, color: 'var(--primary)' }}>Inspection Détaillée : {selectedManifeste.id}</h3>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>{selectedManifeste.filiere} — {selectedManifeste.etablissement}</p>
-              </div>
-              <button onClick={() => setSelectedManifeste(null)} className={styles.btnClose}>✕</button>
-            </div>
-
-            <div className={styles.modalBody}>
-              <div style={{ backgroundColor: 'var(--surface-container-low)', padding: '0.75rem 1rem', borderRadius: '0.5rem', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between' }}>
-                <p style={{ margin: 0 }}><strong>Agent Saisie :</strong> Marie Ngo</p>
-                <p style={{ margin: 0 }}><strong>Contrôle Hash :</strong> <span style={{ color: 'var(--on-tertiary-container)', fontWeight: 'bold' }}>✓ 150/150 Empreintes Validées</span></p>
-              </div>
-
-              <h4 style={{ margin: '1rem 0 0.75rem 0', fontSize: '0.85rem', color: 'var(--primary)' }}>
-                Liste des Diplômés ({etudiantsList.filter(e => e.statut === 'INCLUS').length} / {etudiantsList.length} retenus dans le lot)
-              </h4>
-
-              <div style={{ overflowX: 'auto' }}>
-                <table className={styles.table} style={{ border: '1px solid var(--outline-variant)', minWidth: '750px' }}>
-                  <thead>
-                    <tr>
-                      <th>Matricule</th>
-                      <th>Titulaire</th>
-                      <th>Diplôme & Mention</th>
-                      <th>Statut Actuel</th>
-                      <th style={{ textAlign: 'center' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {etudiantsList.map((etud) => (
-                      <tr key={etud.id} style={{ opacity: etud.statut === 'EXCLU' ? 0.4 : 1 }}>
-                        <td className={styles.mono} style={{ fontWeight: 'bold' }}>{etud.matricule}</td>
-                        <td><strong>{etud.nom}</strong></td>
-                        <td>{etud.diplome} ({etud.mention})</td>
-                        <td>
-                          {etud.statut === 'INCLUS' ? (
-                            <span className={styles.badgeInclus}>✓ INCLUS</span>
-                          ) : (
-                            <span className={styles.badgeExclu}>✕ EXCLU</span>
-                          )}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                            <button className={styles.btnIcon} title="Aperçu diplôme" onClick={() => setPreviewDiplome(etud)}>
-                              <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>visibility</span>
-                            </button>
-
-                            <button
-                              className={etud.statut === 'INCLUS' ? styles.btnExclude : styles.btnInclude}
-                              onClick={() => toggleStudentStatus(etud.id)}
-                            >
-                              {etud.statut === 'INCLUS' ? 'Exclure' : 'Inclure'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className={styles.modalFooter}>
-              <button className={styles.btnReject} onClick={() => handleRefuse('bento')}>
-                <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>cancel</span> Refuser & Renvoyer
-              </button>
-              <button className={styles.btnApprove} onClick={() => handleSign('bento')}>
-                <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>verified</span> Valider & Ancrer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODALE APERÇU DU DIPLÔME */}
-      {previewDiplome && (
-        <div className={styles.modalOverlaySecondary}>
-          <div className={styles.diplomaCard}>
-            <div style={{ textAlign: 'right' }}>
-              <button onClick={() => setPreviewDiplome(null)} className={styles.btnClose}>✕</button>
-            </div>
-            
-            <div className={styles.diplomaPaper}>
-              <div style={{ textAlign: 'center', borderBottom: '2px solid var(--primary)', paddingBottom: '0.75rem' }}>
-                <h2 style={{ color: 'var(--primary)', margin: 0, fontSize: '1rem' }}>RÉPUBLIQUE DU CAMEROUN</h2>
-                <p style={{ margin: '0.25rem 0', fontSize: '0.65rem', color: 'var(--on-surface-variant)' }}>Université de Douala — IUT de Douala</p>
-                <h1 style={{ color: 'var(--luxury-gold)', fontFamily: 'serif', margin: '0.6rem 0 0.25rem 0', fontSize: '1.25rem' }}>ATTESTATION DE DIPLÔME</h1>
-              </div>
-
-              <div style={{ margin: '1rem 0', fontSize: '0.75rem', lineHeight: '1.5' }}>
-                <p style={{ margin: '0.25rem 0' }}>Le Directeur certifie que :</p>
-                <p style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--primary)', textAlign: 'center', margin: '0.5rem 0' }}>
-                  {previewDiplome.nom}
-                </p>
-                <p style={{ margin: '0.25rem 0' }}>Matricule : <strong>{previewDiplome.matricule}</strong></p>
-                <p style={{ margin: '0.25rem 0' }}>Diplôme : <strong>{previewDiplome.diplome}</strong> ({previewDiplome.mention})</p>
-              </div>
-
-              <div style={{ backgroundColor: 'var(--surface-container-low)', padding: '0.4rem', borderRadius: '0.25rem', fontSize: '0.6rem', wordBreak: 'break-all' }}>
-                <strong>Hash SHA-256 :</strong><br />
-                <span className={styles.mono}>{previewDiplome.hash}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

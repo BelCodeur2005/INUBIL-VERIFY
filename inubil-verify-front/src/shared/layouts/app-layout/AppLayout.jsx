@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../core/auth/useAuth';
+import AccountMenu from '../../components/AccountMenu/AccountMenu';
 import styles from './AppLayout.module.css';
 import Logo_Inubil from '../../../assets/Logo_Inubil.png';
 
@@ -40,6 +40,17 @@ const navItems = [
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
         <circle cx="12" cy="7" r="4"/>
         <line x1="12" y1="14" x2="12" y2="20"/><line x1="9" y1="17" x2="15" y2="17"/>
+      </svg>
+    ),
+  },
+  {
+    path: '/universite/etudiants',
+    label: 'Étudiants',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </svg>
     ),
   },
@@ -108,8 +119,8 @@ const bottomNavItems = [
 ];
 
 export default function AppLayout() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { utilisateur, logout } = useAuth();
+  const navigate = useNavigate();
 
   const roleNom = utilisateur?.role?.nom;
   const visible = (item) => !item.roles || roleNom === undefined || item.roles.includes(roleNom);
@@ -118,15 +129,7 @@ export default function AppLayout() {
 
   const prenom = utilisateur?.prenom ?? '';
   const nom = utilisateur?.nom ?? '';
-  const initiales = `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || '··';
   const roleLabel = ROLE_LABELS[roleNom] ?? roleNom ?? '';
-
-  const handleNavClick = (e, item) => {
-    if (item.path === '/universite/ajout') {
-      e.preventDefault();
-      setIsModalOpen(true);
-    }
-  };
 
   const handleLogout = async () => {
     await logout();
@@ -153,9 +156,8 @@ export default function AppLayout() {
               key={item.path}
               to={item.path}
               end={item.path === '/universite'}
-              onClick={(e) => handleNavClick(e, item)}
               className={({ isActive }) =>
-                `${styles.navItem} ${isActive && item.path !== '/universite/ajout' ? styles.navItemActive : ''}`
+                `${styles.navItem} ${isActive ? styles.navItemActive : ''}`
               }
             >
               <span className={styles.navIcon}>{item.icon}</span>
@@ -220,31 +222,30 @@ export default function AppLayout() {
             </button>
 
             {/* Profil */}
-            <div className={styles.userInfo}>
-              <div className={styles.userTexts}>
-                <span className={styles.userName}>{`${prenom} ${nom}`.trim() || 'Utilisateur'}</span>
-                <span className={styles.userRole}>{roleLabel}</span>
-              </div>
-              <div className={styles.avatar}>{initiales}</div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className={styles.iconBtn}
-                title="Se déconnecter"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
-                </svg>
-              </button>
-            </div>
+            <AccountMenu
+              prenom={prenom}
+              nom={nom}
+              roleLabel={roleLabel}
+              onOpenAccount={() => navigate('/universite/mon-compte')}
+            />
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={styles.iconBtn}
+              title="Se déconnecter"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
           </div>
         </header>
 
         {/* Contenu injecté */}
         <main className={styles.main}>
-          <Outlet context={{ isModalOpen, setIsModalOpen }} />
+          <Outlet />
         </main>
       </div>
     </div>

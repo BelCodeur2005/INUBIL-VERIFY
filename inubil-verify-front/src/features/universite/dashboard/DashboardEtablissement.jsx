@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import styles from './DashboardEtablissement.module.css';
-import Ajout_Unitaire from '../../../shared/components/Ajout_Unitaire';
-import { Link } from 'react-router-dom';
 
 const IconTotal = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5">
@@ -63,10 +61,7 @@ const IconArrow = () => (
 );
 
 export default function DashboardEtablissement() {
-  const { isModalOpen, setIsModalOpen } = useOutletContext();
-  
-
-
+  const navigate = useNavigate();
   const [diplomes] = useState([
     { matricule: 'FS-240188', etudiant: 'Mbarga Lucien',  filiere: 'L3 Info-Réseaux',    date: '12 Mai 2024', preuve: '0x8a1...f3e9',          statut: 'ANCRÉ'      },
     { matricule: 'FS-240192', etudiant: 'Ngassa Chantal', filiere: 'M1 Bio-Chimie',       date: '14 Mai 2024', preuve: 'Génération en cours...', statut: 'EN RÉVISION' },
@@ -214,7 +209,7 @@ export default function DashboardEtablissement() {
             <h4 className={styles.panelTitle}>ACTIONS DE SAISIE IMMÉDIATE</h4>
             <button
               className={styles.actionDark}
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => navigate('/universite/ajout')}
             >
             
               <span className={styles.actionIconBox}><IconPlus /></span>
@@ -245,11 +240,6 @@ export default function DashboardEtablissement() {
 
         </div>
       </div>
-      {/* Rendu de la modale branché sur le State */}
-      <Ajout_Unitaire 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-      />
     </div>
   );
 }
