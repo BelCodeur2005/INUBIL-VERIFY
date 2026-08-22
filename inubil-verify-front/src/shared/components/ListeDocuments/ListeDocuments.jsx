@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Search, Eye, Download, X, Loader2, AlertTriangle, FileX } from 'lucide-react';
 import { listerDocuments, getUrlPdfPresignee } from '../../../core/documents/documents.api';
 import { listerTypesDocument } from '../../../core/types-document/types-document.api';
@@ -38,6 +39,9 @@ function classeStatut(valeur) {
 }
 
 export default function ListeDocuments() {
+  const location = useLocation();
+  const etudiantInitial = location.state?.etudiantFiltre ?? null;
+
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -54,7 +58,7 @@ export default function ListeDocuments() {
   const [typeFiltre, setTypeFiltre] = useState('');
   const [dateDebut, setDateDebut] = useState('');
   const [dateFin, setDateFin] = useState('');
-  const [etudiantFiltre, setEtudiantFiltre] = useState(null);
+  const [etudiantFiltre, setEtudiantFiltre] = useState(etudiantInitial);
   const [rechercheEtudiant, setRechercheEtudiant] = useState('');
   const [resultatsRecherche, setResultatsRecherche] = useState([]);
   const [rechercheOuverte, setRechercheOuverte] = useState(false);

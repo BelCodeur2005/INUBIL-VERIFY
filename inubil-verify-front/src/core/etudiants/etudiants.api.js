@@ -16,3 +16,13 @@ export function creerEtudiant(donnees) {
 export function getEtudiant(id) {
   return api.get(`/admin/etudiants/${id}`);
 }
+
+/** PATCH /admin/etudiants/:id — modifie la fiche (UpdateEtudiantAdminDto, universite_id non modifiable). */
+export function modifierEtudiant(id, donnees) {
+  return api.patch(`/admin/etudiants/${id}`, donnees);
+}
+
+/** DELETE /admin/etudiants/:id — soft delete, bloque (409) si l'etudiant a des documents emis. */
+export function supprimerEtudiant(id) {
+  return api.delete(`/admin/etudiants/${id}`);
+}
