@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import styles from './Valide.module.css';
-import Logo_Inubil from '../../assets/Logo_Inubil.png';
+import PublicHeader from './PublicHeader';
 import { telechargerRapport } from '../../core/verify/verify.api';
 
 const LABELS_CATEGORIE = {
@@ -32,7 +31,6 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
   const [copie, setCopie] = useState(false);
   const [telechargement, setTelechargement] = useState(false);
   const [erreurRapport, setErreurRapport] = useState(null);
-  const navigate = useNavigate();
 
   const urlPartage = doc.url_verification || `${window.location.origin}/d/${doc.numero_unique}`;
 
@@ -56,28 +54,7 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerContainer}>
-          <div className={styles.brandGroup}>
-            <img alt="INUBIL Logo" className={styles.logo} src={Logo_Inubil} />
-          </div>
-          <div className={styles.navGroup}>
-            <nav>
-              <button
-                type="button"
-                className={styles.navLink}
-                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                onClick={() => (onNouvelleVerification ? onNouvelleVerification() : navigate('/verification-publique'))}
-              >
-                Nouvelle vérification
-              </button>
-            </nav>
-            <button className={styles.connexionBtn} onClick={() => navigate('/login')}>
-              Connexion
-            </button>
-          </div>
-        </div>
-      </header>
+      <PublicHeader onNouvelleVerification={onNouvelleVerification} />
 
       <main className={styles.main}>
         <div className={styles.mainContainer}>

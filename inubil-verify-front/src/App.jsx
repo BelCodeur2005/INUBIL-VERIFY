@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 // Importation des Layouts et pages existantes
 import AuthLayout from './shared/layouts/auth-layout/AuthLayout';
@@ -7,8 +7,10 @@ import Login from './features/auth/login/Login';
 import ForgotPassword from "./features/auth/forgot-password/ForgotPassword";
 import ResetPassword from './features/auth/reset-password/ResetPassword';
 import DashboardEtablissement from './features/universite/dashboard/DashboardEtablissement'; 
+import Landing from './features/Public/Landing';
 import VerificationPublique from './features/Public/VerificationPublique';
 import Verification from './features/Public/Verification';
+import PartageDocument from './features/Public/PartageDocument';
 import DashboardEtudiant from './features/Etudiant/DashboardEtudiant';
 import DashboardDirecteur from './features/DashboardDirecteur/DashboardDirecteur';
 import AdminInubil from './features/AdminInubil/AdminInubil';
@@ -59,10 +61,11 @@ export default function App() {
         {/* Vérification publique — formulaire upload/hash + résultat par lien/QR (GET /verify/:identifiant) */}
         <Route path="/verification-publique" element={<VerificationPublique />} />
         <Route path="/d/:identifiant" element={<Verification />} />
+        <Route path="/partage/:token" element={<PartageDocument />} />
         <Route path="/dashboard-etudiant" element={<DashboardEtudiant />} />
 
 
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Landing />} />
       </Routes>
     </BrowserRouter>
   );

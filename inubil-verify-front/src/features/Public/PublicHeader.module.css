@@ -1,0 +1,58 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  background-color: rgba(248, 249, 250, 0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #c2c6d1;
+}
+
+.headerContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  height: 5.5rem;
+}
+
+.brandGroup {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+}
+
+.navGroup {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.navLink {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  color: #42474f;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.navLink:hover {
+  color: #0060ac;
+}

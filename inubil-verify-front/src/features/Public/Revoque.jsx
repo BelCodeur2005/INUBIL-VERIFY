@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Revoque.module.css';
-import Logo_Inubil from '../../assets/Logo_Inubil.png';
+import PublicHeader from './PublicHeader';
 
 const LABELS_RESEAU = {
   polygon_amoy: 'Polygon Amoy (Testnet)',
@@ -47,28 +47,7 @@ export default function Revoque({ resultat, message, hashSoumis, blockchain, ver
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerContainer}>
-          <div className="flex items-start">
-            <img src={Logo_Inubil} alt="INUBIL Verify" style={{ height: '80px', width: 'auto', objectFit: 'contain' }} />
-          </div>
-          <div className={styles.navGroup}>
-            <nav>
-              <button
-                type="button"
-                className={styles.navLink}
-                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                onClick={() => (onNouvelleVerification ? onNouvelleVerification() : navigate('/verification-publique'))}
-              >
-                Nouvelle vérification
-              </button>
-            </nav>
-            <button className={styles.connexionBtn} onClick={() => navigate('/login')}>
-              Connexion
-            </button>
-          </div>
-        </div>
-      </header>
+      <PublicHeader onNouvelleVerification={onNouvelleVerification} />
 
       <main className={styles.main}>
         <div className={styles.mainContainer}>

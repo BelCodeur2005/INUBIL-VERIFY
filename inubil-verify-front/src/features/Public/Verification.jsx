@@ -1,30 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import styles from './Valide.module.css';
-import Logo_Inubil from '../../assets/Logo_Inubil.png';
+import PublicHeader from './PublicHeader';
 import { verifierParIdentifiant } from '../../core/verify/verify.api';
 import Valide from './Valide';
 import Revoque from './Revoque';
 
 function Chrome({ children }) {
-  const navigate = useNavigate();
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerContainer}>
-          <div className={styles.brandGroup}>
-            <img alt="INUBIL Logo" className={styles.logo} src={Logo_Inubil} />
-          </div>
-          <div className={styles.navGroup}>
-            <nav>
-              <span className={styles.navLinkActive}>Vérification</span>
-            </nav>
-            <button className={styles.connexionBtn} onClick={() => navigate('/login')}>
-              Connexion
-            </button>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
       <main className={styles.main}>
         <div className={styles.mainContainer} style={{ alignItems: 'center', textAlign: 'center', paddingTop: '80px' }}>
           {children}
@@ -78,7 +63,7 @@ export default function Verification() {
         <p style={{ color: '#42474f', marginBottom: '20px' }}>
           Impossible de contacter le registre INUBIL pour le moment. Réessayez dans quelques instants.
         </p>
-        <button className={styles.connexionBtn} onClick={() => window.location.reload()}>
+        <button className={styles.downloadBtn} style={{ width: 'auto' }} onClick={() => window.location.reload()}>
           Réessayer
         </button>
       </Chrome>

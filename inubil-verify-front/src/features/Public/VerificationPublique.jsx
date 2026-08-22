@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import styles from './VerificationPublique.module.css';
-import Logo_Inubil from '../../assets/Logo_Inubil.png';
+import PublicHeader from './PublicHeader';
 import { verifierParUpload, verifierParHash } from '../../core/verify/verify.api';
 import Valide from './Valide';
 import Revoque from './Revoque';
@@ -117,20 +117,12 @@ export default function VerificationPublique() {
       <div className={styles.blurBg1}></div>
       <div className={styles.blurBg2}></div>
 
-      <header className={styles.header}>
-        <div className={styles.headerContainer}>
-          <img src={Logo_Inubil} alt="INUBIL Verify" style={{ height: '80px', width: 'auto', objectFit: 'contain' }} />
-        </div>
-      </header>
+      <PublicHeader />
 
       <main className={styles.main}>
 
         <div className={styles.card}>
           <div className={styles.textCenter}>
-            <div className={styles.badge}>
-              <span className={styles.pulseDot}></span>
-              Réseau Blockchain Sécurisé
-            </div>
             <h1 className={styles.title}>Vérification de Diplôme</h1>
             <p className={styles.subtitle}>
               Déposez une attestation numérique au format PDF, ou collez directement son empreinte SHA-256,
