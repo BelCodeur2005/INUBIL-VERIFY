@@ -14,6 +14,11 @@ const LABELS_RESEAU = {
   polygon_mainnet: 'Polygon Mainnet',
 };
 
+const EXPLORATEUR_URL = {
+  polygon_amoy: 'https://amoy.polygonscan.com/tx/',
+  polygon_mainnet: 'https://polygonscan.com/tx/',
+};
+
 function fmtDate(iso) {
   if (!iso) return null;
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -31,6 +36,8 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
   const [copie, setCopie] = useState(false);
   const [telechargement, setTelechargement] = useState(false);
   const [erreurRapport, setErreurRapport] = useState(null);
+  const [explorerOuvert, setExplorerOuvert] = useState(false);
+  const [copieHash, setCopieHash] = useState(false);
 
   const urlPartage = doc.url_verification || `${window.location.origin}/d/${doc.numero_unique}`;
 
@@ -38,6 +45,13 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
     navigator.clipboard.writeText(urlPartage);
     setCopie(true);
     setTimeout(() => setCopie(false), 2000);
+  };
+
+  const copierHash = () => {
+    if (!blockchain?.transaction_hash) return;
+    navigator.clipboard.writeText(blockchain.transaction_hash);
+    setCopieHash(true);
+    setTimeout(() => setCopieHash(false), 2000);
   };
 
   const telecharger = async () => {
@@ -223,6 +237,13 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
                       </span>
                     </div>
                   </div>
+
+                  {blockchain.transaction_hash && (
+                    <button type="button" className={styles.explorerBtn} onClick={() => setExplorerOuvert(true)}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>travel_explore</span>
+                      Voir sur l'explorateur
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -283,6 +304,69 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
 
         </div>
       </main>
+
+      {explorerOuvert && blockchain && (
+        <div className={styles.modalOverlay} onClick={() => setExplorerOuvert(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalTitleGroup}>
+                <span className={styles.modalBadge}>Public</span>
+                <h2 className={styles.modalTitle}>Explorateur du registre</h2>
+              </div>
+              <button className={styles.closeBtn} onClick={() => setExplorerOuvert(false)} aria-label="Fermer">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <p className={styles.modalSubtitle}>
+              Aperçu public de l'ancrage enregistré sur le registre décentralisé Polygon.
+            </p>
+
+            <div className={styles.modalStatusRow}>
+              <span className={styles.networkBadge}>
+                <span className={styles.pulseDot}></span>
+                {LABELS_RESEAU[blockchain.reseau] ?? blockchain.reseau}
+              </span>
+              <span className={blockchain.enregistre ? styles.confirmedTag : styles.pendingTag}>
+                {blockchain.enregistre ? 'Confirmé' : 'Non confirmé'}
+              </span>
+            </div>
+
+            <div className={styles.modalField}>
+              <span className={styles.hashLabel}>Transaction Hash</span>
+              <div className={styles.hashRow}>
+                <code className={styles.hashCode} style={{ wordBreak: 'break-all' }}>{blockchain.transaction_hash}</code>
+                <button
+                  className={`${styles.copyBtn} ${copieHash ? styles.copyBtnSuccess : ''}`}
+                  onClick={copierHash}
+                  title="Copier le hash"
+                >
+                  <span className="material-symbols-outlined">{copieHash ? 'check' : 'content_copy'}</span>
+                </button>
+              </div>
+            </div>
+
+            {blockchain.date_enregistrement && (
+              <div className={styles.modalField}>
+                <span className={styles.hashLabel}>Date d'ancrage</span>
+                <span className={styles.valueNormal}>{fmtDateHeure(blockchain.date_enregistrement)}</span>
+              </div>
+            )}
+
+            {EXPLORATEUR_URL[blockchain.reseau] && (
+              <a
+                className={styles.modalExternalLink}
+                href={`${EXPLORATEUR_URL[blockchain.reseau]}${blockchain.transaction_hash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Ouvrir sur PolygonScan
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>open_in_new</span>
+              </a>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

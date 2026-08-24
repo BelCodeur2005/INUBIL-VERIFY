@@ -442,11 +442,165 @@
   50% { opacity: .5; }
 }
 
-.ipfsStatus {
+.explorerBtn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  color: #22c486;
+  justify-content: center;
+  gap: 8px;
+  align-self: flex-start;
+  background: none;
+  border: 1px solid #002c53;
+  color: #002c53;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.explorerBtn:hover {
+  background-color: #002c53;
+  color: #ffffff;
+}
+
+/* Modale Explorateur Blockchain */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background-color: rgba(25, 28, 29, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modalContent {
+  background-color: #ffffff;
+  border-radius: 8px;
+  max-width: 480px;
+  width: 100%;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.modalTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modalBadge {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.modalTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #002c53;
+  margin: 0;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: #737780;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.closeBtn:hover {
+  background-color: #f3f4f5;
+}
+
+.modalSubtitle {
+  font-size: 13px;
+  color: #42474f;
+  margin: -8px 0 0;
+}
+
+.modalStatusRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.networkBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #002c53;
+}
+
+.confirmedTag {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.pendingTag {
+  background-color: #f3f4f5;
+  color: #737780;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.modalField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modalExternalLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #002c53;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.modalExternalLink:hover {
+  opacity: 0.9;
 }
 
 /* Section Historique d'Audit (Bas Droite) */
