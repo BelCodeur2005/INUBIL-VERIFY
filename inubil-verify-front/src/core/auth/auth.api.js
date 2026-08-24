@@ -23,3 +23,23 @@ export async function logout() {
 export function getProfil() {
   return api.get('/auth/me');
 }
+
+/** PATCH /auth/me — modifie nom/prenom (email declenche une re-verification, non gere ici). */
+export function modifierProfil(donnees) {
+  return api.patch('/auth/me', donnees);
+}
+
+/** PATCH /auth/password — changement de mot de passe (204 sans corps). */
+export function changerMotDePasse(donnees) {
+  return api.patch('/auth/password', donnees);
+}
+
+/** GET /auth/sessions — sessions actives de l'utilisateur connecte. */
+export function listerSessions() {
+  return api.get('/auth/sessions');
+}
+
+/** DELETE /auth/sessions/:id — revoque une session a distance (204 sans corps). */
+export function revoquerSession(id) {
+  return api.delete(`/auth/sessions/${id}`);
+}

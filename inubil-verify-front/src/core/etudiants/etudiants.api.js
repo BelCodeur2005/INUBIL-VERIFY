@@ -1,5 +1,10 @@
 import { api } from '../api/client';
 
+/** GET /etudiants/moi — dossier academique de l'etudiant connecte (nom certifie, matricule, telephone...). */
+export function getMonProfilEtudiant() {
+  return api.get('/etudiants/moi');
+}
+
 /** GET /admin/etudiants — recherche libre (nom/prenom/matricule), scope auto sur l'universite de l'acteur. */
 export function rechercherEtudiants(search, { page = 1, limit = 20 } = {}) {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });

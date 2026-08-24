@@ -6,6 +6,7 @@
   box-sizing: border-box;
   width: 100%;
   padding-bottom: 60px;
+  font-family: 'Inter', sans-serif;
 }
 
 .header {
@@ -15,23 +16,53 @@
 }
 
 .title {
-  font-size: 1.5rem;
+  font-size: 24px;
   font-weight: 700;
-  color: #0f172a;
+  color: #002c53;
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
 .subtitle {
-  font-size: 0.9rem;
-  color: #64748b;
+  font-size: 14px;
+  color: #42474f;
   margin: 0;
+}
+
+.loadingBox,
+.errorBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  padding: 12px 16px;
+  border-radius: 4px;
+}
+
+.loadingBox {
+  color: #42474f;
+}
+
+.errorBox {
+  background-color: #FFEBEE;
+  color: #C62828;
+  border: 1px solid #C62828;
+}
+
+.spinIcon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Tabs */
 .tabsNav {
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #c2c6d1;
   padding-bottom: 2px;
 }
 
@@ -42,34 +73,34 @@
   background: none;
   border: none;
   padding: 10px 16px;
-  font-size: 0.9rem;
+  font-size: 13px;
   font-weight: 600;
-  color: #64748b;
+  color: #737780;
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  transition: all 0.2s ease;
+  transition: color 0.2s, border-color 0.2s;
 }
 
 .tabBtn:hover {
-  color: #0350bd;
+  color: #0060ac;
 }
 
 .activeTab {
-  color: #0350bd;
-  border-bottom-color: #0350bd;
+  color: #002c53;
+  border-bottom-color: #002c53;
 }
 
 .alertSuccess {
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #ecfdf5;
-  color: #15803d;
-  border: 1px solid #a7f3d0;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  background-color: #E8F5E9;
+  color: #2E7D32;
+  border: 1px solid #2E7D32;
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .sectionsContainer {
@@ -80,24 +111,31 @@
 
 .sectionCard {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border: 1px solid #c2c6d1;
+  border-radius: 8px;
   padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .sectionTitle {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+  color: #002c53;
   margin: 0;
+}
+
+.sectionDesc {
+  font-size: 13px;
+  color: #737780;
+  margin: -8px 0 0;
 }
 
 .formGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
 }
 
@@ -108,38 +146,39 @@
 }
 
 .formGroup label {
-  font-size: 0.85rem;
+  font-size: 12px;
   font-weight: 600;
-  color: #334155;
+  letter-spacing: 0.03em;
+  color: #42474f;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
 .formGroup input {
-  padding: 10px 14px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  padding: 10px 12px;
+  border: 1px solid #c2c6d1;
+  border-radius: 4px;
+  font-size: 14px;
   outline: none;
-  color: #0f172a;
+  color: #191c1d;
   background-color: #ffffff;
 }
 
 .formGroup input:focus {
-  border-color: #0350bd;
-  box-shadow: 0 0 0 3px rgba(3, 80, 189, 0.15);
+  border-color: #0060ac;
+  box-shadow: 0 0 0 3px rgba(0, 96, 172, 0.15);
 }
 
 .disabledInput {
-  background-color: #f8fafc !important;
-  color: #64748b !important;
+  background-color: #f3f4f5 !important;
+  color: #737780 !important;
   cursor: not-allowed;
 }
 
 .fieldHint {
-  font-size: 0.75rem;
-  color: #94a3b8;
+  font-size: 12px;
+  color: #737780;
 }
 
 .passwordInputWrapper {
@@ -158,7 +197,7 @@
   right: 10px;
   background: none;
   border: none;
-  color: #64748b;
+  color: #737780;
   cursor: pointer;
   padding: 4px;
 }
@@ -173,99 +212,88 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #0350bd;
+  background-color: #002c53;
   color: #ffffff;
   border: none;
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 4px;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 13px;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: opacity 0.2s;
 }
 
 .saveBtn:hover {
-  background-color: #023e96;
+  opacity: 0.9;
 }
 
-/* Switches & Toggles */
-.toggleList {
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Sessions */
+.sessionsList {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-.toggleRow {
+.sessionRow {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
   gap: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 12px 16px;
+  border: 1px solid #c2c6d1;
+  border-radius: 4px;
 }
 
-.toggleRow:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.toggleHeader {
+.sessionInfo {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: 12px;
+  min-width: 0;
 }
 
-.toggleIcon {
-  color: #0350bd;
+.sessionInfo strong {
+  font-size: 13px;
+  color: #191c1d;
+  word-break: break-word;
 }
 
-.toggleRow p {
-  margin: 4px 0 0 0;
-  font-size: 0.825rem;
-  color: #64748b;
+.sessionInfo p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #737780;
 }
 
-/* Switch Component */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
+.sessionIcon {
+  color: #737780;
   flex-shrink: 0;
 }
 
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
+.revokeBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid #C62828;
+  color: #C62828;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  inset: 0;
-  background-color: #cbd5e1;
-  transition: .3s;
-  border-radius: 24px;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
 }
 
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: .3s;
-  border-radius: 50%;
+.revokeBtn:hover {
+  background-color: #FFEBEE;
 }
 
-input:checked + .slider {
-  background-color: #0350bd;
-}
-
-input:checked + .slider:before {
-  transform: translateX(20px);
+.revokeBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

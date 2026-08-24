@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Search, Eye, Download, X, Loader2, AlertTriangle, FileX } from 'lucide-react';
 import { listerDocuments, getUrlPdfPresignee } from '../../../core/documents/documents.api';
+import { listerDocumentsAdmin } from '../../../core/admin/admin.api';
 import { listerTypesDocument } from '../../../core/types-document/types-document.api';
 import { listerMentions } from '../../../core/mentions/mentions.api';
 import { rechercherEtudiants, getEtudiant } from '../../../core/etudiants/etudiants.api';
+import { getUniversite } from '../../../core/universites/universites.api';
 import { ApiError } from '../../../core/api/client';
+import { lirePreferences } from '../../../core/preferences/preferences';
 import styles from './ListeDocuments.module.css';
 
 // Liste reelle des documents (docs/ROLES_ET_PAGES.md §D item 18, GET /documents).
@@ -38,9 +41,10 @@ function classeStatut(valeur) {
   return STATUTS.find((s) => s.valeur === valeur)?.classe ?? 'statutBrouillon';
 }
 
-export default function ListeDocuments() {
+export default function ListeDocuments({ admin = false }) {
   const location = useLocation();
   const etudiantInitial = location.state?.etudiantFiltre ?? null;
+  const [densite] = useState(() => lirePreferences().densiteRegistre);
 
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
@@ -52,6 +56,7 @@ export default function ListeDocuments() {
   const [typesDocument, setTypesDocument] = useState([]);
   const [mentions, setMentions] = useState([]);
   const [etudiantsCache, setEtudiantsCache] = useState({});
+  const [universitesCache, setUniversitesCache] = useState({});
 
   // Filtres
   const [statutFiltre, setStatutFiltre] = useState('');
@@ -109,7 +114,7 @@ export default function ListeDocuments() {
       setLoading(true);
       setError(null);
       try {
-        const res = await listerDocuments({
+        const parametres = {
           statut: statutFiltre || undefined,
           typeDocumentId: typeFiltre || undefined,
           etudiantId: etudiantFiltre?.id,
@@ -117,7 +122,8 @@ export default function ListeDocuments() {
           dateFin: dateFin || undefined,
           page,
           limit,
-        });
+        };
+        const res = admin ? await listerDocumentsAdmin(parametres) : await listerDocuments(parametres);
         if (annule) return;
         setItems(res.items ?? []);
         setTotal(res.total ?? 0);
@@ -135,6 +141,23 @@ export default function ListeDocuments() {
             resultats.forEach((e) => { if (e) next[e.id] = e; });
             return next;
           });
+        }
+
+        // Mode admin : resout aussi les universites (documents de toutes les universites).
+        if (admin) {
+          const univIdsManquants = [...new Set((res.items ?? []).map((d) => d.universite_id))]
+            .filter((id) => id && !universitesCache[id]);
+          if (univIdsManquants.length > 0) {
+            const resultatsUniv = await Promise.all(
+              univIdsManquants.map((id) => getUniversite(id).catch(() => null)),
+            );
+            if (annule) return;
+            setUniversitesCache((prev) => {
+              const next = { ...prev };
+              resultatsUniv.forEach((u) => { if (u) next[u.id] = u; });
+              return next;
+            });
+          }
         }
       } catch (err) {
         if (annule) return;
@@ -165,6 +188,7 @@ export default function ListeDocuments() {
     return e ? `${e.prenom} ${e.nom}` : '…';
   };
   const matriculeEtudiant = (id) => etudiantsCache[id]?.numero_etudiant ?? '';
+  const nomUniversite = (id) => universitesCache[id]?.nom ?? '…';
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -184,7 +208,7 @@ export default function ListeDocuments() {
     <div className={styles.page}>
       <div className={styles.tableCard}>
         <div className={styles.tableHeader}>
-          <div className={styles.tableTitle}>Registre des documents</div>
+          <div className={styles.tableTitle}>{admin ? 'Documents — toutes universités' : 'Registre des documents'}</div>
           <span className={styles.totalCount}>{total} document{total !== 1 ? 's' : ''}</span>
         </div>
 
@@ -255,11 +279,12 @@ export default function ListeDocuments() {
         {error && <p className={styles.errorText}><AlertTriangle size={14} /> {error}</p>}
 
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
+          <table className={`${styles.table} ${densite === 'compact' ? styles.tableCompact : ''}`}>
             <thead>
               <tr>
                 <th>Numéro unique</th>
                 <th>Étudiant</th>
+                {admin && <th>Établissement</th>}
                 <th>Type de diplôme</th>
                 <th>Filière</th>
                 <th>Date d'émission</th>
@@ -269,11 +294,11 @@ export default function ListeDocuments() {
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={7} className={styles.loadingCell}><Loader2 size={18} className={styles.spinnerIcon} /> Chargement...</td></tr>
+                <tr><td colSpan={admin ? 8 : 7} className={styles.loadingCell}><Loader2 size={18} className={styles.spinnerIcon} /> Chargement...</td></tr>
               )}
               {!loading && items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className={styles.emptyCell}>
+                  <td colSpan={admin ? 8 : 7} className={styles.emptyCell}>
                     <FileX size={22} />
                     {filtresActifs ? 'Aucun document ne correspond à ces filtres.' : 'Aucun document émis pour le moment.'}
                   </td>
@@ -286,6 +311,7 @@ export default function ListeDocuments() {
                     {nomEtudiant(doc.etudiant_id)}
                     {matriculeEtudiant(doc.etudiant_id) && <span className={styles.subText}>{matriculeEtudiant(doc.etudiant_id)}</span>}
                   </td>
+                  {admin && <td>{nomUniversite(doc.universite_id)}</td>}
                   <td>{nomType(doc.type_document_id)}</td>
                   <td>{doc.filiere || '—'}</td>
                   <td className={styles.dateCell}>{doc.date_emission ? new Date(doc.date_emission).toLocaleDateString('fr-FR') : '—'}</td>
@@ -336,6 +362,7 @@ export default function ListeDocuments() {
             </div>
             <div className={styles.modalBody}>
               <div className={styles.detailRow}><span>Étudiant</span><strong>{nomEtudiant(documentDetail.etudiant_id)} — {matriculeEtudiant(documentDetail.etudiant_id)}</strong></div>
+              {admin && <div className={styles.detailRow}><span>Établissement</span><strong>{nomUniversite(documentDetail.universite_id)}</strong></div>}
               <div className={styles.detailRow}><span>Type de diplôme</span><strong>{nomType(documentDetail.type_document_id)}</strong></div>
               <div className={styles.detailRow}><span>Filière</span><strong>{documentDetail.filiere || '—'}</strong></div>
               <div className={styles.detailRow}><span>Mention</span><strong>{mentions.find((m) => m.id === documentDetail.mention_id)?.nom ?? '—'}</strong></div>

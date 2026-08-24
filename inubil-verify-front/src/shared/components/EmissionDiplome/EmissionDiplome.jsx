@@ -20,6 +20,7 @@ import { listerTypesDocument } from '../../../core/types-document/types-document
 import { listerMentions } from '../../../core/mentions/mentions.api';
 import { creerDocument, uploaderPdf } from '../../../core/documents/documents.api';
 import { ApiError } from '../../../core/api/client';
+import { lirePreferences } from '../../../core/preferences/preferences';
 import styles from './EmissionDiplome.module.css';
 
 // Stepper d'emission de diplome — branche sur le backend reel :
@@ -88,6 +89,8 @@ export default function EmissionDiplome() {
   const [mentions, setMentions] = useState([]);
   const [loadingReferentiels, setLoadingReferentiels] = useState(true);
   const [referentielsError, setReferentielsError] = useState(null);
+  const [diplome, setDiplome] = useState({ type_document_id: '', filiere: '', mention_id: '', date_emission: '', annee_academique: '' });
+  const step2Valid = Boolean(diplome.type_document_id && diplome.filiere && diplome.date_emission);
 
   useEffect(() => {
     let annule = false;
@@ -99,6 +102,14 @@ export default function EmissionDiplome() {
         if (annule) return;
         setTypesDocument(types ?? []);
         setMentions(mentionsRes ?? []);
+
+        const nomParDefaut = lirePreferences().typeDocumentParDefaut;
+        if (nomParDefaut) {
+          const correspondance = (types ?? []).find((t) => t.nom === nomParDefaut);
+          if (correspondance) {
+            setDiplome((d) => (d.type_document_id ? d : { ...d, type_document_id: correspondance.id }));
+          }
+        }
       })
       .catch((err) => {
         if (annule) return;
@@ -109,9 +120,6 @@ export default function EmissionDiplome() {
       });
     return () => { annule = true; };
   }, [universiteId]);
-
-  const [diplome, setDiplome] = useState({ type_document_id: '', filiere: '', mention_id: '', date_emission: '', annee_academique: '' });
-  const step2Valid = Boolean(diplome.type_document_id && diplome.filiere && diplome.date_emission);
 
   // ── Document ──
   const [selectedFile, setSelectedFile] = useState(null);
@@ -183,6 +191,9 @@ export default function EmissionDiplome() {
   const goNext = () => {
     if (!stepValidity[currentStep]) return;
     if (currentStep === 4) {
+      if (lirePreferences().confirmerAvantSoumission && !window.confirm('Confirmer la soumission de ce diplôme ?')) {
+        return;
+      }
       soumettreDossier();
       return;
     }
