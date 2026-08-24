@@ -7,7 +7,7 @@ import Login from './features/auth/login/Login';
 import ForgotPassword from "./features/auth/forgot-password/ForgotPassword";
 import ResetPassword from './features/auth/reset-password/ResetPassword';
 import DashboardEtablissement from './features/universite/dashboard/DashboardEtablissement'; 
-import Landing from './features/Public/Landing';
+import LandingPage from './features/Landing-Page/landingPage';
 import VerificationPublique from './features/Public/VerificationPublique';
 import Verification from './features/Public/Verification';
 import PartageDocument from './features/Public/PartageDocument';
@@ -22,6 +22,7 @@ import JournalActivites from './features/JournalActivites/JournalActivites';
 import MonComptePage from './features/universite/mon-compte/MonComptePage';
 import EmissionDiplome from './shared/components/EmissionDiplome/EmissionDiplome';
 import FicheEtudiant from './shared/components/FicheEtudiant/FicheEtudiant';
+import MonCompte from './shared/components/MonCompte/MonCompte';
 
 export default function App() {
   return (
@@ -63,9 +64,11 @@ export default function App() {
         <Route path="/d/:identifiant" element={<Verification />} />
         <Route path="/partage/:token" element={<PartageDocument />} />
         <Route path="/dashboard-etudiant" element={<DashboardEtudiant />} />
+        <Route path="/mon-compte" element={<MonCompte />} />
 
 
-        <Route path="/" element={<Landing />} />
+
+        <Route path="/" element={<LandingPage />} />
       </Routes>
     </BrowserRouter>
   );
