@@ -88,7 +88,6 @@
   padding: 40px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border: 1px solid #c2c6d1;
-  border-top: 4px solid #2E7D32; /* Liseré vert immuable */
   position: relative;
   overflow: hidden;
 }

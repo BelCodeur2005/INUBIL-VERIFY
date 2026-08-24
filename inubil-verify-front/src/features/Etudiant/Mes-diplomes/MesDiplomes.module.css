@@ -28,26 +28,6 @@
   margin: 0;
 }
 
-.addDegreeBtn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
-  color: #ffffff;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  white-space: nowrap;
-}
-
-.addDegreeBtn:hover {
-  opacity: 0.9;
-}
-
 /* Filter Bar */
 .filterBar {
   display: flex;
@@ -132,17 +112,6 @@
   position: relative;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
-
-.cardIndicator {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-}
-
-.indicatorCertified { background-color: #10b981; }
-.indicatorPending { background-color: #3b82f6; }
 
 .cardHeader {
   display: flex;

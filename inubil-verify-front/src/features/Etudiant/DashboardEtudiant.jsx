@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../core/auth/useAuth';
+import AccountMenu from '../../shared/components/AccountMenu/AccountMenu';
 import Logo_Inubil from '../../assets/Logo_Inubil.png';
 import styles from './DashboardEtudiant.module.css';
 import VerificationModal from './Visualisation.jsx';
@@ -37,23 +38,12 @@ export default function DashboardEtudiant() {
   return (
     <div className={styles.page}>
       
-      {/* SIDEBAR INTACTE */}
+      {/* Sidebar unifiee avec AppLayout/AdminInubil/DashboardDirecteur : logo, nav, nav bas —
+          plus de bloc "wallet" dans la sidebar (adresse fictive retiree), deconnexion dans le header. */}
       <aside className={styles.sidebar}>
         <div className={styles.brandGroup}>
           <div className={styles.logoBox}>
             <img alt="INUBIL Logo" className={styles.logo} src={Logo_Inubil} />
-          </div>
-        </div>
-
-        <div className={styles.userContextWrapper}>
-          <div className={styles.userContextBox}>
-            <div className={styles.avatarInitials}>
-              {user.initials}
-            </div>
-            <div className={styles.userMetadata}>
-              <span className={styles.userName}>{user.name}</span>
-              <span className={styles.userWallet}>{user.shortAddress}</span>
-            </div>
           </div>
         </div>
 
@@ -90,7 +80,10 @@ export default function DashboardEtudiant() {
             <span>Vues Recruteurs</span>
           </button>
 
-          <button 
+        </nav>
+
+        <nav className={styles.navBottom}>
+          <button
             onClick={() => setActiveMenu('settings')}
             className={`${styles.navBtn} ${activeMenu === 'settings' ? styles.navBtnActive : ''}`}
           >
@@ -98,13 +91,6 @@ export default function DashboardEtudiant() {
             <span>Paramètres</span>
           </button>
         </nav>
-
-        <div className={styles.sidebarFooter}>
-          <button onClick={handleLogout} className={styles.logoutBtn}>
-            <span className="material-symbols-outlined">logout</span>
-            <span className={styles.logoutText}>Déconnexion</span>
-          </button>
-        </div>
       </aside>
 
       {/* CONTENU CENTRAL */}
@@ -117,20 +103,22 @@ export default function DashboardEtudiant() {
             <input type="search" placeholder="Rechercher un diplôme, une vérification..." className={styles.searchInput} />
           </div>
           <div className={styles.headerActions}>
-            <button className={styles.notifBtn}>
+            <button className={styles.iconBtn}>
               <span className="material-symbols-outlined">notifications</span>
               <span className={styles.notifBadge}>3</span>
             </button>
-            <div className={styles.divider}></div>
-            <div className={styles.profileIndicator}>
-              <div className={styles.profileText}>
-                <span className={styles.profileName}>{user.name}</span>
-                <span className={styles.profileRole}>{user.level}</span>
-              </div>
-              <div className={styles.headerAvatar}>
-                {user.initials}
-              </div>
-            </div>
+            <button className={styles.iconBtn} title="Historique">
+              <span className="material-symbols-outlined">history</span>
+            </button>
+            <AccountMenu
+              prenom={prenom}
+              nom={nom}
+              roleLabel={user.level}
+              onOpenAccount={() => setActiveMenu('settings')}
+            />
+            <button type="button" onClick={handleLogout} className={styles.iconBtn} title="Se déconnecter">
+              <span className="material-symbols-outlined">logout</span>
+            </button>
           </div>
         </header>
 

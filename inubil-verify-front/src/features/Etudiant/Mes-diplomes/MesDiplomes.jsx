@@ -1,15 +1,13 @@
-import React, { useState } from 'react';
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  Share2, 
-  ExternalLink, 
-  CheckCircle2, 
-  Clock, 
-  Copy, 
-  Check, 
-  Plus, 
+import { useState } from 'react';
+import {
+  Search,
+  Download,
+  Share2,
+  ExternalLink,
+  CheckCircle2,
+  Clock,
+  Copy,
+  Check,
   X,
   Award,
   Calendar,
@@ -100,10 +98,6 @@ export default function MesDiplomes() {
             Consultez, partagez et téléchargez l'ensemble de vos titres académiques certifiés sur la blockchain.
           </p>
         </div>
-        <button className={styles.addDegreeBtn}>
-          <Plus size={16} />
-          <span>Ajouter un diplôme</span>
-        </button>
       </div>
 
       {/* Barre de Filtres et Recherche */}
@@ -148,8 +142,6 @@ export default function MesDiplomes() {
 
           return (
             <div key={diploma.id} className={styles.card}>
-              <div className={`${styles.cardIndicator} ${isCertified ? styles.indicatorCertified : styles.indicatorPending}`} />
-              
               <div className={styles.cardHeader}>
                 <div className={styles.titleGroup}>
                   <span className={styles.levelBadge}>{diploma.degreeLevel}</span>
