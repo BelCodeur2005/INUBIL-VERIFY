@@ -1,0 +1,38 @@
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.drawerPanel {
+  height: 100%;
+  width: 460px;
+  max-width: 92vw;
+  background-color: #ffffff;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
+  padding: 24px 28px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawerOverlay, .drawerPanel {
+    animation: none;
+  }
+}

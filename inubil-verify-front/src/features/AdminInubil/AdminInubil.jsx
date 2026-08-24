@@ -5,12 +5,30 @@ import AccountMenu from '../../shared/components/AccountMenu/AccountMenu';
 import MonCompte from '../../shared/components/MonCompte/MonCompte';
 import styles from './AdminInubil.module.css';
 import {
-  EtablissementModal,
-  UserModal,
-  QuotaModal,
-  NodeDetailsModal,
+  InviterUtilisateurModal,
   AuditLogDetailsModal,
+  ConfigEditDrawer,
 } from './AdminModals';
+import { listerConfigurations } from '../../core/configurations/configurations.api';
+import ListeDocuments from '../../shared/components/ListeDocuments/ListeDocuments';
+import { listerRoles } from '../../core/roles/roles.api';
+import {
+  listerUtilisateursAdmin,
+  activerUtilisateurAdmin,
+  desactiverUtilisateurAdmin,
+  getStatistiquesGlobales,
+  declencherBackup,
+  listerJournalAudit,
+} from '../../core/admin/admin.api';
+import { assignerRole } from '../../core/utilisateurs/utilisateurs.api';
+import { ApiError } from '../../core/api/client';
+
+const LABELS_STATUT_UTILISATEUR = {
+  actif: 'Actif',
+  inactif: 'Inactif',
+  suspendu: 'Suspendu',
+  en_attente_email: 'Email non vérifié',
+};
 
 const ROLE_LABELS = {
   super_admin: 'Super Administrateur',
@@ -66,7 +84,7 @@ function FlyoutNavItem({ label, icon, isOpen, isChildActive, onToggle, children 
 }
 
 export default function AdminInubil() {
-  const [activeTab, setActiveTab] = useState('etablissements');
+  const [activeTab, setActiveTab] = useState('statistiques');
   const [openFlyout, setOpenFlyout] = useState(null);
   const { utilisateur, logout } = useAuth();
 
@@ -86,33 +104,166 @@ export default function AdminInubil() {
   };
 
   // États des Modales
-  const [isEtabModalOpen, setIsEtabModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [isQuotaModalOpen, setIsQuotaModalOpen] = useState(false);
-  const [selectedEtabQuota, setSelectedEtabQuota] = useState(null);
-  const [selectedNodeDetails, setSelectedNodeDetails] = useState(null);
   const [selectedLog, setSelectedLog] = useState(null);
 
-  // Données de démonstration : Établissements
-  const [etablissements] = useState([
-    { id: 1, nom: 'Université de Douala - IUT', code: 'UD-IUT', type: 'Public', statut: 'ACTIF', quotas: 5000, consomme: 3750, admins: 3, directeurs: 2 },
-    { id: 2, nom: 'Université de Yaoundé I - Polytechnique', code: 'UY1-ENSPY', type: 'Public', statut: 'ACTIF', quotas: 10000, consomme: 8200, admins: 5, directeurs: 4 },
-    { id: 3, nom: 'Institut Saint-Jérôme', code: 'IU-SJ', type: 'Privé', statut: 'SUSPENDU', quotas: 2000, consomme: 2000, admins: 1, directeurs: 1 },
-  ]);
+  // ── Logs d'Audit (GET /admin/audit) ──
+  const [auditState, setAuditState] = useState({ data: [], total: 0, page: 1, limit: 50 });
+  const [auditLoading, setAuditLoading] = useState(true);
+  const [auditError, setAuditError] = useState(null);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditFiltreAction, setAuditFiltreAction] = useState('');
+  const [auditFiltreModule, setAuditFiltreModule] = useState('');
 
-  // Données de démonstration : Utilisateurs
-  const [users] = useState([
-    { id: 1, nom: 'Admin Root', email: 'admin@inubil.cm', role: 'SUPER_ADMIN', etablissement: 'INUBIL Central', statut: 'ACTIF', derniereConnexion: '30/07/2026 14:22' },
-    { id: 2, nom: 'Marie Ngo', email: 'm.ngo@univ-douala.cm', role: 'AGENT_SAISIE', etablissement: 'UD-IUT', statut: 'ACTIF', derniereConnexion: '30/07/2026 09:15' },
-    { id: 3, nom: 'Prof. Kamga', email: 'kamga@univ-douala.cm', role: 'DIRECTEUR_SIGNATAIRE', etablissement: 'UD-IUT', statut: 'ACTIF', derniereConnexion: '29/07/2026 16:40' },
-  ]);
+  useEffect(() => {
+    let annule = false;
+    const timeout = setTimeout(() => {
+      setAuditLoading(true);
+      setAuditError(null);
+      listerJournalAudit({
+        page: auditPage,
+        action: auditFiltreAction || undefined,
+        module: auditFiltreModule || undefined,
+      })
+        .then((res) => { if (!annule) setAuditState(res); })
+        .catch((err) => { if (!annule) setAuditError(err instanceof ApiError ? err.message : "Impossible de charger le journal d'audit."); })
+        .finally(() => { if (!annule) setAuditLoading(false); });
+    }, 300);
+    return () => { annule = true; clearTimeout(timeout); };
+  }, [auditPage, auditFiltreAction, auditFiltreModule]);
 
-  // Données de démonstration : Logs d'Audit
-  const logs = [
-    { id: 'LOG-9921', horodatage: '30/07/2026 14:05', auteur: 'Admin Root', action: 'Attribution Quota', details: '+1 000 Crédits vers UY1-ENSPY', ip: '197.234.221.10' },
-    { id: 'LOG-9920', horodatage: '30/07/2026 11:30', auteur: 'Prof. Kamga', action: 'Signature BATCH', details: 'Validation BATCH-2026-UD-DAWII-043', ip: '41.202.219.45' },
-    { id: 'LOG-9919', horodatage: '30/07/2026 09:18', auteur: 'Marie Ngo', action: 'Création Manifeste', details: 'Importation 150 diplômes DAWII', ip: '41.202.219.88' },
-  ];
+  const auditTotalPages = Math.max(1, Math.ceil(auditState.total / (auditState.limit || 50)));
+
+  // ── Paramètres Système (GET/PUT /configurations) ──
+  const [configs, setConfigs] = useState([]);
+  const [configsLoading, setConfigsLoading] = useState(true);
+  const [configsError, setConfigsError] = useState(null);
+  const [configEnEdition, setConfigEnEdition] = useState(null);
+
+  const chargerConfigurations = async () => {
+    setConfigsLoading(true);
+    setConfigsError(null);
+    try {
+      const res = await listerConfigurations();
+      setConfigs(res ?? []);
+    } catch (err) {
+      setConfigsError(err instanceof ApiError ? err.message : 'Impossible de charger les paramètres.');
+    } finally {
+      setConfigsLoading(false);
+    }
+  };
+
+  useEffect(() => { (async () => { await chargerConfigurations(); })(); }, []);
+
+  // ── Sauvegarde Manuelle (POST /admin/backup) ──
+  const [backupEnCours, setBackupEnCours] = useState(false);
+  const [backupResultat, setBackupResultat] = useState(null);
+  const [backupErreur, setBackupErreur] = useState(null);
+
+  const lancerBackup = async () => {
+    setBackupEnCours(true);
+    setBackupErreur(null);
+    setBackupResultat(null);
+    try {
+      const res = await declencherBackup();
+      setBackupResultat(res);
+    } catch (err) {
+      setBackupErreur(err instanceof ApiError ? err.message : 'Le backup a échoué.');
+    } finally {
+      setBackupEnCours(false);
+    }
+  };
+
+  // ── Statistiques globales (GET /admin/statistiques) ──
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState(null);
+
+  useEffect(() => {
+    let annule = false;
+    getStatistiquesGlobales()
+      .then((s) => { if (!annule) setStats(s); })
+      .catch((err) => { if (!annule) setStatsError(err instanceof ApiError ? err.message : 'Impossible de charger les statistiques.'); })
+      .finally(() => { if (!annule) setStatsLoading(false); });
+    return () => { annule = true; };
+  }, []);
+
+  // ── Rôles (partagé entre l'onglet Utilisateurs et l'onglet Rôles & Permissions) ──
+  const [roles, setRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
+  const [rolesError, setRolesError] = useState(null);
+
+  useEffect(() => {
+    let annule = false;
+    listerRoles()
+      .then((r) => { if (!annule) setRoles(r ?? []); })
+      .catch((err) => { if (!annule) setRolesError(err instanceof ApiError ? err.message : 'Impossible de charger les rôles.'); })
+      .finally(() => { if (!annule) setRolesLoading(false); });
+    return () => { annule = true; };
+  }, []);
+
+  // ── Utilisateurs (GET /admin/utilisateurs) ──
+  const [usersState, setUsersState] = useState({ data: [], total: 0, page: 1, totalPages: 1 });
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [usersError, setUsersError] = useState(null);
+  const [usersFiltreStatut, setUsersFiltreStatut] = useState('');
+  const [usersFiltreRole, setUsersFiltreRole] = useState('');
+  const [usersSearch, setUsersSearch] = useState('');
+  const [usersPage, setUsersPage] = useState(1);
+  const [actionEnCours, setActionEnCours] = useState(null);
+
+  const chargerUtilisateurs = async () => {
+    setUsersLoading(true);
+    setUsersError(null);
+    try {
+      const res = await listerUtilisateursAdmin({
+        page: usersPage,
+        statut: usersFiltreStatut || undefined,
+        role_id: usersFiltreRole || undefined,
+        search: usersSearch || undefined,
+      });
+      setUsersState(res);
+    } catch (err) {
+      setUsersError(err instanceof ApiError ? err.message : 'Impossible de charger les utilisateurs.');
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timeout = setTimeout(() => { chargerUtilisateurs(); }, 300);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usersPage, usersFiltreStatut, usersFiltreRole, usersSearch]);
+
+  const toggleActivationUtilisateur = async (u) => {
+    setActionEnCours(u.id);
+    try {
+      if (u.statut === 'actif') {
+        await desactiverUtilisateurAdmin(u.id);
+      } else {
+        await activerUtilisateurAdmin(u.id);
+      }
+      await chargerUtilisateurs();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : 'Action impossible.');
+    } finally {
+      setActionEnCours(null);
+    }
+  };
+
+  const changerRoleUtilisateur = async (u, roleId) => {
+    if (!roleId || roleId === u.role?.id) return;
+    setActionEnCours(u.id);
+    try {
+      await assignerRole(u.id, roleId);
+      await chargerUtilisateurs();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : 'Impossible de changer le rôle.');
+    } finally {
+      setActionEnCours(null);
+    }
+  };
 
   return (
     <div className={styles.adminContainer}>
@@ -130,12 +281,21 @@ export default function AdminInubil() {
 
         <nav className={styles.navSection}>
           <p className={styles.sectionTitle}>SUPERVISION GLOBALE</p>
+          {/* Établissements (multi-tenant) : hors scope pour l'instant — INUBIL est mono-université.
+              Section masquée, pas supprimée : a reprendre quand le multi-etablissement sera planifie. */}
           <button
-            className={activeTab === 'etablissements' ? styles.navItemActive : styles.navItem}
-            onClick={() => setActiveTab('etablissements')}
+            className={activeTab === 'statistiques' ? styles.navItemActive : styles.navItem}
+            onClick={() => setActiveTab('statistiques')}
           >
-            <span className="material-symbols-outlined">domain</span>
-            <span>Établissements</span>
+            <span className="material-symbols-outlined">monitoring</span>
+            <span>Statistiques</span>
+          </button>
+          <button
+            className={activeTab === 'documents' ? styles.navItemActive : styles.navItem}
+            onClick={() => setActiveTab('documents')}
+          >
+            <span className="material-symbols-outlined">description</span>
+            <span>Documents</span>
           </button>
           <FlyoutNavItem
             label="Utilisateurs & Rôles"
@@ -157,13 +317,8 @@ export default function AdminInubil() {
               Rôles & Permissions
             </button>
           </FlyoutNavItem>
-          <button
-            className={activeTab === 'nodes' ? styles.navItemActive : styles.navItem}
-            onClick={() => setActiveTab('nodes')}
-          >
-            <span className="material-symbols-outlined">dns</span>
-            <span>Infrastructures & Nœuds</span>
-          </button>
+          {/* Infrastructures & Nœuds : retire — aucun backend ne l'alimente (pas de "noeud prive"
+              administre par INUBIL, juste un acces RPC public au reseau Polygon Amoy/Mainnet). */}
 
           <p className={styles.sectionTitle}>SÉCURITÉ & AUDIT</p>
           <button
@@ -241,136 +396,174 @@ export default function AdminInubil() {
         </header>
 
         <main className={styles.mainContent}>
-          {/* Métriques d'En-tête */}
-          {activeTab !== 'mon-compte' && (
-          <section className={styles.kpiGrid}>
-            <div className={styles.kpiCard}>
-              <p className={styles.kpiLabel}>ÉTABLISSEMENTS PARTENAIRES</p>
-              <h3 className={styles.kpiValue}>12</h3>
-              <p className={styles.kpiSub}>11 Actifs | 1 Suspendu</p>
-            </div>
-            <div className={styles.kpiCard}>
-              <p className={styles.kpiLabel}>CONSOMMATION GLOBALE BLOCKCHAIN</p>
-              <h3 className={styles.kpiValue}>13,950 / 20,000</h3>
-              <div className={styles.progressBar}>
-                <div className={styles.progressFill} style={{ width: '69.7%' }}></div>
-              </div>
-            </div>
-            <div className={styles.kpiCard}>
-              <p className={styles.kpiLabel}>SANTÉ DU RÉSEAU (NŒUD HSM)</p>
-              <h3 className={styles.kpiValue} style={{ color: 'var(--on-tertiary-container)' }}>100% OPÉRATIONNEL</h3>
-              <p className={styles.kpiSub}>Latence moyenne : 18ms</p>
-            </div>
-          </section>
-          )}
-
-          {/* VUE 1 : GESTION DES ÉTABLISSEMENTS */}
-          {activeTab === 'etablissements' && (
+          {/* VUE 1 : STATISTIQUES GLOBALES */}
+          {activeTab === 'statistiques' && (
             <section className={styles.tableCard}>
               <div className={styles.tableHeader}>
                 <div>
-                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Gestion des Établissements Partenaires</h3>
-                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Configuration des structures universitaires et allocation des quotas.</p>
+                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Statistiques Globales</h3>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Chiffres agrégés de la plateforme, toutes universités confondues.</p>
                 </div>
-                <button className={styles.btnPrimary} onClick={() => setIsEtabModalOpen(true)}>
-                  <span className="material-symbols-outlined">add</span> Ajouter un Établissement
-                </button>
               </div>
-
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Code</th>
-                    <th>Nom de l'Établissement</th>
-                    <th>Type</th>
-                    <th>Statut</th>
-                    <th>Quota Consommé</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {etablissements.map((etab) => (
-                    <tr key={etab.id}>
-                      <td className={styles.mono}><strong>{etab.code}</strong></td>
-                      <td>{etab.nom}</td>
-                      <td>{etab.type}</td>
-                      <td>
-                        <span className={etab.statut === 'ACTIF' ? styles.statusActive : styles.statusSuspended}>
-                          {etab.statut}
-                        </span>
-                      </td>
-                      <td>
-                        <strong>{etab.consomme}</strong> / {etab.quotas} Crédits
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                          <button className={styles.btnSecondary} onClick={() => { setSelectedEtabQuota(etab); setIsQuotaModalOpen(true); }}>
-                            Recharger Quota
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {statsError && <p style={{ color: '#ba1a1a', fontSize: '0.8rem' }}>{statsError}</p>}
+              {statsLoading && <p style={{ fontSize: '0.8rem' }}>Chargement…</p>}
+              {!statsLoading && stats && (
+                <section className={styles.kpiGrid}>
+                  <div className={styles.kpiCard}>
+                    <p className={styles.kpiLabel}>UNIVERSITÉS</p>
+                    <h3 className={styles.kpiValue}>{stats.universites.total}</h3>
+                    <p className={styles.kpiSub}>{stats.universites.actives} active{stats.universites.actives > 1 ? 's' : ''}</p>
+                  </div>
+                  <div className={styles.kpiCard}>
+                    <p className={styles.kpiLabel}>DOCUMENTS ÉMIS</p>
+                    <h3 className={styles.kpiValue}>{stats.documents.total}</h3>
+                    <p className={styles.kpiSub}>{stats.documents.actifs} actifs · {stats.documents.en_validation} en validation · {stats.documents.revoques} révoqués</p>
+                  </div>
+                  <div className={styles.kpiCard}>
+                    <p className={styles.kpiLabel}>VÉRIFICATIONS</p>
+                    <h3 className={styles.kpiValue}>{stats.verifications.total}</h3>
+                    <p className={styles.kpiSub}>{stats.verifications.ce_mois} ce mois-ci</p>
+                  </div>
+                  <div className={styles.kpiCard}>
+                    <p className={styles.kpiLabel}>ÉTUDIANTS</p>
+                    <h3 className={styles.kpiValue}>{stats.etudiants}</h3>
+                  </div>
+                  <div className={styles.kpiCard}>
+                    <p className={styles.kpiLabel}>UTILISATEURS</p>
+                    <h3 className={styles.kpiValue}>{stats.utilisateurs}</h3>
+                  </div>
+                  <div className={styles.kpiCard}>
+                    <p className={styles.kpiLabel}>PARTAGES ACTIFS</p>
+                    <h3 className={styles.kpiValue}>{stats.partages.actifs}</h3>
+                  </div>
+                </section>
+              )}
             </section>
           )}
 
-          {/* VUE 2 : GESTION DES UTILISATEURS & RÔLES */}
+          {/* VUE : DOCUMENTS (toutes universités) */}
+          {activeTab === 'documents' && <ListeDocuments admin />}
+
+          {/* VUE 2 : GESTION DES UTILISATEURS */}
           {activeTab === 'users' && (
             <section className={styles.tableCard}>
               <div className={styles.tableHeader}>
                 <div>
                   <h3 style={{ margin: 0, color: 'var(--primary)' }}>Gestion des Utilisateurs</h3>
-                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Comptes actifs sur la plateforme, toutes universités confondues.</p>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>{usersState.total} compte{usersState.total > 1 ? 's' : ''} sur la plateforme.</p>
                 </div>
                 <button className={styles.btnPrimary} onClick={() => setIsUserModalOpen(true)}>
-                  <span className="material-symbols-outlined">person_add</span> Nouvel Utilisateur
+                  <span className="material-symbols-outlined">person_add</span> Inviter un Collaborateur
                 </button>
               </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', margin: '0 0 1rem', flexWrap: 'wrap' }}>
+                <input
+                  type="search"
+                  placeholder="Rechercher nom, prénom, email…"
+                  value={usersSearch}
+                  onChange={(e) => { setUsersPage(1); setUsersSearch(e.target.value); }}
+                  style={{ flex: '1 1 220px', padding: '0.5rem 0.75rem', borderRadius: '0.375rem', border: '1px solid var(--outline-variant)', fontSize: '0.8rem' }}
+                />
+                <select
+                  value={usersFiltreStatut}
+                  onChange={(e) => { setUsersPage(1); setUsersFiltreStatut(e.target.value); }}
+                  style={{ padding: '0.5rem 0.75rem', borderRadius: '0.375rem', border: '1px solid var(--outline-variant)', fontSize: '0.8rem' }}
+                >
+                  <option value="">Tous les statuts</option>
+                  {Object.entries(LABELS_STATUT_UTILISATEUR).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
+                <select
+                  value={usersFiltreRole}
+                  onChange={(e) => { setUsersPage(1); setUsersFiltreRole(e.target.value); }}
+                  style={{ padding: '0.5rem 0.75rem', borderRadius: '0.375rem', border: '1px solid var(--outline-variant)', fontSize: '0.8rem' }}
+                >
+                  <option value="">Tous les rôles</option>
+                  {roles.map((r) => <option key={r.id} value={r.id}>{r.nom}</option>)}
+                </select>
+              </div>
+
+              {usersError && <p style={{ color: '#ba1a1a', fontSize: '0.8rem' }}>{usersError}</p>}
 
               <table className={styles.table}>
                 <thead>
                   <tr>
                     <th>Utilisateur</th>
                     <th>Rôle</th>
-                    <th>Établissement Attribué</th>
+                    <th>Établissement</th>
                     <th>Dernière Connexion</th>
                     <th>Statut</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((usr) => (
+                  {usersLoading && (
+                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Chargement…</td></tr>
+                  )}
+                  {!usersLoading && usersState.data.length === 0 && (
+                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Aucun utilisateur ne correspond à ces filtres.</td></tr>
+                  )}
+                  {!usersLoading && usersState.data.map((usr) => (
                     <tr key={usr.id}>
                       <td>
-                        <strong>{usr.nom}</strong><br />
+                        <strong>{usr.prenom} {usr.nom}</strong><br />
                         <span style={{ fontSize: '0.7rem', color: 'var(--outline)' }}>{usr.email}</span>
                       </td>
-                      <td><span className={styles.roleBadge}>{usr.role}</span></td>
-                      <td>{usr.etablissement}</td>
-                      <td className={styles.mono} style={{ fontSize: '0.75rem' }}>{usr.derniereConnexion}</td>
-                      <td><span className={styles.statusActive}>{usr.statut}</span></td>
+                      <td>
+                        <select
+                          value={usr.role?.id ?? ''}
+                          onChange={(e) => changerRoleUtilisateur(usr, e.target.value)}
+                          disabled={actionEnCours === usr.id || rolesLoading}
+                          style={{ fontSize: '0.7rem', padding: '0.2rem 0.4rem', borderRadius: '0.375rem', border: '1px solid var(--outline-variant)' }}
+                        >
+                          <option value="" disabled>Sans rôle</option>
+                          {roles.map((r) => <option key={r.id} value={r.id}>{r.nom}</option>)}
+                        </select>
+                      </td>
+                      <td>{usr.universite?.nom ?? '—'}</td>
+                      <td className={styles.mono} style={{ fontSize: '0.75rem' }}>
+                        {usr.derniere_connexion ? new Date(usr.derniere_connexion).toLocaleString('fr-FR') : 'Jamais'}
+                      </td>
+                      <td>
+                        <span className={usr.statut === 'actif' ? styles.statusActive : styles.statusSuspended}>
+                          {LABELS_STATUT_UTILISATEUR[usr.statut] ?? usr.statut}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          className={styles.btnSecondary}
+                          onClick={() => toggleActivationUtilisateur(usr)}
+                          disabled={actionEnCours === usr.id}
+                        >
+                          {actionEnCours === usr.id ? '…' : (usr.statut === 'actif' ? 'Désactiver' : 'Activer')}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </section>
-          )}
 
-          {/* VUE 3 : INFRASTRUCTURE & NŒUD BLOCKCHAIN */}
-          {activeTab === 'nodes' && (
-            <section className={styles.bentoGrid}>
-              <div className={styles.bentoCard} style={{ gridColumn: 'span 6' }}>
-                <h3 style={{ color: 'var(--primary)', margin: '0 0 0.5rem 0' }}>Nœud d'Ancrage Blockchain INUBIL #01</h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Type: Private Ethereum Enterprise (PoA)</p>
-                <div style={{ margin: '1rem 0' }}>
-                  <p style={{ fontSize: '0.75rem', margin: '0.25rem 0' }}>Dernier Bloc Ancré: <strong className={styles.mono}>#18,429,102</strong></p>
-                  <p style={{ fontSize: '0.75rem', margin: '0.25rem 0' }}>Adresse du Smart Contract: <strong className={styles.mono}>0x71C...3a9B</strong></p>
+              {usersState.totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                  <button
+                    className={styles.btnSecondary}
+                    onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
+                    disabled={usersState.page <= 1}
+                  >
+                    Précédent
+                  </button>
+                  <span style={{ fontSize: '0.75rem', alignSelf: 'center' }}>Page {usersState.page} / {usersState.totalPages}</span>
+                  <button
+                    className={styles.btnSecondary}
+                    onClick={() => setUsersPage((p) => Math.min(usersState.totalPages, p + 1))}
+                    disabled={usersState.page >= usersState.totalPages}
+                  >
+                    Suivant
+                  </button>
                 </div>
-                <button className={styles.btnPrimary} onClick={() => setSelectedNodeDetails({ id: 'NODE-01', status: 'SYNCHRONISÉ', peers: 12 })}>
-                  Inspecter Métriques du Nœud
-                </button>
-              </div>
+              )}
             </section>
           )}
 
@@ -378,34 +571,83 @@ export default function AdminInubil() {
           {activeTab === 'logs' && (
             <section className={styles.tableCard}>
               <div className={styles.tableHeader}>
-                <h3 style={{ margin: 0, color: 'var(--primary)' }}>Journal des Logs d'Audit Globaux</h3>
+                <div>
+                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Journal des Logs d'Audit Globaux</h3>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>{auditState.total} entrée{auditState.total > 1 ? 's' : ''}.</p>
+                </div>
               </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', margin: '0 0 1rem', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Filtrer par action (ex: CREATE_DOCUMENT)"
+                  value={auditFiltreAction}
+                  onChange={(e) => { setAuditPage(1); setAuditFiltreAction(e.target.value); }}
+                  style={{ flex: '1 1 220px', padding: '0.5rem 0.75rem', borderRadius: '0.375rem', border: '1px solid var(--outline-variant)', fontSize: '0.8rem' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Filtrer par module (ex: documents)"
+                  value={auditFiltreModule}
+                  onChange={(e) => { setAuditPage(1); setAuditFiltreModule(e.target.value); }}
+                  style={{ flex: '1 1 220px', padding: '0.5rem 0.75rem', borderRadius: '0.375rem', border: '1px solid var(--outline-variant)', fontSize: '0.8rem' }}
+                />
+              </div>
+
+              {auditError && <p style={{ color: '#ba1a1a', fontSize: '0.8rem' }}>{auditError}</p>}
+
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>ID Log</th>
                     <th>Horodatage</th>
                     <th>Auteur</th>
+                    <th>Module</th>
                     <th>Action</th>
-                    <th>Détails</th>
+                    <th>IP</th>
                     <th style={{ textAlign: 'right' }}>Détails</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((log) => (
+                  {auditLoading && (
+                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Chargement…</td></tr>
+                  )}
+                  {!auditLoading && auditState.data.length === 0 && (
+                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Aucune entrée ne correspond à ces filtres.</td></tr>
+                  )}
+                  {!auditLoading && auditState.data.map((log) => (
                     <tr key={log.id}>
-                      <td className={styles.mono}>{log.id}</td>
-                      <td className={styles.mono} style={{ fontSize: '0.75rem' }}>{log.horodatage}</td>
-                      <td><strong>{log.auteur}</strong></td>
+                      <td className={styles.mono} style={{ fontSize: '0.75rem' }}>{new Date(log.created_at).toLocaleString('fr-FR')}</td>
+                      <td><strong>{log.nom_utilisateur ?? 'Système'}</strong></td>
+                      <td style={{ fontSize: '0.8rem' }}>{log.module}</td>
                       <td><span className={styles.actionBadge}>{log.action}</span></td>
-                      <td style={{ fontSize: '0.8rem' }}>{log.details}</td>
+                      <td className={styles.mono} style={{ fontSize: '0.75rem' }}>{log.ip_address ?? '—'}</td>
                       <td style={{ textAlign: 'right' }}>
-                        <button className={styles.btnSecondary} onClick={() => setSelectedLog(log)}>Inspecter IP</button>
+                        <button className={styles.btnSecondary} onClick={() => setSelectedLog(log)}>Détails</button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+
+              {auditTotalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                  <button
+                    className={styles.btnSecondary}
+                    onClick={() => setAuditPage((p) => Math.max(1, p - 1))}
+                    disabled={auditState.page <= 1}
+                  >
+                    Précédent
+                  </button>
+                  <span style={{ fontSize: '0.75rem', alignSelf: 'center' }}>Page {auditState.page} / {auditTotalPages}</span>
+                  <button
+                    className={styles.btnSecondary}
+                    onClick={() => setAuditPage((p) => Math.min(auditTotalPages, p + 1))}
+                    disabled={auditState.page >= auditTotalPages}
+                  >
+                    Suivant
+                  </button>
+                </div>
+              )}
             </section>
           )}
 
@@ -418,30 +660,28 @@ export default function AdminInubil() {
                   <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Catalogue des rôles métier et de leurs permissions RBAC.</p>
                 </div>
               </div>
+              {rolesError && <p style={{ color: '#ba1a1a', fontSize: '0.8rem' }}>{rolesError}</p>}
               <table className={styles.table}>
                 <thead>
                   <tr>
                     <th>Rôle</th>
                     <th>Description</th>
+                    <th>Portée</th>
                     <th style={{ textAlign: 'right' }}>Permissions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td><span className={styles.roleBadge}>responsable_universite</span></td>
-                    <td style={{ fontSize: '0.8rem' }}>Direction de l'établissement</td>
-                    <td style={{ textAlign: 'right' }}>14</td>
-                  </tr>
-                  <tr>
-                    <td><span className={styles.roleBadge}>directeur_pedagogique</span></td>
-                    <td style={{ fontSize: '0.8rem' }}>Validation, rejet, révocation des diplômes</td>
-                    <td style={{ textAlign: 'right' }}>6</td>
-                  </tr>
-                  <tr>
-                    <td><span className={styles.roleBadge}>agent_saisie</span></td>
-                    <td style={{ fontSize: '0.8rem' }}>Saisie quotidienne des diplômes</td>
-                    <td style={{ textAlign: 'right' }}>3</td>
-                  </tr>
+                  {rolesLoading && (
+                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Chargement…</td></tr>
+                  )}
+                  {!rolesLoading && roles.map((r) => (
+                    <tr key={r.id}>
+                      <td><span className={styles.roleBadge}>{r.nom}</span></td>
+                      <td style={{ fontSize: '0.8rem' }}>{r.description ?? '—'}</td>
+                      <td style={{ fontSize: '0.75rem' }}>{r.est_systeme ? 'Rôle système' : 'Rôle établissement'}</td>
+                      <td style={{ textAlign: 'right' }}>{r.permissions?.length ?? 0}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </section>
@@ -456,20 +696,33 @@ export default function AdminInubil() {
                   <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Clés de configuration globales de la plateforme.</p>
                 </div>
               </div>
+              {configsError && <p style={{ color: '#ba1a1a', fontSize: '0.8rem' }}>{configsError}</p>}
               <table className={styles.table}>
                 <thead>
                   <tr>
                     <th>Clé</th>
+                    <th>Description</th>
                     <th style={{ textAlign: 'right' }}>Valeur</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr><td className={styles.mono}>partage_duree_jours</td><td style={{ textAlign: 'right' }}>30</td></tr>
-                  <tr><td className={styles.mono}>max_tentatives_connexion</td><td style={{ textAlign: 'right' }}>5</td></tr>
-                  <tr><td className={styles.mono}>duree_blocage_min</td><td style={{ textAlign: 'right' }}>15</td></tr>
-                  <tr><td className={styles.mono}>pdf_max_taille_mo</td><td style={{ textAlign: 'right' }}>10</td></tr>
-                  <tr><td className={styles.mono}>presigned_url_duree_min</td><td style={{ textAlign: 'right' }}>15</td></tr>
-                  <tr><td className={styles.mono}>mot_de_passe_longueur_min</td><td style={{ textAlign: 'right' }}>8</td></tr>
+                  {configsLoading && (
+                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Chargement…</td></tr>
+                  )}
+                  {!configsLoading && configs.length === 0 && (
+                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Aucun paramètre enregistré.</td></tr>
+                  )}
+                  {!configsLoading && configs.map((c) => (
+                    <tr key={c.id}>
+                      <td className={styles.mono}>{c.cle}</td>
+                      <td style={{ fontSize: '0.8rem' }}>{c.description ?? '—'}</td>
+                      <td className={styles.mono} style={{ textAlign: 'right' }}>{c.valeur}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button className={styles.btnSecondary} onClick={() => setConfigEnEdition(c)}>Modifier</button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </section>
@@ -480,9 +733,15 @@ export default function AdminInubil() {
             <section className={styles.bentoGrid}>
               <div className={styles.bentoCard} style={{ gridColumn: 'span 6' }}>
                 <h3 style={{ color: 'var(--primary)', margin: '0 0 0.5rem 0' }}>Sauvegarde Manuelle</h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Déclenche un backup immédiat de la base vers le stockage FTP configuré.</p>
-                <button className={styles.btnPrimary} style={{ marginTop: '1rem' }}>
-                  <span className="material-symbols-outlined">backup</span> Lancer une sauvegarde
+                <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Déclenche un backup immédiat de la base (pg_dump) vers le stockage configuré.</p>
+                {backupErreur && <p style={{ color: '#ba1a1a', fontSize: '0.8rem' }}>{backupErreur}</p>}
+                {backupResultat && (
+                  <p style={{ color: '#166534', fontSize: '0.8rem' }}>
+                    {backupResultat.message} — <span className={styles.mono}>{backupResultat.fichier}</span> ({backupResultat.tailleMo} Mo)
+                  </p>
+                )}
+                <button className={styles.btnPrimary} style={{ marginTop: '1rem' }} onClick={lancerBackup} disabled={backupEnCours}>
+                  <span className="material-symbols-outlined">backup</span> {backupEnCours ? 'Sauvegarde en cours…' : 'Lancer une sauvegarde'}
                 </button>
               </div>
             </section>
@@ -494,11 +753,21 @@ export default function AdminInubil() {
       </div>
 
       {/* MODALES INTERACTIVES */}
-      {isEtabModalOpen && <EtablissementModal onClose={() => setIsEtabModalOpen(false)} />}
-      {isUserModalOpen && <UserModal onClose={() => setIsUserModalOpen(false)} etablissements={etablissements} />}
-      {isQuotaModalOpen && <QuotaModal etab={selectedEtabQuota} onClose={() => setIsQuotaModalOpen(false)} />}
-      {selectedNodeDetails && <NodeDetailsModal node={selectedNodeDetails} onClose={() => setSelectedNodeDetails(null)} />}
+      {isUserModalOpen && (
+        <InviterUtilisateurModal
+          onClose={() => setIsUserModalOpen(false)}
+          onInvited={chargerUtilisateurs}
+          roles={roles}
+        />
+      )}
       {selectedLog && <AuditLogDetailsModal log={selectedLog} onClose={() => setSelectedLog(null)} />}
+      {configEnEdition && (
+        <ConfigEditDrawer
+          config={configEnEdition}
+          onClose={() => setConfigEnEdition(null)}
+          onSaved={chargerConfigurations}
+        />
+      )}
     </div>
   );
 }
