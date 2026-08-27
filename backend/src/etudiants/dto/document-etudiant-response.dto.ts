@@ -79,6 +79,24 @@ export class DocumentEtudiantDto {
 
   @ApiProperty({ example: 'ISTAMA INUBIL' })
   universite: string;
+
+  @ApiPropertyOptional({ example: 'a1b2c3...', description: 'Empreinte SHA-256 du PDF, presente une fois le document actif.' })
+  hash_sha256: string | null;
+
+  @ApiPropertyOptional({ example: '0xabc123...' })
+  transaction_hash: string | null;
+
+  @ApiPropertyOptional({ example: 'polygon_amoy' })
+  reseau: string | null;
+
+  @ApiPropertyOptional({ example: '1234567' })
+  bloc_numero: string | null;
+
+  @ApiPropertyOptional({ example: '2026-06-12T00:00:00.000Z' })
+  date_enregistrement: Date | null;
+
+  @ApiProperty({ example: true, description: 'True si un PDF est associe (GET .../documents/:id/pdf disponible).' })
+  a_un_pdf: boolean;
 }
 
 export class DocumentsEtudiantListeDto {

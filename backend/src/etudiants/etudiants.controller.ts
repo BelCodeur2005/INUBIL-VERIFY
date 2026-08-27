@@ -25,6 +25,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { EtudiantsService } from './etudiants.service';
 import { DocumentsEtudiantQueryDto } from './dto/document-etudiant-response.dto';
+import { VerificationsEtudiantQueryDto } from './dto/verification-etudiant-response.dto';
 import { CreerPartageDto } from './dto/creer-partage.dto';
 
 @ApiTags('Espace étudiant')
@@ -74,6 +75,23 @@ export class EtudiantsController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.service.obtenirUrlPdf(user.id, id);
+  }
+
+  @Get('verifications')
+  @ApiOperation({
+    summary: 'Historique des verifications publiques sur les documents de l\'etudiant',
+    description:
+      'Chaque controle public (lien, QR, hash) sur un de ses documents. Le destinataire n\'est ' +
+      'rendu que si la verification est passee par un lien de partage cree par l\'etudiant lui-meme ; ' +
+      'sinon l\'evenement reste anonyme.',
+  })
+  @ApiOkResponse({ description: 'Liste paginee des verifications.' })
+  @ApiResponse({ status: 403, description: 'Aucun espace étudiant lié à ce compte.' })
+  listerVerifications(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: VerificationsEtudiantQueryDto,
+  ) {
+    return this.service.listerVerifications(user.id, query);
   }
 
   @Get('statistiques')

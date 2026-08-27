@@ -20,6 +20,11 @@ import {
 import { CreerPartageDto } from './dto/creer-partage.dto';
 import { PartageResponseDto } from './dto/partage-response.dto';
 import { StatistiquesEtudiantDto } from './dto/statistiques-etudiant.dto';
+import {
+  VerificationEtudiantDto,
+  VerificationsEtudiantQueryDto,
+  VerificationsEtudiantListeDto,
+} from './dto/verification-etudiant-response.dto';
 
 @Injectable()
 export class EtudiantsService {
@@ -322,6 +327,53 @@ export class EtudiantsService {
     };
   }
 
+  /**
+   * Historique des verifications publiques passees sur les documents de l'etudiant
+   * (table `verifications`, deja alimentee par PublicVerifyService a chaque controle,
+   * mais jusqu'ici jamais exposee cote etudiant). Aucune identite d'organisation n'est
+   * inventee : quand la verification est passee par un lien de partage cree par
+   * l'etudiant lui-meme, on rend le destinataire qu'il avait renseigne ; sinon
+   * l'evenement reste anonyme (ip/user-agent ne sont pas exposes ici).
+   */
+  async listerVerifications(
+    userId: string,
+    query: VerificationsEtudiantQueryDto,
+  ): Promise<VerificationsEtudiantListeDto> {
+    const etudiant = await this.trouverEtudiantDuCompte(userId);
+    const page  = query.page  ?? 1;
+    const limit = query.limit ?? 20;
+    const skip  = (page - 1) * limit;
+
+    const where = { documents: { etudiant_id: etudiant.id } };
+
+    const [verifs, total] = await Promise.all([
+      this.prisma.verifications.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        include: {
+          documents:         { select: { numero_unique: true, types_document: { select: { nom: true } } } },
+          partages_document: { select: { email_destinataire_externe: true } },
+        },
+      }),
+      this.prisma.verifications.count({ where }),
+    ]);
+
+    const data: VerificationEtudiantDto[] = verifs.map((v: any) => ({
+      id:                   v.id,
+      document_id:          v.document_id ?? null,
+      numero_unique:        v.documents?.numero_unique ?? null,
+      type_document:        v.documents?.types_document?.nom ?? null,
+      type_verification:    v.type_verification,
+      resultat:             v.resultat,
+      destinataire_partage: v.partages_document?.email_destinataire_externe ?? null,
+      created_at:           v.created_at,
+    }));
+
+    return { data, total, page, limit };
+  }
+
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
   private async trouverEtudiantDuCompte(userId: string) {
@@ -358,6 +410,12 @@ export class EtudiantsService {
       url_verification: d.url_verification ?? null,
       matieres,
       universite:       d.universites.nom,
+      hash_sha256:         d.hash_sha256 ?? null,
+      transaction_hash:    d.transaction_hash ?? null,
+      reseau:              d.reseau ?? null,
+      bloc_numero:         d.bloc_numero !== null && d.bloc_numero !== undefined ? String(d.bloc_numero) : null,
+      date_enregistrement: d.emis_le ?? d.date_emission ?? null,
+      a_un_pdf:            Boolean(d.pdf_url),
     };
   }
 

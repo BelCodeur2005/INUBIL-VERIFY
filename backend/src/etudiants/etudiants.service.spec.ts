@@ -48,6 +48,17 @@ const makeDoc = (overrides = {}) => ({
   ...overrides,
 });
 
+const makeVerif = (overrides = {}) => ({
+  id:                'ver-0000-0000-0000-000000000005',
+  document_id:       DOC_ID,
+  type_verification: 'lien_unique',
+  resultat:          'authentique',
+  created_at:        new Date('2026-08-20T10:00:00.000Z'),
+  documents:         { numero_unique: 'INUB-2026-0001', types_document: { nom: 'Licence' } },
+  partages_document: null,
+  ...overrides,
+});
+
 const makePartage = (overrides = {}) => ({
   id:                          PARTAGE_ID,
   document_id:                 DOC_ID,
@@ -98,6 +109,7 @@ const makePrisma = () => ({
   },
   verifications: {
     count: jest.fn(),
+    findMany: jest.fn(),
   },
 });
 
@@ -166,6 +178,30 @@ describe('EtudiantsService', () => {
       expect(result.data).toHaveLength(1);
       expect(result.data[0].numero_unique).toBe('INUB-2026-0001');
       expect(result.data[0].mention).toBe('Assez Bien');
+      expect(result.data[0].a_un_pdf).toBe(true);
+      expect(result.data[0].hash_sha256).toBeNull();
+    });
+
+    it('expose le hash et la transaction blockchain quand le document est ancré', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.documents.findMany.mockResolvedValue([
+        makeDoc({
+          hash_sha256:      'a'.repeat(64),
+          transaction_hash: '0x' + 'b'.repeat(64),
+          reseau:           'polygon_amoy',
+          bloc_numero:      BigInt(123456),
+          emis_le:          new Date('2026-06-02'),
+        }),
+      ]);
+      prisma.documents.count.mockResolvedValue(1);
+
+      const result = await service.listerDocuments(USER_ID, {});
+
+      expect(result.data[0].hash_sha256).toBe('a'.repeat(64));
+      expect(result.data[0].transaction_hash).toBe('0x' + 'b'.repeat(64));
+      expect(result.data[0].reseau).toBe('polygon_amoy');
+      expect(result.data[0].bloc_numero).toBe('123456');
+      expect(result.data[0].date_enregistrement).toEqual(new Date('2026-06-02'));
     });
 
     it('filtre par statut si fourni', async () => {
@@ -192,6 +228,52 @@ describe('EtudiantsService', () => {
       expect(result.page).toBe(2);
       expect(result.limit).toBe(5);
       expect(prisma.documents.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 5, take: 5 }),
+      );
+    });
+  });
+
+  // ── listerVerifications ────────────────────────────────────────────────────
+
+  describe('listerVerifications', () => {
+    it('retourne l\'historique des verifications, evenement anonyme par defaut', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.verifications.findMany.mockResolvedValue([makeVerif()]);
+      prisma.verifications.count.mockResolvedValue(1);
+
+      const result = await service.listerVerifications(USER_ID, {});
+
+      expect(result.total).toBe(1);
+      expect(result.data[0].numero_unique).toBe('INUB-2026-0001');
+      expect(result.data[0].type_verification).toBe('lien_unique');
+      expect(result.data[0].destinataire_partage).toBeNull();
+      expect(prisma.verifications.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { documents: { etudiant_id: ETU_ID } } }),
+      );
+    });
+
+    it('expose le destinataire quand la verification est passee par un partage de l\'etudiant', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.verifications.findMany.mockResolvedValue([
+        makeVerif({ partages_document: { email_destinataire_externe: 'rh@orange.cm' } }),
+      ]);
+      prisma.verifications.count.mockResolvedValue(1);
+
+      const result = await service.listerVerifications(USER_ID, {});
+
+      expect(result.data[0].destinataire_partage).toBe('rh@orange.cm');
+    });
+
+    it('paginé : page 2, limit 5', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.verifications.findMany.mockResolvedValue([]);
+      prisma.verifications.count.mockResolvedValue(10);
+
+      const result = await service.listerVerifications(USER_ID, { page: 2, limit: 5 });
+
+      expect(result.page).toBe(2);
+      expect(result.limit).toBe(5);
+      expect(prisma.verifications.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ skip: 5, take: 5 }),
       );
     });
