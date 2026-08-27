@@ -9,6 +9,7 @@ import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { ConfigurationsService } from '../configurations/configurations.service';
+import { StorageService } from '../storage/storage.service';
 import { ProfilEtudiantDto } from './dto/profil-etudiant.dto';
 import {
   DocumentEtudiantDto,
@@ -30,6 +31,7 @@ export class EtudiantsService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly configurations: ConfigurationsService,
+    private readonly storage: StorageService,
   ) {}
 
   /**
@@ -46,6 +48,13 @@ export class EtudiantsService {
     return Number.isFinite(jours) && jours > 0
       ? jours
       : EtudiantsService.DUREE_PARTAGE_DEFAUT_JOURS;
+  }
+
+  /** Duree (en secondes) de validite des liens presignes S3/R2, pilotable via configurations. */
+  private async presignedUrlDureeSecondes(): Promise<number> {
+    const brut = await this.configurations.get('presigned_url_duree_min', '15');
+    const min = Number(brut);
+    return (Number.isFinite(min) && min > 0 ? min : 15) * 60;
   }
 
   // ─── Profil ────────────────────────────────────────────────────────────────
@@ -112,6 +121,38 @@ export class EtudiantsService {
       page,
       limit,
     };
+  }
+
+  /**
+   * Lien presigne S3/R2 pour telecharger le PDF d'un document appartenant a
+   * l'etudiant connecte. Meme logique que DocumentsService.getPdfUrl (staff),
+   * mais scopee par etudiant_id plutot que par permission doc:read — le role
+   * "etudiant" n'a aucune permission RBAC, cette route est ouverte a tout
+   * detenteur du document via son propre compte.
+   */
+  async obtenirUrlPdf(
+    userId: string,
+    documentId: string,
+  ): Promise<{ url: string; expires_in_seconds: number }> {
+    const etudiant = await this.trouverEtudiantDuCompte(userId);
+
+    const doc = await this.prisma.documents.findFirst({
+      where: { id: documentId, etudiant_id: etudiant.id, deleted_at: null },
+    });
+    if (!doc) throw new NotFoundException('Document introuvable dans votre dossier');
+
+    if (doc.statut === 'revoque') {
+      throw new ForbiddenException('Ce document a été révoqué');
+    }
+    if (!doc.pdf_url) {
+      throw new BadRequestException('Aucun PDF associé à ce document');
+    }
+
+    const expires = await this.presignedUrlDureeSecondes();
+    const url = await this.storage.getPresignedUrl(doc.pdf_url, expires);
+    if (!url) throw new BadRequestException('Stockage S3 non configuré');
+
+    return { url, expires_in_seconds: expires };
   }
 
   // ─── Partages ──────────────────────────────────────────────────────────────

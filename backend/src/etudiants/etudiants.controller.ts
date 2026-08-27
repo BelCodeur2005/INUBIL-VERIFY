@@ -53,6 +53,29 @@ export class EtudiantsController {
     return this.service.listerDocuments(user.id, query);
   }
 
+  @Get('documents/:id/pdf')
+  @ApiOperation({
+    summary: 'Lien presigné pour télécharger le PDF d\'un document du dossier étudiant',
+    description: 'Génère un lien pré-signé S3/R2 valable ~15 min (durée pilotable). Le PDF est privé.',
+  })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string' },
+        expires_in_seconds: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Document révoqué ou aucun espace étudiant lié à ce compte.' })
+  @ApiResponse({ status: 404, description: 'Document introuvable dans le dossier de l\'étudiant.' })
+  obtenirUrlPdf(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.service.obtenirUrlPdf(user.id, id);
+  }
+
   @Get('statistiques')
   @ApiOperation({ summary: 'Statistiques de l\'étudiant (consultations, partages, etc.)' })
   @ApiOkResponse({ description: 'Compteurs agrégés.' })

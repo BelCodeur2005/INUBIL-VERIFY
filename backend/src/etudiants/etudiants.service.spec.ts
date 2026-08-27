@@ -4,6 +4,7 @@ import { EtudiantsService } from './etudiants.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { ConfigurationsService } from '../configurations/configurations.service';
+import { StorageService } from '../storage/storage.service';
 
 const USER_ID   = 'usr-0000-0000-0000-000000000001';
 const ETU_ID    = 'etu-0000-0000-0000-000000000002';
@@ -39,6 +40,7 @@ const makeDoc = (overrides = {}) => ({
   statut:           'actif',
   moyenne_generale: 13.5,
   url_verification: null,
+  pdf_url:          'documents/INUB-2026-0001.pdf',
   types_document:   { nom: 'Licence', categorie: 'diplome' },
   mentions_document: { nom: 'Assez Bien' },
   universites:      { nom: 'ISTAMA INUBIL' },
@@ -73,6 +75,10 @@ const makeConfigurations = () => ({
   get: jest.fn().mockResolvedValue('30'),
 });
 
+const makeStorage = () => ({
+  getPresignedUrl: jest.fn().mockResolvedValue('https://s3.example.com/signed-url'),
+});
+
 const makePrisma = () => ({
   etudiants: {
     findFirst: jest.fn(),
@@ -100,11 +106,13 @@ describe('EtudiantsService', () => {
   let prisma: ReturnType<typeof makePrisma>;
   let mail: ReturnType<typeof makeMail>;
   let configurations: ReturnType<typeof makeConfigurations>;
+  let storage: ReturnType<typeof makeStorage>;
 
   beforeEach(async () => {
     prisma = makePrisma();
     mail   = makeMail();
     configurations = makeConfigurations();
+    storage = makeStorage();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -112,6 +120,7 @@ describe('EtudiantsService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: MailService,   useValue: mail   },
         { provide: ConfigurationsService, useValue: configurations },
+        { provide: StorageService, useValue: storage },
       ],
     }).compile();
 
@@ -185,6 +194,54 @@ describe('EtudiantsService', () => {
       expect(prisma.documents.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ skip: 5, take: 5 }),
       );
+    });
+  });
+
+  // ── obtenirUrlPdf ─────────────────────────────────────────────────────────
+
+  describe('obtenirUrlPdf', () => {
+    it('retourne un lien presigné pour un document actif appartenant à l\'étudiant', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+
+      const result = await service.obtenirUrlPdf(USER_ID, DOC_ID);
+
+      expect(result.url).toBe('https://s3.example.com/signed-url');
+      expect(result.expires_in_seconds).toBe(30 * 60);
+      expect(storage.getPresignedUrl).toHaveBeenCalledWith('documents/INUB-2026-0001.pdf', 30 * 60);
+    });
+
+    it('lève NotFoundException si le document n\'appartient pas à l\'étudiant', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.documents.findFirst.mockResolvedValue(null);
+
+      await expect(service.obtenirUrlPdf(USER_ID, DOC_ID))
+        .rejects.toThrow(NotFoundException);
+    });
+
+    it('lève ForbiddenException si le document est révoqué', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.documents.findFirst.mockResolvedValue(makeDoc({ statut: 'revoque' }));
+
+      await expect(service.obtenirUrlPdf(USER_ID, DOC_ID))
+        .rejects.toThrow(ForbiddenException);
+    });
+
+    it('lève BadRequestException si aucun PDF n\'est associé', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.documents.findFirst.mockResolvedValue(makeDoc({ pdf_url: null }));
+
+      await expect(service.obtenirUrlPdf(USER_ID, DOC_ID))
+        .rejects.toThrow(BadRequestException);
+    });
+
+    it('lève BadRequestException si le stockage S3 n\'est pas configuré', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+      storage.getPresignedUrl.mockResolvedValue(null);
+
+      await expect(service.obtenirUrlPdf(USER_ID, DOC_ID))
+        .rejects.toThrow(BadRequestException);
     });
   });
 
