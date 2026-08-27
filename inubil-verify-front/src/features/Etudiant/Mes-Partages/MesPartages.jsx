@@ -1,86 +1,123 @@
-import React, { useState } from 'react';
-import { 
-  Share2, 
-  Link2, 
-  Copy, 
-  Check, 
-  Plus, 
-  Trash2, 
-  Eye, 
-  Clock, 
-  ShieldCheck,
+import { useEffect, useState } from 'react';
+import {
+  Share2,
+  Link2,
+  Copy,
+  Check,
+  Plus,
+  Trash2,
+  Eye,
+  Clock,
+  ListChecks,
   Calendar,
-  X
+  X,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
+import { listerMesPartages, creerPartage, revoquerPartage, listerMesDocuments } from '../../../core/etudiants/etudiants.api';
+import { ApiError } from '../../../core/api/client';
 import styles from './MesPartages.module.css';
 
+const URL_PARTAGE_BASE = 'https://verify.inubil.com/partages/';
+
+const DUREES = [
+  { valeur: '7',         label: '7 jours' },
+  { valeur: '30',        label: '30 jours (par défaut)' },
+  { valeur: '90',        label: '90 jours' },
+  { valeur: '365',       label: '1 an' },
+  { valeur: 'permanent', label: 'Permanent (sans expiration)' },
+];
+
+function fmtDate(iso) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 export default function MesPartages() {
+  const [partages, setPartages] = useState([]);
+  const [documentsActifs, setDocumentsActifs] = useState([]);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [revocationId, setRevocationId] = useState(null);
 
-  // Formulaire pour le nouveau lien
-  const [newShare, setNewShare] = useState({
-    title: '',
-    diploma: 'Licence en Développement Web (DAWII)',
-    recipient: '',
-    duration: '7'
-  });
+  const [drawerOuvert, setDrawerOuvert] = useState(false);
+  const [formulaire, setFormulaire] = useState({ document_id: '', email_destinataire: '', duree: '30' });
+  const [creationEnCours, setCreationEnCours] = useState(false);
+  const [creationErreur, setCreationErreur] = useState(null);
 
-  const [shares, setShares] = useState([
-    {
-      id: 'sh_101',
-      title: 'Lien Recrutement — Tech Lead',
-      diploma: 'Licence en Développement Web (DAWII)',
-      recipient: 'Recruteurs publics',
-      createdDate: '12/08/2026',
-      expiresIn: '7 jours',
-      viewsCount: 5,
-      status: 'Actif',
-      shareUrl: 'https://verify.inubil.org/v/abc123xyz'
-    },
-    {
-      id: 'sh_102',
-      title: 'Partage pour Candidature Master',
-      diploma: 'Licence en Développement Web (DAWII)',
-      recipient: 'Université de Paris',
-      createdDate: '01/08/2026',
-      expiresIn: 'Expiré',
-      viewsCount: 12,
-      status: 'Expiré',
-      shareUrl: 'https://verify.inubil.org/v/exp987456'
-    }
-  ]);
+  useEffect(() => {
+    (async () => {
+      setChargement(true);
+      setErreur(null);
+      try {
+        const [reponsePartages, reponseDocs] = await Promise.all([
+          listerMesPartages(),
+          listerMesDocuments({ statut: 'actif', limit: 100 }),
+        ]);
+        setPartages(reponsePartages);
+        setDocumentsActifs(reponseDocs.data);
+      } catch (err) {
+        setErreur(err instanceof ApiError ? err.message : 'Impossible de charger vos partages');
+      } finally {
+        setChargement(false);
+      }
+    })();
+  }, []);
 
-  const handleCopyLink = (id, url) => {
-    navigator.clipboard.writeText(url);
+  const handleCopyLink = (id, token) => {
+    navigator.clipboard.writeText(`${URL_PARTAGE_BASE}${token}`);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleRevokeShare = (id) => {
-    setShares(shares.filter(share => share.id !== id));
+  const handleRevoquerPartage = async (id) => {
+    setRevocationId(id);
+    try {
+      await revoquerPartage(id);
+      setPartages((prev) => prev.map((p) => (p.id === id ? { ...p, statut: 'revoque' } : p)));
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : 'Révocation impossible.');
+    } finally {
+      setRevocationId(null);
+    }
   };
 
-  const handleCreateShare = (e) => {
+  const ouvrirDrawer = () => {
+    setCreationErreur(null);
+    setFormulaire({ document_id: documentsActifs[0]?.id ?? '', email_destinataire: '', duree: '30' });
+    setDrawerOuvert(true);
+  };
+
+  const handleCreerPartage = async (e) => {
     e.preventDefault();
-    if (!newShare.title || !newShare.recipient) return;
+    if (!formulaire.document_id) return;
 
-    const created = {
-      id: `sh_${Date.now()}`,
-      title: newShare.title,
-      diploma: newShare.diploma,
-      recipient: newShare.recipient,
-      createdDate: new Date().toLocaleDateString('fr-FR'),
-      expiresIn: `${newShare.duration} jours`,
-      viewsCount: 0,
-      status: 'Actif',
-      shareUrl: `https://verify.inubil.org/v/${Math.random().toString(36).substr(2, 9)}`
-    };
+    setCreationEnCours(true);
+    setCreationErreur(null);
+    try {
+      const dto = { document_id: formulaire.document_id };
+      if (formulaire.email_destinataire) dto.email_destinataire = formulaire.email_destinataire;
+      if (formulaire.duree === 'permanent') {
+        dto.permanent = true;
+      } else {
+        const expiration = new Date();
+        expiration.setDate(expiration.getDate() + Number(formulaire.duree));
+        dto.date_expiration = expiration.toISOString();
+      }
 
-    setShares([created, ...shares]);
-    setShowCreateModal(false);
-    setNewShare({ title: '', diploma: 'Licence en Développement Web (DAWII)', recipient: '', duration: '7' });
+      const cree = await creerPartage(dto);
+      setPartages((prev) => [cree, ...prev]);
+      setDrawerOuvert(false);
+    } catch (err) {
+      setCreationErreur(err instanceof ApiError ? err.message : 'Création du lien impossible.');
+    } finally {
+      setCreationEnCours(false);
+    }
   };
+
+  const liensActifs = partages.filter((p) => p.statut === 'actif').length;
+  const totalConsultations = partages.reduce((acc, p) => acc + (p.nb_consultations ?? 0), 0);
 
   return (
     <div className={styles.container}>
@@ -95,10 +132,7 @@ export default function MesPartages() {
             Gérez les accès sécurisés que vous avez générés pour les recruteurs et institutions.
           </p>
         </div>
-        <button 
-          className={styles.createBtn}
-          onClick={() => setShowCreateModal(true)}
-        >
+        <button className={styles.createBtn} onClick={ouvrirDrawer} disabled={documentsActifs.length === 0}>
           <Plus size={18} />
           Nouveau Lien de Partage
         </button>
@@ -109,7 +143,7 @@ export default function MesPartages() {
         <div className={styles.statCard}>
           <div className={`${styles.iconBox} ${styles.blueIcon}`}><Link2 size={20} /></div>
           <div>
-            <span className={styles.statNumber}>{shares.filter(s => s.status === 'Actif').length}</span>
+            <span className={styles.statNumber}>{liensActifs}</span>
             <span className={styles.statLabel}>Liens Actifs</span>
           </div>
         </div>
@@ -117,16 +151,16 @@ export default function MesPartages() {
         <div className={styles.statCard}>
           <div className={`${styles.iconBox} ${styles.greenIcon}`}><Eye size={20} /></div>
           <div>
-            <span className={styles.statNumber}>{shares.reduce((acc, curr) => acc + curr.viewsCount, 0)}</span>
+            <span className={styles.statNumber}>{totalConsultations}</span>
             <span className={styles.statLabel}>Consultations Totales</span>
           </div>
         </div>
 
         <div className={styles.statCard}>
-          <div className={`${styles.iconBox} ${styles.purpleIcon}`}><ShieldCheck size={20} /></div>
+          <div className={`${styles.iconBox} ${styles.purpleIcon}`}><ListChecks size={20} /></div>
           <div>
-            <span className={styles.statNumber}>Blockchain</span>
-            <span className={styles.statLabel}>Protection Active</span>
+            <span className={styles.statNumber}>{partages.length}</span>
+            <span className={styles.statLabel}>Liens Créés au Total</span>
           </div>
         </div>
       </div>
@@ -135,116 +169,142 @@ export default function MesPartages() {
       <div className={styles.sharesListSection}>
         <h2 className={styles.sectionTitle}>Historique des accès générés</h2>
 
-        <div className={styles.sharesGrid}>
-          {shares.map((share) => (
-            <div key={share.id} className={styles.shareCard}>
-              <div className={styles.cardHeader}>
-                <div className={styles.cardHeaderInfo}>
-                  <h3 className={styles.shareTitle}>{share.title}</h3>
-                  <span className={styles.diplomaName}>{share.diploma}</span>
+        {chargement && (
+          <div className={styles.etatVide}>
+            <Loader2 size={22} className={styles.spin} />
+            <p>Chargement de vos partages...</p>
+          </div>
+        )}
+
+        {!chargement && erreur && (
+          <div className={styles.etatVide}>
+            <AlertTriangle size={22} />
+            <p>{erreur}</p>
+          </div>
+        )}
+
+        {!chargement && !erreur && partages.length === 0 && (
+          <div className={styles.etatVide}>
+            <Share2 size={22} />
+            <p>Vous n'avez encore créé aucun lien de partage.</p>
+          </div>
+        )}
+
+        {!chargement && !erreur && partages.length > 0 && (
+          <div className={styles.sharesGrid}>
+            {partages.map((share) => {
+              const estActif = share.statut === 'actif';
+              return (
+                <div key={share.id} className={styles.shareCard}>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.cardHeaderInfo}>
+                      <h3 className={styles.shareTitle}>{share.document_titre}</h3>
+                    </div>
+                    <span className={`${styles.statusBadge} ${estActif ? styles.statusActive : styles.statusExpired}`}>
+                      {share.statut === 'actif' ? 'Actif' : share.statut === 'revoque' ? 'Révoqué' : 'Expiré'}
+                    </span>
+                  </div>
+
+                  <div className={styles.linkBox}>
+                    <code className={styles.urlText}>{URL_PARTAGE_BASE}{share.token_acces}</code>
+                    <button
+                      className={styles.copyBtn}
+                      onClick={() => handleCopyLink(share.id, share.token_acces)}
+                      title="Copier le lien"
+                      disabled={!estActif}
+                    >
+                      {copiedId === share.id ? <Check size={16} color="#10b981" /> : <Copy size={16} />}
+                    </button>
+                  </div>
+
+                  <div className={styles.cardMeta}>
+                    <div className={styles.metaItem}><Calendar size={14} /><span>Créé le : {fmtDate(share.created_at)}</span></div>
+                    <div className={styles.metaItem}><Clock size={14} /><span>{share.date_expiration ? `Expire le ${fmtDate(share.date_expiration)}` : 'Permanent'}</span></div>
+                    <div className={styles.metaItem}><Eye size={14} /><span>{share.nb_consultations} vues</span></div>
+                  </div>
+
+                  <div className={styles.cardFooter}>
+                    <span className={styles.recipient}>
+                      Destinataire : <strong>{share.email_destinataire ?? share.universite_destinataire ?? 'Non renseigné'}</strong>
+                    </span>
+                    {estActif && (
+                      <button
+                        className={styles.revokeBtn}
+                        onClick={() => handleRevoquerPartage(share.id)}
+                        disabled={revocationId === share.id}
+                      >
+                        <Trash2 size={14} /> {revocationId === share.id ? 'Révocation...' : 'Révoquer'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <span className={`${styles.statusBadge} ${share.status === 'Actif' ? styles.statusActive : styles.statusExpired}`}>
-                  {share.status}
-                </span>
-              </div>
-
-              <div className={styles.linkBox}>
-                <code className={styles.urlText}>{share.shareUrl}</code>
-                <button 
-                  className={styles.copyBtn} 
-                  onClick={() => handleCopyLink(share.id, share.shareUrl)}
-                  title="Copier le lien"
-                >
-                  {copiedId === share.id ? <Check size={16} color="#10b981" /> : <Copy size={16} />}
-                </button>
-              </div>
-
-              <div className={styles.cardMeta}>
-                <div className={styles.metaItem}><Calendar size={14} /><span>Créé le : {share.createdDate}</span></div>
-                <div className={styles.metaItem}><Clock size={14} /><span>Expiration : {share.expiresIn}</span></div>
-                <div className={styles.metaItem}><Eye size={14} /><span>{share.viewsCount} vues</span></div>
-              </div>
-
-              <div className={styles.cardFooter}>
-                <span className={styles.recipient}>Destinataire : <strong>{share.recipient}</strong></span>
-                <button className={styles.revokeBtn} onClick={() => handleRevokeShare(share.id)}>
-                  <Trash2 size={14} /> Révoquer
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* MODALE DE CRÉATION */}
-      {showCreateModal && (
-        <div className={styles.modalOverlay} onClick={() => setShowCreateModal(false)}>
-          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+      {/* DRAWER DE CRÉATION */}
+      {drawerOuvert && (
+        <div className={styles.drawerOverlay} onClick={() => setDrawerOuvert(false)}>
+          <div className={styles.drawerPanel} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h3>Générer un lien de vérification</h3>
-              <button className={styles.closeModalBtn} onClick={() => setShowCreateModal(false)}>
+              <button className={styles.closeModalBtn} onClick={() => setDrawerOuvert(false)}>
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateShare} className={styles.modalForm}>
+            <form onSubmit={handleCreerPartage} className={styles.modalForm}>
               <div className={styles.formGroup}>
-                <label>Diplôme concerné</label>
-                <select 
-                  value={newShare.diploma} 
-                  onChange={(e) => setNewShare({...newShare, diploma: e.target.value})}
+                <label htmlFor="partage-document">Diplôme concerné</label>
+                <select
+                  id="partage-document"
+                  value={formulaire.document_id}
+                  onChange={(e) => setFormulaire({ ...formulaire, document_id: e.target.value })}
+                  required
                 >
-                  <option value="Licence en Développement Web (DAWII)">
-                    Licence en Développement Web (DAWII)
-                  </option>
+                  {documentsActifs.map((doc) => (
+                    <option key={doc.id} value={doc.id}>
+                      {doc.type_document} — {doc.numero_unique}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div className={styles.formGroup}>
-                <label>Nom ou motif du partage</label>
-                <input 
-                  type="text" 
-                  placeholder="Ex: Candidature Poste Développeur Fullstack"
-                  value={newShare.title}
-                  onChange={(e) => setNewShare({...newShare, title: e.target.value})}
-                  required
+                <label htmlFor="partage-email">Email du destinataire (optionnel)</label>
+                <input
+                  id="partage-email"
+                  type="email"
+                  placeholder="Ex: rh@entreprise.cm"
+                  value={formulaire.email_destinataire}
+                  onChange={(e) => setFormulaire({ ...formulaire, email_destinataire: e.target.value })}
                 />
+                <span className={styles.formHint}>Si renseigné, un email avec le lien lui est envoyé automatiquement.</span>
               </div>
 
               <div className={styles.formGroup}>
-                <label>Destinataire / Entreprise</label>
-                <input 
-                  type="text" 
-                  placeholder="Ex: RH Google / Cabinet Recruitment"
-                  value={newShare.recipient}
-                  onChange={(e) => setNewShare({...newShare, recipient: e.target.value})}
-                  required
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Durée de validité du lien</label>
-                <select 
-                  value={newShare.duration} 
-                  onChange={(e) => setNewShare({...newShare, duration: e.target.value})}
+                <label htmlFor="partage-duree">Durée de validité du lien</label>
+                <select
+                  id="partage-duree"
+                  value={formulaire.duree}
+                  onChange={(e) => setFormulaire({ ...formulaire, duree: e.target.value })}
                 >
-                  <option value="1">24 heures</option>
-                  <option value="7">7 jours</option>
-                  <option value="30">30 jours</option>
-                  <option value="90">90 jours</option>
+                  {DUREES.map((d) => (
+                    <option key={d.valeur} value={d.valeur}>{d.label}</option>
+                  ))}
                 </select>
               </div>
+
+              {creationErreur && <p className={styles.formError}>{creationErreur}</p>}
 
               <div className={styles.modalActions}>
-                <button 
-                  type="button" 
-                  className={styles.cancelBtn} 
-                  onClick={() => setShowCreateModal(false)}
-                >
+                <button type="button" className={styles.cancelBtn} onClick={() => setDrawerOuvert(false)}>
                   Annuler
                 </button>
-                <button type="submit" className={styles.submitBtn}>
-                  Générer le lien
+                <button type="submit" className={styles.submitBtn} disabled={creationEnCours || !formulaire.document_id}>
+                  {creationEnCours ? <Loader2 size={16} className={styles.spin} /> : 'Générer le lien'}
                 </button>
               </div>
             </form>

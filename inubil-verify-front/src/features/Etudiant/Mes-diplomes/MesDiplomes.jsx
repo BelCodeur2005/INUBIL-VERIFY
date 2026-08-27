@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Search,
-  Download,
   Share2,
+  Download,
   ExternalLink,
   CheckCircle2,
   Clock,
+  ShieldOff,
+  ShieldAlert,
   Copy,
   Check,
   X,
@@ -13,77 +15,98 @@ import {
   Calendar,
   Building2,
   FileCheck2,
-  ShieldCheck
+  ShieldCheck,
+  Loader2
 } from 'lucide-react';
+import { listerMesDocuments, getUrlPdfMonDocument } from '../../../core/etudiants/etudiants.api';
+import { ApiError } from '../../../core/api/client';
+import DiplomaThumbnail from './DiplomaThumbnail';
 import styles from './MesDiplomes.module.css';
 
-// Données de démonstration
-const DIPLOMAS_DATA = [
-  {
-    id: 'dip-1',
-    title: 'Master Informatique - Spécialité Blockchain & Web3',
-    institution: 'Université de Technologie de Paris',
-    degreeLevel: 'Bac +5 (Master 2)',
-    graduationDate: '15 Juillet 2024',
-    status: 'certified', // 'certified' | 'pending'
-    blockchainHash: '0x8f2d...3a91b',
-    fullHash: '0x8f2d4e1a9b8c7f6e5d4c3b2a1f0e9d8c7b6a51b',
-    certificateId: 'UTP-2024-BC-8921',
-    credits: '120 ECTS',
-    mention: 'Très Bien'
-  },
-  {
-    id: 'dip-2',
-    title: 'Licence Informatique et Systèmes d\'Information',
-    institution: 'Institut Supérieur du Numérique',
-    degreeLevel: 'Bac +3 (Licence)',
-    graduationDate: '20 Juin 2022',
-    status: 'certified',
-    blockchainHash: '0x4a1e...9c82d',
-    fullHash: '0x4a1e7d3c5b9a8f2e6d1c4b7a0f9e8d3c2b1a9c82d',
-    certificateId: 'ISN-2022-LIC-4412',
-    credits: '180 ECTS',
-    mention: 'Bien'
-  },
-  {
-    id: 'dip-3',
-    title: 'Certification Lead Developer Smart Contracts',
-    institution: 'Web3 Tech Academy',
-    degreeLevel: 'Certification Professionnelle',
-    graduationDate: 'En cours (Oct. 2026)',
-    status: 'pending',
-    blockchainHash: 'En attente d\'émission',
-    fullHash: '',
-    certificateId: 'W3A-2026-PENDING',
-    credits: '30 ECTS',
-    mention: '-'
-  }
-];
+const LABELS_RESEAU = {
+  polygon_amoy: 'Polygon Amoy (Testnet)',
+  polygon_mainnet: 'Polygon Mainnet',
+};
+
+const EXPLORATEUR_URL = {
+  polygon_amoy: 'https://amoy.polygonscan.com/tx/',
+  polygon_mainnet: 'https://polygonscan.com/tx/',
+};
+
+// statut_document (backend) -> presentation carte. brouillon/en_validation partagent le meme
+// visuel "en cours" cote etudiant : la distinction saisie/validation n'a pas de valeur pour lui.
+const STATUT_VISUEL = {
+  actif:         { label: 'Certifié',  classe: 'statusCertified', icone: CheckCircle2 },
+  en_validation: { label: 'En cours',  classe: 'statusPending',   icone: Clock },
+  brouillon:     { label: 'En cours',  classe: 'statusPending',   icone: Clock },
+  revoque:       { label: 'Révoqué',   classe: 'statusRevoked',   icone: ShieldOff },
+  expire:        { label: 'Expiré',    classe: 'statusExpired',   icone: ShieldAlert },
+};
+
+function fmtDate(iso) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+}
 
 export default function MesDiplomes() {
+  const [documents, setDocuments] = useState([]);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'certified', 'pending'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'actif' | 'en_cours'
   const [copiedHashId, setCopiedHashId] = useState(null);
   const [selectedDiploma, setSelectedDiploma] = useState(null);
+  const [telechargementId, setTelechargementId] = useState(null);
 
-  // Copie du Hash Blockchain
+  useEffect(() => {
+    (async () => {
+      setChargement(true);
+      setErreur(null);
+      try {
+        const reponse = await listerMesDocuments({ limit: 100 });
+        setDocuments(reponse.data);
+      } catch (err) {
+        setErreur(err instanceof ApiError ? err.message : 'Impossible de charger vos documents');
+      } finally {
+        setChargement(false);
+      }
+    })();
+  }, []);
+
   const handleCopyHash = (id, hash, e) => {
     e.stopPropagation();
-    if (!hash || hash.includes('attente')) return;
+    if (!hash) return;
     navigator.clipboard.writeText(hash);
     setCopiedHashId(id);
     setTimeout(() => setCopiedHashId(null), 2000);
   };
 
-  // Filtrage des diplômes
-  const filteredDiplomas = DIPLOMAS_DATA.filter((item) => {
-    const matchesSearch = 
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.institution.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.certificateId.toLowerCase().includes(searchTerm.toLowerCase());
+  const handleTelecharger = async (doc, e) => {
+    e.stopPropagation();
+    setTelechargementId(doc.id);
+    try {
+      const { url } = await getUrlPdfMonDocument(doc.id);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : 'Téléchargement impossible.');
+    } finally {
+      setTelechargementId(null);
+    }
+  };
 
-    const matchesStatus = 
-      statusFilter === 'all' || item.status === statusFilter;
+  const nbCertifies = documents.filter((d) => d.statut === 'actif').length;
+  const nbEnCours = documents.filter((d) => d.statut === 'en_validation' || d.statut === 'brouillon').length;
+
+  const filteredDocuments = documents.filter((doc) => {
+    const matchesSearch =
+      doc.type_document.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.universite.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.numero_unique.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'actif' && doc.statut === 'actif') ||
+      (statusFilter === 'en_cours' && (doc.statut === 'en_validation' || doc.statut === 'brouillon'));
 
     return matchesSearch && matchesStatus;
   });
@@ -114,161 +137,202 @@ export default function MesDiplomes() {
         </div>
 
         <div className={styles.filterTabs}>
-          <button 
+          <button
             className={`${styles.filterTab} ${statusFilter === 'all' ? styles.filterTabActive : ''}`}
             onClick={() => setStatusFilter('all')}
           >
-            Tous ({DIPLOMAS_DATA.length})
+            Tous ({documents.length})
           </button>
-          <button 
-            className={`${styles.filterTab} ${statusFilter === 'certified' ? styles.filterTabActive : ''}`}
-            onClick={() => setStatusFilter('certified')}
+          <button
+            className={`${styles.filterTab} ${statusFilter === 'actif' ? styles.filterTabActive : ''}`}
+            onClick={() => setStatusFilter('actif')}
           >
-            Certifiés ({DIPLOMAS_DATA.filter(d => d.status === 'certified').length})
+            Certifiés ({nbCertifies})
           </button>
-          <button 
-            className={`${styles.filterTab} ${statusFilter === 'pending' ? styles.filterTabActive : ''}`}
-            onClick={() => setStatusFilter('pending')}
+          <button
+            className={`${styles.filterTab} ${statusFilter === 'en_cours' ? styles.filterTabActive : ''}`}
+            onClick={() => setStatusFilter('en_cours')}
           >
-            En attente ({DIPLOMAS_DATA.filter(d => d.status === 'pending').length})
+            En attente ({nbEnCours})
           </button>
         </div>
       </div>
 
-      {/* Grille des Diplômes */}
-      <div className={styles.diplomasGrid}>
-        {filteredDiplomas.map((diploma) => {
-          const isCertified = diploma.status === 'certified';
-
-          return (
-            <div key={diploma.id} className={styles.card}>
-              <div className={styles.cardHeader}>
-                <div className={styles.titleGroup}>
-                  <span className={styles.levelBadge}>{diploma.degreeLevel}</span>
-                  <h3 className={styles.degreeTitle}>{diploma.title}</h3>
-                  <p className={styles.institutionName}>{diploma.institution}</p>
-                </div>
-                <span className={`${styles.statusBadge} ${isCertified ? styles.statusCertified : styles.statusPending}`}>
-                  {isCertified ? (
-                    <>
-                      <CheckCircle2 size={12} /> Certifié
-                    </>
-                  ) : (
-                    <>
-                      <Clock size={12} /> En cours
-                    </>
-                  )}
-                </span>
-              </div>
-
-              <div className={styles.metadataGrid}>
-                <div className={styles.metaItem}>
-                  <span className={styles.metaLabel}>Date d'obtention</span>
-                  <span className={styles.metaValue}>{diploma.graduationDate}</span>
-                </div>
-                <div className={styles.metaItem}>
-                  <span className={styles.metaLabel}>Crédits / Mention</span>
-                  <span className={styles.metaValue}>{diploma.credits} - {diploma.mention}</span>
-                </div>
-              </div>
-
-              {/* Bloc Empreinte Blockchain */}
-              <div className={styles.blockchainBlock}>
-                <div className={styles.blockchainInfo}>
-                  <ShieldCheck size={14} className={isCertified ? styles.shieldCertified : styles.shieldPending} />
-                  <span className={styles.hashCode}>{diploma.blockchainHash}</span>
-                </div>
-                {isCertified && (
-                  <button 
-                    className={styles.copyBtn}
-                    onClick={(e) => handleCopyHash(diploma.id, diploma.fullHash, e)}
-                    title="Copier le Hash complet"
-                  >
-                    {copiedHashId === diploma.id ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
-                  </button>
-                )}
-              </div>
-
-              {/* Actions de la carte */}
-              <div className={styles.cardActions}>
-                <button 
-                  className={styles.primaryActionBtn}
-                  onClick={() => setSelectedDiploma(diploma)}
-                >
-                  <FileCheck2 size={14} />
-                  <span>Voir le certificat</span>
-                </button>
-                <button className={styles.secondaryActionBtn} title="Télécharger le PDF">
-                  <Download size={14} />
-                </button>
-                <button className={styles.secondaryActionBtn} title="Partager l'accès">
-                  <Share2 size={14} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Modal de détail d'un certificat */}
-      {selectedDiploma && (
-        <div className={styles.modalOverlay} onClick={() => setSelectedDiploma(null)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <div className={styles.modalTitleBox}>
-                <Award size={20} className={styles.modalIcon} />
-                <h2>Détails du Certificat</h2>
-              </div>
-              <button className={styles.closeBtn} onClick={() => setSelectedDiploma(null)}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className={styles.modalBody}>
-              <div className={styles.modalBanner}>
-                <span className={selectedDiploma.status === 'certified' ? styles.statusCertified : styles.statusPending}>
-                  {selectedDiploma.status === 'certified' ? 'Certifié Blockchain' : 'En attente de validation'}
-                </span>
-                <p className={styles.certIdText}>ID: {selectedDiploma.certificateId}</p>
-              </div>
-
-              <div className={styles.detailSection}>
-                <h3>{selectedDiploma.title}</h3>
-                <p className={styles.institutionDetail}>
-                  <Building2 size={14} /> {selectedDiploma.institution}
-                </p>
-                <p className={styles.dateDetail}>
-                  <Calendar size={14} /> Délivré le : {selectedDiploma.graduationDate}
-                </p>
-              </div>
-
-              <div className={styles.proofBox}>
-                <h4>Preuve cryptographique</h4>
-                <div className={styles.hashDetailRow}>
-                  <span className={styles.fieldLabel}>Hash Transaction :</span>
-                  <p className={styles.fullHashText}>{selectedDiploma.fullHash || 'N/A'}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.modalFooter}>
-              <button className={styles.modalDownloadBtn}>
-                <Download size={14} /> Télécharger le PDF officiel
-              </button>
-              {selectedDiploma.status === 'certified' && (
-                <a 
-                  href={`https://etherscan.io/tx/${selectedDiploma.fullHash}`} 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className={styles.modalVerifyBtn}
-                >
-                  <ExternalLink size={14} /> Vérifier sur l'explorateur
-                </a>
-              )}
-            </div>
-          </div>
+      {chargement && (
+        <div className={styles.etatVide}>
+          <Loader2 size={22} className={styles.spin} />
+          <p>Chargement de votre dossier académique...</p>
         </div>
       )}
+
+      {!chargement && erreur && (
+        <div className={styles.etatVide}>
+          <ShieldAlert size={22} />
+          <p>{erreur}</p>
+        </div>
+      )}
+
+      {!chargement && !erreur && filteredDocuments.length === 0 && (
+        <div className={styles.etatVide}>
+          <Award size={22} />
+          <p>
+            {documents.length === 0
+              ? "Aucun diplôme n'a encore été émis à votre nom."
+              : 'Aucun document ne correspond à votre recherche.'}
+          </p>
+        </div>
+      )}
+
+      {/* Grille des Diplômes */}
+      {!chargement && !erreur && filteredDocuments.length > 0 && (
+        <div className={styles.diplomasGrid}>
+          {filteredDocuments.map((doc) => {
+            const visuel = STATUT_VISUEL[doc.statut] ?? STATUT_VISUEL.en_validation;
+            const Icone = visuel.icone;
+            const hashCourt = doc.hash_sha256 ? `${doc.hash_sha256.slice(0, 10)}…${doc.hash_sha256.slice(-6)}` : null;
+
+            return (
+              <div key={doc.id} className={styles.card}>
+                <DiplomaThumbnail documentId={doc.id} aUnPdf={doc.a_un_pdf} statut={doc.statut} />
+
+                <div className={styles.cardBody}>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.titleGroup}>
+                      <span className={styles.levelBadge}>{doc.categorie}</span>
+                      <h3 className={styles.degreeTitle}>{doc.type_document}{doc.filiere ? ` — ${doc.filiere}` : ''}</h3>
+                      <p className={styles.institutionName}>{doc.universite}</p>
+                    </div>
+                    <span className={`${styles.statusBadge} ${styles[visuel.classe]}`}>
+                      <Icone size={12} /> {visuel.label}
+                    </span>
+                  </div>
+
+                  <div className={styles.metadataGrid}>
+                    <div className={styles.metaItem}>
+                      <span className={styles.metaLabel}>Date d'émission</span>
+                      <span className={styles.metaValue}>{fmtDate(doc.date_emission) ?? '—'}</span>
+                    </div>
+                    <div className={styles.metaItem}>
+                      <span className={styles.metaLabel}>Mention</span>
+                      <span className={styles.metaValue}>{doc.mention ?? '—'}</span>
+                    </div>
+                  </div>
+
+                  {/* Bloc Empreinte Blockchain */}
+                  <div className={styles.blockchainBlock}>
+                    <div className={styles.blockchainInfo}>
+                      <ShieldCheck size={14} className={doc.statut === 'actif' ? styles.shieldCertified : styles.shieldPending} />
+                      <span className={styles.hashCode}>
+                        {hashCourt ?? "En attente d'ancrage blockchain"}
+                      </span>
+                    </div>
+                    {hashCourt && (
+                      <button
+                        className={styles.copyBtn}
+                        onClick={(e) => handleCopyHash(doc.id, doc.hash_sha256, e)}
+                        title="Copier le hash complet"
+                      >
+                        {copiedHashId === doc.id ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Actions de la carte */}
+                  <div className={styles.cardActions}>
+                    <button className={styles.primaryActionBtn} onClick={() => setSelectedDiploma(doc)}>
+                      <FileCheck2 size={14} />
+                      <span>Voir le certificat</span>
+                    </button>
+                    {doc.a_un_pdf && (
+                      <button
+                        className={styles.secondaryActionBtn}
+                        title="Télécharger le PDF"
+                        onClick={(e) => handleTelecharger(doc, e)}
+                        disabled={telechargementId === doc.id}
+                      >
+                        {telechargementId === doc.id ? <Loader2 size={14} className={styles.spin} /> : <Download size={14} />}
+                      </button>
+                    )}
+                    <button className={styles.secondaryActionBtn} title="Partager l'accès">
+                      <Share2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Drawer de détail d'un certificat */}
+      {selectedDiploma && (() => {
+        const visuel = STATUT_VISUEL[selectedDiploma.statut] ?? STATUT_VISUEL.en_validation;
+        return (
+          <div className={styles.drawerOverlay} onClick={() => setSelectedDiploma(null)}>
+            <div className={styles.drawerPanel} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalHeader}>
+                <div className={styles.modalTitleBox}>
+                  <Award size={20} className={styles.modalIcon} />
+                  <h2>Détails du Certificat</h2>
+                </div>
+                <button className={styles.closeBtn} onClick={() => setSelectedDiploma(null)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className={styles.modalBody}>
+                <div className={styles.modalBanner}>
+                  <span className={`${styles.statusBadge} ${styles[visuel.classe]}`}>{visuel.label}</span>
+                  <p className={styles.certIdText}>{selectedDiploma.numero_unique}</p>
+                </div>
+
+                <div className={styles.detailSection}>
+                  <h3>{selectedDiploma.type_document}{selectedDiploma.filiere ? ` — ${selectedDiploma.filiere}` : ''}</h3>
+                  <p className={styles.institutionDetail}>
+                    <Building2 size={14} /> {selectedDiploma.universite}
+                  </p>
+                  <p className={styles.dateDetail}>
+                    <Calendar size={14} /> Émis le : {fmtDate(selectedDiploma.date_emission) ?? '—'}
+                  </p>
+                </div>
+
+                <div className={styles.proofBox}>
+                  <h4>Preuve cryptographique</h4>
+                  {selectedDiploma.hash_sha256 ? (
+                    <>
+                      <div className={styles.hashDetailRow}>
+                        <span className={styles.fieldLabel}>Hash SHA-256 du document :</span>
+                        <p className={styles.fullHashText}>{selectedDiploma.hash_sha256}</p>
+                      </div>
+                      {selectedDiploma.transaction_hash && (
+                        <div className={styles.hashDetailRow}>
+                          <span className={styles.fieldLabel}>Transaction ({LABELS_RESEAU[selectedDiploma.reseau] ?? selectedDiploma.reseau}) :</span>
+                          <p className={styles.fullHashText}>{selectedDiploma.transaction_hash}</p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className={styles.fieldLabel}>Ce document n'est pas encore ancré sur la blockchain.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.modalFooter}>
+                {selectedDiploma.transaction_hash && EXPLORATEUR_URL[selectedDiploma.reseau] && (
+                  <a
+                    href={`${EXPLORATEUR_URL[selectedDiploma.reseau]}${selectedDiploma.transaction_hash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={styles.modalVerifyBtn}
+                  >
+                    <ExternalLink size={14} /> Vérifier sur l'explorateur
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
