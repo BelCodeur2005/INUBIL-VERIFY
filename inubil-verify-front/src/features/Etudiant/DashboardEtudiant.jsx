@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../core/auth/useAuth';
 import AccountMenu from '../../shared/components/AccountMenu/AccountMenu';
+import NotificationsBell from '../../shared/components/NotificationsBell/NotificationsBell';
 import Logo_Inubil from '../../assets/Logo_Inubil.png';
 import styles from './DashboardEtudiant.module.css';
 import MesDiplomes from './Mes-diplomes/MesDiplomes.jsx';
@@ -93,10 +94,7 @@ export default function DashboardEtudiant() {
             <input type="search" placeholder="Rechercher un diplôme, une vérification..." className={styles.searchInput} />
           </div>
           <div className={styles.headerActions}>
-            <button className={styles.iconBtn}>
-              <span className="material-symbols-outlined">notifications</span>
-              <span className={styles.notifBadge}>3</span>
-            </button>
+            <NotificationsBell />
             <button className={styles.iconBtn} title="Historique">
               <span className="material-symbols-outlined">history</span>
             </button>

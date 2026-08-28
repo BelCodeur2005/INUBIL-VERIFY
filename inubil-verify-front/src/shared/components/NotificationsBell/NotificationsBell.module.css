@@ -1,0 +1,224 @@
+.trigger {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.trigger:hover {
+  background-color: #f1f5f9;
+}
+
+.badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.58rem;
+  font-weight: 700;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Drawer — panneau lateral depuis la droite, coherent avec le reste de l'app */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background-color: rgba(15, 23, 42, 0.5);
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.drawerPanel {
+  height: 100%;
+  width: 400px;
+  max-width: 92vw;
+  background-color: #ffffff;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.25s ease-out;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .drawerOverlay, .drawerPanel { animation: none; }
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 12px;
+  flex-shrink: 0;
+}
+
+.drawerHeader h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.closeBtn:hover {
+  background-color: #f1f5f9;
+}
+
+.toutLireBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin: 0 20px 12px;
+  background: transparent;
+  border: none;
+  color: #0350bd;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.toutLireBtn:hover {
+  text-decoration: underline;
+}
+
+.liste {
+  flex: 1;
+  overflow-y: auto;
+  border-top: 1px solid #f1f5f9;
+}
+
+.etatVide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px 20px;
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
+}
+
+.spin { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
+.item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 14px 20px;
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.item:hover {
+  background-color: #f8fafc;
+}
+
+.itemNonLue {
+  background-color: #f0f6ff;
+}
+
+.itemNonLue:hover {
+  background-color: #e6f0fe;
+}
+
+.itemIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: #f1f5f9;
+  color: #0350bd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.itemBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.itemTitre {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.itemMessage {
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.itemDate {
+  font-size: 10.5px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.dotNonLue {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #0350bd;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.itemArchiver {
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.itemArchiver:hover {
+  color: #64748b;
+  background-color: #e2e8f0;
+}
