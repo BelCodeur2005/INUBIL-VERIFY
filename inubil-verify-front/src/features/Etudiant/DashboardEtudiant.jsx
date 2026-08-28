@@ -95,9 +95,6 @@ export default function DashboardEtudiant() {
           </div>
           <div className={styles.headerActions}>
             <NotificationsBell />
-            <button className={styles.iconBtn} title="Historique">
-              <span className="material-symbols-outlined">history</span>
-            </button>
             <AccountMenu
               prenom={prenom}
               nom={nom}
