@@ -78,7 +78,11 @@ export default function NotificationsBell() {
         // navigation quand meme, le marquage-lu n'est pas bloquant
       }
     }
-    if (notif.lien) window.location.assign(notif.lien);
+    // Le lien vient de la base (champ libre) : on ne navigue que vers un chemin
+    // relatif du meme site, jamais vers un javascript: ou un domaine externe.
+    if (notif.lien && notif.lien.startsWith('/') && !notif.lien.startsWith('//')) {
+      window.location.assign(notif.lien);
+    }
   };
 
   const handleArchiver = async (id, e) => {
