@@ -1,14 +1,17 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { HashService } from '../documents/hash.service';
 import { RapportVerificationPdfService, RapportVerificationData } from '../documents/rapport-verification-pdf.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
 import { ConfigurationsService } from '../configurations/configurations.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { VerifyResponseDto, DocumentPublicDto, MatierePublicDto, BlockchainInfoDto } from './dto/verify-response.dto';
 
 @Injectable()
 export class PublicVerifyService {
+  private readonly logger = new Logger(PublicVerifyService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly hash: HashService,
@@ -16,6 +19,7 @@ export class PublicVerifyService {
     private readonly blockchain: BlockchainService,
     private readonly config: ConfigService,
     private readonly configurations: ConfigurationsService,
+    private readonly notificationsInApp: NotificationsService,
   ) {}
 
   /** Limite effective (en octets) pour un upload de PDF — parametre systeme "pdf_max_taille_mo". */
@@ -128,7 +132,7 @@ export class PublicVerifyService {
     return this.prisma.documents.findFirst({
       where: { ...where, deleted_at: null },
       include: {
-        etudiants:      { select: { prenom: true, nom: true } },
+        etudiants:      { select: { prenom: true, nom: true, utilisateur_id: true } },
         universites:    { select: { nom: true } },
         types_document: { select: { nom: true, categorie: true, a_matieres: true } },
         mentions_document: { select: { nom: true } },
@@ -223,6 +227,19 @@ export class PublicVerifyService {
         rapport_genere:    false,
       },
     });
+
+    const utilisateurId = doc?.etudiants?.utilisateur_id;
+    if (utilisateurId) {
+      this.notificationsInApp
+        .creer({
+          utilisateurId,
+          type:    'document_verifie',
+          titre:   'Diplôme vérifié',
+          message: `Votre document ${doc.numero_unique} vient d'être vérifié publiquement.`,
+          lien:    '/dashboard-etudiant',
+        })
+        .catch((err) => this.logger.error(`Notification in-app verification echouee pour doc ${doc.id} : ${err.message}`));
+    }
 
     return {
       resultat,

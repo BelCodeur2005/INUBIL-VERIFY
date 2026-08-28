@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, GoneException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, GoneException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   PartagePublicResponseDto,
   DocumentPartageDto,
@@ -8,7 +9,12 @@ import {
 
 @Injectable()
 export class PublicPartagesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(PublicPartagesService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsInApp: NotificationsService,
+  ) {}
 
   /**
    * Accès public à un document partagé via son token.
@@ -21,7 +27,7 @@ export class PublicPartagesService {
       include: {
         documents: {
           include: {
-            etudiants:         { select: { prenom: true, nom: true } },
+            etudiants:         { select: { prenom: true, nom: true, utilisateur_id: true } },
             universites:       { select: { nom: true } },
             types_document:    { select: { nom: true, categorie: true } },
             mentions_document: { select: { nom: true } },
@@ -69,6 +75,19 @@ export class PublicPartagesService {
     });
 
     const doc = partage.documents;
+
+    const utilisateurId = (doc as any).etudiants?.utilisateur_id;
+    if (utilisateurId) {
+      this.notificationsInApp
+        .creer({
+          utilisateurId,
+          type:    'partage_consulte',
+          titre:   'Lien de partage consulté',
+          message: `Le lien de partage de votre document ${doc.numero_unique} vient d'être consulté.`,
+          lien:    '/dashboard-etudiant',
+        })
+        .catch((err) => this.logger.error(`Notification in-app consultation partage echouee (partage ${partage.id}) : ${err.message}`));
+    }
 
     const matieres: MatierePartageDto[] = (doc.matieres_document ?? []).map((m) => ({
       nom_matiere: m.nom_matiere,

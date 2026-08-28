@@ -3,13 +3,14 @@ import { AuthModule } from '../auth/auth.module';
 import { DocumentsModule } from '../documents/documents.module';
 import { BlockchainModule } from '../blockchain/blockchain.module';
 import { ConfigurationsModule } from '../configurations/configurations.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { VerificationsController } from './verifications.controller';
 import { VerificationsService } from './verifications.service';
 import { PublicVerifyController } from './public-verify.controller';
 import { PublicVerifyService } from './public-verify.service';
 
 @Module({
-  imports: [AuthModule, DocumentsModule, BlockchainModule, ConfigurationsModule],
+  imports: [AuthModule, DocumentsModule, BlockchainModule, ConfigurationsModule, NotificationsModule],
   controllers: [VerificationsController, PublicVerifyController],
   providers: [VerificationsService, PublicVerifyService],
 })

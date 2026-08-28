@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, GoneException } from '@nestjs/common';
 import { PublicPartagesService } from './public-partages.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const TOKEN    = 'a'.repeat(64);
 const PARTAGE_ID = 'par-0000-0000-0000-000000000001';
@@ -44,16 +45,23 @@ const makePrisma = () => ({
   },
 });
 
+const makeNotificationsInApp = () => ({
+  creer: jest.fn().mockResolvedValue(undefined),
+});
+
 describe('PublicPartagesService', () => {
   let service: PublicPartagesService;
   let prisma: ReturnType<typeof makePrisma>;
+  let notificationsInApp: ReturnType<typeof makeNotificationsInApp>;
 
   beforeEach(async () => {
     prisma = makePrisma();
+    notificationsInApp = makeNotificationsInApp();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PublicPartagesService,
         { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: notificationsInApp },
       ],
     }).compile();
     service = module.get(PublicPartagesService);
@@ -87,6 +95,29 @@ describe('PublicPartagesService', () => {
       }),
     );
     expect(result.partage.nb_consultations).toBe(3); // 2 + 1
+  });
+
+  it('notifie l\'etudiant in-app quand son compte est lie', async () => {
+    prisma.partages_document.findFirst.mockResolvedValue(
+      makePartage({ documents: makeDoc({ etudiants: { prenom: 'Bertrand', nom: 'KAMGA', utilisateur_id: 'usr-0000-0000-0000-000000000009' } }) }),
+    );
+
+    await service.accederParToken(TOKEN);
+
+    expect(notificationsInApp.creer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        utilisateurId: 'usr-0000-0000-0000-000000000009',
+        type: 'partage_consulte',
+      }),
+    );
+  });
+
+  it('ne notifie personne si le document n\'a pas de compte etudiant lie', async () => {
+    prisma.partages_document.findFirst.mockResolvedValue(makePartage());
+
+    await service.accederParToken(TOKEN);
+
+    expect(notificationsInApp.creer).not.toHaveBeenCalled();
   });
 
   it('retourne la date d\'expiration dans le partage', async () => {

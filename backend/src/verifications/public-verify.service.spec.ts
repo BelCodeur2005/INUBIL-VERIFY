@@ -7,6 +7,7 @@ import { HashService } from '../documents/hash.service';
 import { RapportVerificationPdfService } from '../documents/rapport-verification-pdf.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
 import { ConfigurationsService } from '../configurations/configurations.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const HASH_REEL  = 'a'.repeat(64);
 const HASH_FAUX  = 'b'.repeat(64);
@@ -59,6 +60,10 @@ const makeConfigurations = () => ({
   get: jest.fn().mockImplementation((_cle: string, defaut?: string) => Promise.resolve(defaut)),
 });
 
+const makeNotificationsInApp = () => ({
+  creer: jest.fn().mockResolvedValue(undefined),
+});
+
 describe('PublicVerifyService', () => {
   let service: PublicVerifyService;
   let prisma: ReturnType<typeof makePrisma>;
@@ -66,6 +71,7 @@ describe('PublicVerifyService', () => {
   let rapportPdf: ReturnType<typeof makeRapportPdf>;
   let blockchain: ReturnType<typeof makeBlockchain>;
   let configurations: ReturnType<typeof makeConfigurations>;
+  let notificationsInApp: ReturnType<typeof makeNotificationsInApp>;
 
   beforeEach(async () => {
     prisma         = makePrisma();
@@ -73,6 +79,7 @@ describe('PublicVerifyService', () => {
     rapportPdf     = makeRapportPdf();
     blockchain     = makeBlockchain();
     configurations = makeConfigurations();
+    notificationsInApp = makeNotificationsInApp();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -83,6 +90,7 @@ describe('PublicVerifyService', () => {
         { provide: BlockchainService,             useValue: blockchain     },
         { provide: ConfigService,                 useValue: makeConfig()   },
         { provide: ConfigurationsService,         useValue: configurations },
+        { provide: NotificationsService,          useValue: notificationsInApp },
       ],
     }).compile();
 
@@ -101,6 +109,29 @@ describe('PublicVerifyService', () => {
       expect(res.document?.numero_unique).toBe('INUB-2026-0001');
       expect(res.document?.etudiant_nom).toBe('Bertrand KAMGA');
       expect(res.verification_id).toBe(VERIF_ID);
+    });
+
+    it('notifie l\'etudiant in-app quand son compte est lie', async () => {
+      const doc = makeDoc('actif');
+      (doc as any).etudiants.utilisateur_id = 'usr-0000-0000-0000-000000000009';
+      prisma.documents.findFirst.mockResolvedValue(doc);
+
+      await service.verifierParIdentifiant('INUB-2026-0001');
+
+      expect(notificationsInApp.creer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          utilisateurId: 'usr-0000-0000-0000-000000000009',
+          type: 'document_verifie',
+        }),
+      );
+    });
+
+    it('ne notifie personne si le document n\'a pas de compte etudiant lie', async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDoc('actif'));
+
+      await service.verifierParIdentifiant('INUB-2026-0001');
+
+      expect(notificationsInApp.creer).not.toHaveBeenCalled();
     });
 
     it('retourne "revoque" pour un document révoqué', async () => {

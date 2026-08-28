@@ -7,6 +7,7 @@ import { AuditService } from '../audit/audit.service';
 import { HashService } from './hash.service';
 import { QrCodeService } from './qr-code.service';
 import { NotificationEmissionService } from './notification-emission.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { StorageService } from '../storage/storage.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
 import { ConfigurationsService } from '../configurations/configurations.service';
@@ -35,6 +36,9 @@ const makeQr       = () => ({ generateQr: jest.fn().mockResolvedValue(Buffer.fro
 const makeNotif    = () => ({
   notifierEtudiant:   jest.fn().mockResolvedValue(undefined),
   notifierRevocation: jest.fn().mockResolvedValue(undefined),
+});
+const makeNotificationsInApp = () => ({
+  creer: jest.fn().mockResolvedValue(undefined),
 });
 const makeStorage  = () => ({
   configured: true,
@@ -81,6 +85,7 @@ describe('DocumentsService', () => {
   let hash: ReturnType<typeof makeHash>;
   let qr: ReturnType<typeof makeQr>;
   let notif: ReturnType<typeof makeNotif>;
+  let notificationsInApp: ReturnType<typeof makeNotificationsInApp>;
   let storage: ReturnType<typeof makeStorage>;
   let blockchain: ReturnType<typeof makeBlockchain>;
   let config: ReturnType<typeof makeConfig>;
@@ -92,6 +97,7 @@ describe('DocumentsService', () => {
     hash           = makeHash();
     qr             = makeQr();
     notif          = makeNotif();
+    notificationsInApp = makeNotificationsInApp();
     storage        = makeStorage();
     blockchain     = makeBlockchain();
     config         = makeConfig();
@@ -106,6 +112,7 @@ describe('DocumentsService', () => {
         { provide: HashService,                 useValue: hash           },
         { provide: QrCodeService,               useValue: qr             },
         { provide: NotificationEmissionService, useValue: notif          },
+        { provide: NotificationsService,        useValue: notificationsInApp },
         { provide: StorageService,              useValue: storage        },
         { provide: BlockchainService,           useValue: blockchain     },
         { provide: ConfigurationsService,       useValue: configurations },
@@ -360,6 +367,22 @@ describe('DocumentsService', () => {
       expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'DOCUMENT_VALIDER' }));
     });
 
+    it('notifie l\'etudiant in-app quand son compte est lie', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({ statut: 'brouillon', pdf_url: FAKE_PDF_KEY, hash_sha256: FAKE_HASH }),
+      );
+      prisma.documents.update.mockResolvedValue(
+        makeDocument({ statut: 'actif', etudiants: { utilisateur_id: 'usr-0000-0000-0000-000000000009' } }),
+      );
+
+      await service.valider(DOC_ID, ACTEUR_ID);
+
+      expect(notificationsInApp.creer).toHaveBeenCalledWith(
+        expect.objectContaining({ utilisateurId: 'usr-0000-0000-0000-000000000009', type: 'document_emis' }),
+      );
+    });
+
     it('lève BadRequestException si le PDF n\'a pas été uploadé', async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
       prisma.documents.findFirst.mockResolvedValue(
@@ -413,6 +436,20 @@ describe('DocumentsService', () => {
         expect.objectContaining({ data: expect.objectContaining({ statut: 'revoque' }) }),
       );
       expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'DOCUMENT_REVOQUER' }));
+    });
+
+    it('notifie l\'etudiant in-app quand son compte est lie', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(makeDocument({ statut: 'actif' }));
+      prisma.documents.update.mockResolvedValue(
+        makeDocument({ statut: 'revoque', etudiants: { utilisateur_id: 'usr-0000-0000-0000-000000000009' } }),
+      );
+
+      await service.revoquer(DOC_ID, { raison: 'Erreur sur le nom de l\'étudiant' }, ACTEUR_ID);
+
+      expect(notificationsInApp.creer).toHaveBeenCalledWith(
+        expect.objectContaining({ utilisateurId: 'usr-0000-0000-0000-000000000009', type: 'document_revoque' }),
+      );
     });
 
     it('lève BadRequestException si le document n\'est pas actif', async () => {

@@ -13,6 +13,7 @@ import { AuditService } from '../audit/audit.service';
 import { HashService } from './hash.service';
 import { QrCodeService } from './qr-code.service';
 import { NotificationEmissionService } from './notification-emission.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { StorageService } from '../storage/storage.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
 import { ConfigurationsService } from '../configurations/configurations.service';
@@ -33,6 +34,7 @@ export class DocumentsService {
     private readonly hash: HashService,
     private readonly qr: QrCodeService,
     private readonly notif: NotificationEmissionService,
+    private readonly notificationsInApp: NotificationsService,
     private readonly storage: StorageService,
     private readonly blockchain: BlockchainService,
     private readonly configurations: ConfigurationsService,
@@ -411,7 +413,10 @@ export class DocumentsService {
         valide_le: maintenant,
         emis_le: maintenant,
       },
-      include: { matieres_document: { orderBy: { ordre: 'asc' } } },
+      include: {
+        matieres_document: { orderBy: { ordre: 'asc' } },
+        etudiants: { select: { utilisateur_id: true } },
+      },
     });
 
     await this.audit.log({
@@ -427,6 +432,18 @@ export class DocumentsService {
     this.notif.notifierEtudiant(id).catch((err) =>
       this.logger.error(`Notification émission échouée pour doc ${id} : ${err.message}`),
     );
+
+    if (updated.etudiants?.utilisateur_id) {
+      this.notificationsInApp
+        .creer({
+          utilisateurId: updated.etudiants.utilisateur_id,
+          type:    'document_emis',
+          titre:   'Diplôme certifié',
+          message: `Votre document ${updated.numero_unique} a été validé et ancré sur la blockchain.`,
+          lien:    '/dashboard-etudiant',
+        })
+        .catch((err) => this.logger.error(`Notification in-app émission échouée pour doc ${id} : ${err.message}`));
+    }
 
     this.enregistrerSurBlockchain(updated.id, doc.hash_sha256, updated.universite_id, updated.numero_unique)
       .catch((err) =>
@@ -455,7 +472,10 @@ export class DocumentsService {
         // #22 - Blockchain : revokeDiploma(bytes32 hash) sera appelé ici une fois
         // le service Ethers.js + Polygon implémenté (transaction_hash mis à jour en retour).
       },
-      include: { matieres_document: { orderBy: { ordre: 'asc' } } },
+      include: {
+        matieres_document: { orderBy: { ordre: 'asc' } },
+        etudiants: { select: { utilisateur_id: true } },
+      },
     });
 
     await this.audit.log({
@@ -471,6 +491,18 @@ export class DocumentsService {
     this.notif.notifierRevocation(id).catch((err) =>
       this.logger.error(`Notification révocation échouée pour doc ${id} : ${err.message}`),
     );
+
+    if (updated.etudiants?.utilisateur_id) {
+      this.notificationsInApp
+        .creer({
+          utilisateurId: updated.etudiants.utilisateur_id,
+          type:    'document_revoque',
+          titre:   'Diplôme révoqué',
+          message: `Votre document ${updated.numero_unique} a été révoqué par votre établissement.`,
+          lien:    '/dashboard-etudiant',
+        })
+        .catch((err) => this.logger.error(`Notification in-app révocation échouée pour doc ${id} : ${err.message}`));
+    }
 
     // Blockchain fire & forget - révoque le diplôme on-chain sans bloquer la réponse
     this.revoquerSurBlockchain(id, updated.numero_unique)
