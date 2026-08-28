@@ -1,218 +1,165 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Cormorant+Garamond:wght@500;600;700&display=swap');
-
-.page {
-  background-color: #f8f9fa;
-  color: #191c1d;
+/* Container global avec le dégradé INUBIL */
+.landingContainer {
   min-height: 100vh;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  color: #f8fafc;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   display: flex;
   flex-direction: column;
-  font-family: 'Inter', sans-serif;
 }
 
-/* ---------- Hero ---------- */
-.hero {
-  position: relative;
-  overflow: hidden;
-  border-bottom: 1px solid #c2c6d1;
+/* Header */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color:white;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.hashTexture {
-  position: absolute;
-  inset: 0;
+.headerContent {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 2rem; /* Espacement aux bords gauche et droit */
+  height: 80px; /* Aligné avec la hauteur du logo */
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: space-between;
-  padding: 24px 0;
-  pointer-events: none;
-  user-select: none;
-  z-index: 0;
 }
 
-.hashTexture span {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  letter-spacing: 0.1em;
-  color: #002c53;
-  opacity: 0.035;
-  white-space: nowrap;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
 }
 
-.heroScanLine {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -140px;
-  height: 140px;
-  z-index: 0;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(0, 96, 172, 0) 0%, rgba(0, 96, 172, 0.06) 50%, rgba(0, 96, 172, 0) 100%);
+.logoBadge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: #10b981;
+  color: #022c22;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .heroScanLine {
-    animation: heroScanSweep 8s linear infinite;
-  }
+.brandName {
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: 0.05em;
+  color: #ffffff;
 }
 
-@keyframes heroScanSweep {
-  0% { top: -140px; }
-  100% { top: 100%; }
+.navLinks {
+  display: flex;
+  gap: 2rem;
 }
 
-.heroInner {
-  position: relative;
-  z-index: 1;
+.navLinks a {
+  color:#1d4ed8 ;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.navLinks a:hover {
+  color: #34d399;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btnLogin {
+  color: #1d4ed8;
+  border: 1px solid #1d4ed8;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.btnLogin:hover {
+  background-color: #1d4ed8;
+  color: #ffffff;
+}
+
+.btnPrimary {
+  background-color: #10b981;
+  color: #022c22;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.btnPrimary:hover {
+  background-color: #34d399;
+}
+
+/* Hero Section */
+.heroSection {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 64px 24px 80px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5rem 1.5rem 4rem;
+}
+
+.heroContent {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 3rem;
   align-items: center;
 }
 
-@media (min-width: 1024px) {
-  .heroInner {
-    grid-template-columns: 1.1fr 0.9fr;
-    padding-top: 88px;
-    padding-bottom: 96px;
-  }
+.heroCopy {
+  min-width: 0;
 }
 
-.heroText {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.headline {
-  font-size: 40px;
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  color: #002c53;
-  margin: 0;
-}
-
-@media (min-width: 640px) {
-  .headline { font-size: 48px; }
-}
-
-@media (min-width: 1024px) {
-  .headline { font-size: 56px; }
-}
-
-.headlineAccent {
-  color: #0060ac;
-}
-
-.subheadline {
-  font-size: 18px;
-  line-height: 28px;
-  color: #42474f;
-  max-width: 46ch;
-  margin: 0;
-}
-
-.ctaRow {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 24px;
-  margin-top: 8px;
-}
-
-.ctaPrimary {
-  background-color: #002c53;
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  padding: 14px 32px;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  transition: opacity 0.2s ease, translate 0.2s ease, box-shadow 0.2s ease;
-}
-
-.ctaPrimary:hover {
-  opacity: 0.92;
-  translate: 0 -2px;
-  box-shadow: 0 8px 16px rgba(0, 44, 83, 0.25);
-}
-
-.ctaPrimary:active {
-  translate: 0 0;
-}
-
-.ctaGhost {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #002c53;
-  font-weight: 600;
-  font-size: 14px;
-  text-decoration: none;
-}
-
-.ctaGhost:hover {
-  color: #0060ac;
-}
-
-.ctaGhost .material-symbols-outlined {
-  font-size: 18px !important;
-}
-
-/* ---------- Hero visual : carte de verification signature ---------- */
 .heroVisual {
   display: flex;
   justify-content: center;
+  min-width: 0;
 }
 
 .diplomaCard {
   position: relative;
   overflow: hidden;
   width: 100%;
-  max-width: 400px;
+  max-width: 480px;
   background-color: #fffdf7;
-  border: 2px solid #002c53;
-  border-radius: 6px;
-  box-shadow: 0 24px 48px rgba(0, 44, 83, 0.14);
+  border: 3px solid #172d58;
+  border-radius: 8px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
   padding: 14px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .diplomaCard {
-    transition: transform 0.15s ease-out;
-    transform-style: preserve-3d;
-  }
-}
-
-.diplomaScanTrack {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2;
+  transition: transform 0.15s ease-out;
+  transform-style: preserve-3d;
 }
 
 .diplomaScanBeam {
   position: absolute;
   left: 0;
   right: 0;
-  top: -20%;
+  top: -40%;
   height: 40%;
-  background: linear-gradient(180deg, rgba(0, 96, 172, 0) 0%, rgba(0, 96, 172, 0.18) 50%, rgba(0, 96, 172, 0) 100%);
-  opacity: 0;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .diplomaScanBeam {
-    animation: scanSweep 1.6s ease-out 0.3s 1;
-  }
-
-  .diplomaStamp {
-    animation: stampIn 0.4s ease-out 1.2s both;
-  }
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 96, 172, 0) 0%, rgba(0, 96, 172, 0.2) 50%, rgba(0, 96, 172, 0) 100%);
+  animation: scanSweep 1.6s ease-out 0.3s 1;
 }
 
 @keyframes scanSweep {
@@ -220,6 +167,31 @@
   10% { opacity: 1; }
   85% { opacity: 1; }
   100% { top: 100%; opacity: 0; }
+}
+
+.diplomaStamp {
+  position: absolute;
+  top: 24px;
+  right: 18px;
+  z-index: 3;
+  width: 82px;
+  height: 82px;
+  border: 3px solid #4d813f;
+  border-radius: 50%;
+  color: #4d813f;
+  background-color: rgba(232, 244, 229, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  transform: rotate(-10deg);
+  animation: stampIn 0.4s ease-out 1.2s both;
+}
+
+.diplomaStamp .material-symbols-outlined {
+  font-size: 24px;
 }
 
 @keyframes stampIn {
@@ -232,7 +204,7 @@
   z-index: 1;
   border: 1px solid #b8934a;
   border-radius: 4px;
-  padding: 28px 24px 20px;
+  padding: 2.5rem 1.5rem 1.25rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -240,55 +212,60 @@
 }
 
 .diplomaSeal {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
   margin-bottom: 8px;
 }
 
-.diplomaEyebrow {
+.diplomaEyebrow,
+.diplomaFooterLabel {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.25em;
   text-transform: uppercase;
   color: #b8934a;
   font-weight: 600;
 }
 
+.diplomaEyebrow {
+  font-size: 11px;
+  letter-spacing: 0.25em;
+}
+
 .diplomaInstitution {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 17px;
+  font-family: Georgia, serif;
+  font-size: 20px;
   font-weight: 600;
-  color: #002c53;
-  margin: 6px 0 0;
-  letter-spacing: 0.01em;
+  color: #172d58;
+  margin: 8px 0 0;
 }
 
 .diplomaDivider {
-  width: 48px;
+  width: 52px;
   height: 1px;
   background-color: #b8934a;
-  margin: 16px 0;
+  margin: 1.25rem 0;
+}
+
+.diplomaGrantText,
+.diplomaDegree {
+  color: #4c5668;
+  margin: 0;
 }
 
 .diplomaGrantText {
-  font-size: 12px;
-  color: #737780;
-  margin: 0;
+  font-size: 13px;
 }
 
 .diplomaRecipient {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 32px;
+  font-family: Georgia, serif;
+  font-size: 2.25rem;
   font-weight: 700;
   color: #191c1d;
-  margin: 6px 0;
+  margin: 8px 0;
 }
 
 .diplomaDegree {
-  font-size: 13px;
-  color: #42474f;
-  margin: 0;
+  font-size: 14px;
 }
 
 .diplomaFooterRow {
@@ -302,282 +279,287 @@
 .diplomaFooterField {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  text-align: left;
+}
+
+.diplomaFooterField:last-child {
+  align-items: flex-end;
+  text-align: right;
 }
 
 .diplomaFooterLabel {
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
   color: #737780;
 }
 
-.diplomaFooterValue {
-  font-size: 13px;
+.diplomaFooterValue,
+.diplomaFooterValueCode {
   color: #191c1d;
+  font-size: 13px;
   font-weight: 500;
 }
 
-.diplomaFooterValueCode {
+.diplomaFooterValueCode,
+.diplomaHash {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: #191c1d;
 }
 
 .diplomaHashRow {
   width: 100%;
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 6px;
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px dashed #c2c6d1;
+  align-items: center;
+  gap: 8px;
+  border-top: 2px dashed #c5cad3;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
   color: #737780;
+}
+
+.diplomaHashRow .material-symbols-outlined {
+  font-size: 16px;
 }
 
 .diplomaHash {
-  font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
 }
 
-.diplomaStamp {
+.diplomaExample {
   position: absolute;
-  top: 18px;
-  right: 18px;
-  z-index: 3;
+  right: 12px;
+  bottom: 8px;
+  color: #737780;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.heroBadge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1.5rem;
+}
+
+.heroTitle {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
+}
+
+.heroSubtitle {
+  font-size: 1.125rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+  margin-bottom: 2.5rem;
+}
+
+/* Search Box */
+.searchBox {
+  max-width: 600px;
+  margin: 0 auto;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  padding: 0.375rem;
   display: flex;
-  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+}
+
+.searchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+
+.searchInput::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.searchButton {
+  background-color: #10b981;
+  color: #022c22;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.searchButton:hover {
+  background-color: #34d399;
+}
+
+/* Features Section */
+.featuresSection {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+}
+
+.featuresTitle {
+  margin: 0 0 2rem;
+  color: #ffffff;
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.featureCard {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 1.75rem;
+  border-radius: 16px;
+  backdrop-filter: blur(6px);
+}
+
+.featureIcon {
+  width: 40px;
+  height: 40px;
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-radius: 8px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  border: 2px solid #2E7D32;
-  color: #2E7D32;
-  background-color: rgba(232, 245, 233, 0.9);
-  font-size: 9px;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.featureCard h3 {
+  font-size: 1.125rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  opacity: 1;
-  transform: rotate(-10deg);
-  text-align: center;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
 }
 
-.diplomaStamp .material-symbols-outlined {
-  font-size: 22px !important;
+.featureCard p {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
 }
 
-.diplomaExemple {
-  position: absolute;
-  bottom: 10px;
-  right: 16px;
-  z-index: 3;
-  font-size: 10px;
-  font-style: italic;
-  color: #737780;
-}
-
-/* ---------- Comment ca marche ---------- */
-.etapesSection {
-  max-width: 1280px;
+.statsSection {
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 80px 24px;
-  scroll-margin-top: 24px;
-}
-
-.sectionTitle {
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #002c53;
-  text-align: center;
-  margin: 0 0 48px;
-}
-
-.etapesGrid {
+  padding: 1rem 1.5rem 4rem;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
-}
-
-@media (min-width: 768px) {
-  .etapesGrid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.etapeCard {
-  position: relative;
-  background-color: #ffffff;
-  border: 1px solid #c2c6d1;
-  border-radius: 8px;
-  padding: 32px 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  opacity: 1;
-  transform: none;
-  transition: translate 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.5s ease, transform 0.5s ease;
-  transition-delay: 0s, 0s, 0s, var(--reveal-delay, 0s), var(--reveal-delay, 0s);
-}
-
-.etapeCard:hover {
-  translate: 0 -4px;
-  box-shadow: 0 12px 24px rgba(0, 44, 83, 0.1);
-  border-color: #0060ac;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .etapeCard {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-
-  .etapesGrid.revealed .etapeCard {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.etapeNumero {
-  display: block;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  font-weight: 600;
-  color: #0060ac;
-  letter-spacing: 0.05em;
-  margin-bottom: 16px;
-}
-
-.etapeIcon {
-  display: block;
-  font-size: 28px !important;
-  color: #002c53;
-  margin-bottom: 12px;
-}
-
-.etapeTitre {
-  font-size: 18px;
-  font-weight: 700;
-  color: #002c53;
-  margin: 0 0 8px;
-}
-
-.etapeDesc {
-  font-size: 14px;
-  line-height: 22px;
-  color: #42474f;
-  margin: 0;
-}
-
-/* ---------- Garanties ---------- */
-.garantiesSection {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 64px 24px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 32px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
   text-align: center;
 }
 
-@media (min-width: 768px) {
-  .garantiesSection {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-.garantieItem {
+.statItem {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  opacity: 1;
-  transform: none;
-  transition: opacity 0.5s ease, transform 0.5s ease;
-  transition-delay: var(--reveal-delay, 0s);
+  gap: 0.5rem;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .garantieItem {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-
-  .garantiesSection.revealed .garantieItem {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.garantieValeur {
+.statValue {
+  color: #ffffff;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 28px;
-  font-weight: 600;
-  color: #002c53;
+  font-size: 2rem;
+  line-height: 1;
 }
 
-.garantieLabel {
-  font-size: 13px;
-  color: #42474f;
+.statLabel {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.875rem;
 }
 
-/* ---------- Footer ---------- */
+/* Footer */
 .footer {
-  border-top: 1px solid #c2c6d1;
-  background-color: #ffffff;
-  padding: 32px 24px;
   margin-top: auto;
+  border-top: 1px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color:#1d4ed8 ;
+  background-color: #f8fafc;
 }
 
-.footerInner {
-  max-width: 1280px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+/* Responsive */
+@media (max-width: 768px) {
+  .navLinks {
+    display: none;
+  }
+  .heroTitle {
+    font-size: 2rem;
+  }
 
-@media (min-width: 768px) {
-  .footerInner {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
+  .heroContent {
+    grid-template-columns: 1fr;
+  }
+
+  .heroCopy {
+    text-align: center;
+  }
+
+  .searchBox {
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
-.footerBrand {
-  font-weight: 700;
-  color: #002c53;
-  font-size: 14px;
-}
+@media (max-width: 600px) {
+  .headerContent {
+    padding: 0 1rem;
+  }
 
-.footerCopy {
-  font-size: 13px;
-  color: #737780;
-  margin: 4px 0 0;
-}
+  .headerActions {
+    gap: 0.5rem;
+  }
 
-.footerLinks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-}
+  .btnPrimary {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
 
-.footerLinks a,
-.footerLinks button {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: #42474f;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-}
+  .statsSection {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem 1rem;
+  }
 
-.footerLinks a:hover,
-.footerLinks button:hover {
-  color: #0060ac;
+  .statValue {
+    font-size: 1.5rem;
+  }
+
+  .heroSection {
+    padding: 3rem 1rem;
+  }
+
+  .diplomaInstitution {
+    font-size: 17px;
+  }
+
+  .diplomaRecipient {
+    font-size: 1.8rem;
+  }
 }
