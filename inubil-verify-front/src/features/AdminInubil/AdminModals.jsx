@@ -3,6 +3,7 @@ import { creerInvitation } from '../../core/invitations/invitations.api';
 import { listerUniversites } from '../../core/universites/universites.api';
 import { upsertConfiguration } from '../../core/configurations/configurations.api';
 import { ApiError } from '../../core/api/client';
+import { metaConfig } from './configurations-metadata';
 import drawerStyles from './AdminModals.module.css';
 
 // Style commun pour le fond des modales
@@ -165,6 +166,7 @@ export function ConfigEditDrawer({ config, onClose, onSaved }) {
   const [description, setDescription] = useState(config.description ?? '');
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState(null);
+  const meta = metaConfig(config.cle);
 
   const soumettre = async (e) => {
     e.preventDefault();
@@ -184,8 +186,16 @@ export function ConfigEditDrawer({ config, onClose, onSaved }) {
   return (
     <div className={drawerStyles.drawerOverlay} onClick={onClose}>
       <div className={drawerStyles.drawerPanel} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-          <h3 style={{ margin: 0, color: 'var(--primary)', fontFamily: 'monospace', fontSize: '1rem' }}>{config.cle}</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+          <div>
+            <h3 style={{ margin: 0, color: 'var(--primary)', fontSize: '1.05rem' }}>{meta.label}</h3>
+            <p style={{ margin: '0.3rem 0 0 0', fontFamily: 'monospace', fontSize: '0.72rem', color: '#8a94a6' }}>{config.cle}</p>
+            {!meta.connecte && (
+              <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.72rem', color: '#a5680f', fontWeight: 600 }}>
+                ⚠ Non connecté — modifier cette valeur n&#x2019;a aucun effet réel côté backend.
+              </p>
+            )}
+          </div>
           <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
         </div>
         {erreur && <p style={{ color: '#ba1a1a', fontSize: '0.8rem', marginTop: 0 }}>{erreur}</p>}

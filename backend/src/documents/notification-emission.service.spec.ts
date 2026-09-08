@@ -2,23 +2,29 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationEmissionService } from './notification-emission.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
-const DOC_ID     = 'doc-0000-0000-0000-000000000001';
-const ETU_ID     = 'etu-0000-0000-0000-000000000002';
-const LOG_ID     = 'log-0000-0000-0000-000000000003';
-const EMAIL      = 'bertrand.kamga@example.com';
+const DOC_ID = 'doc-0000-0000-0000-000000000001';
+const ETU_ID = 'etu-0000-0000-0000-000000000002';
+const LOG_ID = 'log-0000-0000-0000-000000000003';
+const EMAIL = 'bertrand.kamga@example.com';
 const NUM_UNIQUE = 'INUB-2026-0001';
+const UNIV_ID = 'univ-0000-0000-0000-000000000004';
+const DEPT_ID = 'dept-0000-0000-0000-000000000005';
+const VALIDATEUR_ID = 'val-0000-0000-0000-000000000006';
 
 const makeDoc = (overrides: any = {}) => ({
   id: DOC_ID,
   numero_unique: NUM_UNIQUE,
   url_verification: `https://verify.inubil.com/d/${NUM_UNIQUE}`,
   filiere: 'Licence en Informatique',
+  universite_id: UNIV_ID,
   etudiants: {
     id: ETU_ID,
     nom: 'KAMGA',
     prenom: 'Bertrand',
     email: EMAIL,
+    departement_id: null,
     utilisateurs_etudiants_utilisateur_idToutilisateurs: null,
   },
   universites: { nom: 'ISTAMA INUBIL' },
@@ -26,30 +32,47 @@ const makeDoc = (overrides: any = {}) => ({
   ...overrides,
 });
 
+const makeValidateur = (overrides: any = {}) => ({
+  id: VALIDATEUR_ID,
+  email: 'directeur@istama-inubil.cm',
+  prenom: 'Ada',
+  nom: 'NGONO',
+  ...overrides,
+});
+
 const makePrisma = () => ({
-  documents:  { findFirst: jest.fn() },
+  documents: { findFirst: jest.fn() },
   emails_log: { create: jest.fn(), update: jest.fn() },
+  utilisateurs: { findMany: jest.fn() },
 });
 
 const makeMail = () => ({
-  sendDocumentEmis:     jest.fn(),
-  sendDocumentRévoqué:  jest.fn(),
+  sendDocumentEmis: jest.fn(),
+  sendDocumentRévoqué: jest.fn(),
+  sendDocumentAValider: jest.fn(),
+});
+
+const makeNotificationsInApp = () => ({
+  creer: jest.fn().mockResolvedValue(undefined),
 });
 
 describe('NotificationEmissionService', () => {
   let service: NotificationEmissionService;
   let prisma: ReturnType<typeof makePrisma>;
   let mail: ReturnType<typeof makeMail>;
+  let notificationsInApp: ReturnType<typeof makeNotificationsInApp>;
 
   beforeEach(async () => {
     prisma = makePrisma();
-    mail   = makeMail();
+    mail = makeMail();
+    notificationsInApp = makeNotificationsInApp();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationEmissionService,
         { provide: PrismaService, useValue: prisma },
-        { provide: MailService,   useValue: mail  },
+        { provide: MailService, useValue: mail },
+        { provide: NotificationsService, useValue: notificationsInApp },
       ],
     }).compile();
 
@@ -69,17 +92,21 @@ describe('NotificationEmissionService', () => {
       expect.objectContaining({ numeroUnique: NUM_UNIQUE }),
     );
     expect(prisma.emails_log.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ statut: 'envoye' }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ statut: 'envoye' }),
+      }),
     );
   });
 
-  it('utilise l\'email du compte utilisateur lié s\'il existe', async () => {
+  it("utilise l'email du compte utilisateur lié s'il existe", async () => {
     const emailCompte = 'compte@univ.cm';
     const doc = makeDoc({
       etudiants: {
         ...makeDoc().etudiants,
         email: null,
-        utilisateurs_etudiants_utilisateur_idToutilisateurs: { email: emailCompte },
+        utilisateurs_etudiants_utilisateur_idToutilisateurs: {
+          email: emailCompte,
+        },
       },
     });
     prisma.documents.findFirst.mockResolvedValue(doc);
@@ -89,7 +116,10 @@ describe('NotificationEmissionService', () => {
 
     await service.notifierEtudiant(DOC_ID);
 
-    expect(mail.sendDocumentEmis).toHaveBeenCalledWith(emailCompte, expect.anything());
+    expect(mail.sendDocumentEmis).toHaveBeenCalledWith(
+      emailCompte,
+      expect.anything(),
+    );
   });
 
   it('logue statut "echoue" si MailService lève une erreur', async () => {
@@ -102,19 +132,22 @@ describe('NotificationEmissionService', () => {
 
     expect(prisma.emails_log.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ statut: 'echoue', erreur: 'SMTP timeout' }),
+        data: expect.objectContaining({
+          statut: 'echoue',
+          erreur: 'SMTP timeout',
+        }),
       }),
     );
   });
 
-  it('ne lève pas d\'erreur si le document est introuvable', async () => {
+  it("ne lève pas d'erreur si le document est introuvable", async () => {
     prisma.documents.findFirst.mockResolvedValue(null);
 
     await expect(service.notifierEtudiant(DOC_ID)).resolves.toBeUndefined();
     expect(mail.sendDocumentEmis).not.toHaveBeenCalled();
   });
 
-  it('ne lève pas d\'erreur si l\'étudiant n\'a pas d\'email', async () => {
+  it("ne lève pas d'erreur si l'étudiant n'a pas d'email", async () => {
     prisma.documents.findFirst.mockResolvedValue(
       makeDoc({
         etudiants: {
@@ -170,7 +203,9 @@ describe('NotificationEmissionService', () => {
         expect.objectContaining({ numeroUnique: NUM_UNIQUE }),
       );
       expect(prisma.emails_log.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ statut: 'envoye' }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ statut: 'envoye' }),
+        }),
       );
     });
 
@@ -185,8 +220,8 @@ describe('NotificationEmissionService', () => {
       expect(prisma.emails_log.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            template:    'document_revoque',
-            statut:      'en_attente',
+            template: 'document_revoque',
+            statut: 'en_attente',
             destinataire: EMAIL,
           }),
         }),
@@ -203,18 +238,21 @@ describe('NotificationEmissionService', () => {
 
       expect(prisma.emails_log.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ statut: 'echoue', erreur: 'SMTP down' }),
+          data: expect.objectContaining({
+            statut: 'echoue',
+            erreur: 'SMTP down',
+          }),
         }),
       );
     });
 
-    it('ne lève pas d\'erreur si le document est introuvable', async () => {
+    it("ne lève pas d'erreur si le document est introuvable", async () => {
       prisma.documents.findFirst.mockResolvedValue(null);
       await expect(service.notifierRevocation(DOC_ID)).resolves.toBeUndefined();
       expect(mail.sendDocumentRévoqué).not.toHaveBeenCalled();
     });
 
-    it('ne lève pas d\'erreur si l\'étudiant n\'a pas d\'email', async () => {
+    it("ne lève pas d'erreur si l'étudiant n'a pas d'email", async () => {
       prisma.documents.findFirst.mockResolvedValue(
         makeDocRévoqué({
           etudiants: {
@@ -226,6 +264,121 @@ describe('NotificationEmissionService', () => {
       );
       await expect(service.notifierRevocation(DOC_ID)).resolves.toBeUndefined();
       expect(mail.sendDocumentRévoqué).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── notifierValidateurs ───────────────────────────────────────────────────
+
+  describe('notifierValidateurs', () => {
+    it('notifie (email + in-app) chaque validateur trouvé', async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+      prisma.utilisateurs.findMany.mockResolvedValue([makeValidateur()]);
+      prisma.emails_log.create.mockResolvedValue({ id: LOG_ID });
+      mail.sendDocumentAValider.mockResolvedValue(undefined);
+      prisma.emails_log.update.mockResolvedValue({});
+
+      await service.notifierValidateurs(DOC_ID);
+
+      expect(mail.sendDocumentAValider).toHaveBeenCalledWith(
+        'directeur@istama-inubil.cm',
+        expect.objectContaining({
+          numeroUnique: NUM_UNIQUE,
+          documentId: DOC_ID,
+        }),
+      );
+      expect(notificationsInApp.creer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          utilisateurId: VALIDATEUR_ID,
+          type: 'document_a_valider',
+        }),
+      );
+      expect(prisma.emails_log.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ statut: 'envoye' }),
+        }),
+      );
+    });
+
+    it("interroge les universite_id + roles directeur_pedagogique/responsable_universite, sans departement ou departement de l'etudiant", async () => {
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDoc({
+          etudiants: { ...makeDoc().etudiants, departement_id: DEPT_ID },
+        }),
+      );
+      prisma.utilisateurs.findMany.mockResolvedValue([makeValidateur()]);
+      prisma.emails_log.create.mockResolvedValue({ id: LOG_ID });
+      prisma.emails_log.update.mockResolvedValue({});
+
+      await service.notifierValidateurs(DOC_ID);
+
+      expect(prisma.utilisateurs.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            universite_id: UNIV_ID,
+            roles_utilisateurs_role_idToroles: {
+              nom: { in: ['directeur_pedagogique', 'responsable_universite'] },
+            },
+            OR: [
+              { departements: { none: {} } },
+              { departements: { some: { id: DEPT_ID } } },
+            ],
+          }),
+        }),
+      );
+    });
+
+    it("ne fait rien si aucun validateur n'est trouvé", async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+      prisma.utilisateurs.findMany.mockResolvedValue([]);
+
+      await expect(
+        service.notifierValidateurs(DOC_ID),
+      ).resolves.toBeUndefined();
+      expect(mail.sendDocumentAValider).not.toHaveBeenCalled();
+      expect(notificationsInApp.creer).not.toHaveBeenCalled();
+    });
+
+    it("ne lève pas d'erreur si le document est introuvable", async () => {
+      prisma.documents.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.notifierValidateurs(DOC_ID),
+      ).resolves.toBeUndefined();
+      expect(prisma.utilisateurs.findMany).not.toHaveBeenCalled();
+    });
+
+    it('logue statut "echoue" pour un validateur si MailService lève une erreur, sans bloquer les autres', async () => {
+      const autreValidateur = makeValidateur({
+        id: 'val-2',
+        email: 'autre@istama-inubil.cm',
+      });
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+      prisma.utilisateurs.findMany.mockResolvedValue([
+        makeValidateur(),
+        autreValidateur,
+      ]);
+      prisma.emails_log.create.mockResolvedValue({ id: LOG_ID });
+      prisma.emails_log.update.mockResolvedValue({});
+      mail.sendDocumentAValider
+        .mockRejectedValueOnce(new Error('SMTP down'))
+        .mockResolvedValueOnce(undefined);
+
+      await service.notifierValidateurs(DOC_ID);
+
+      expect(mail.sendDocumentAValider).toHaveBeenCalledTimes(2);
+      expect(prisma.emails_log.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            statut: 'echoue',
+            erreur: 'SMTP down',
+          }),
+        }),
+      );
+      expect(prisma.emails_log.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ statut: 'envoye' }),
+        }),
+      );
     });
   });
 });

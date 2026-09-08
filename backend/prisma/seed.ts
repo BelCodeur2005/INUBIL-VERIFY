@@ -439,6 +439,38 @@ async function main(): Promise<void> {
   }
   console.log(`${configurationsSysteme.length} configurations systeme upserted.`);
 
+  // Parametres email (lus par MailService a chaque envoi, repli sur les variables .env si absents).
+  const configurationsEmail = [
+    {
+      cle: 'app_nom',
+      valeur: 'INUBIL Verify',
+      description: "Nom affiche dans l'en-tete et le pied de page des emails envoyes par la plateforme.",
+    },
+    {
+      cle: 'smtp_host',
+      valeur: process.env.MAIL_HOST ?? 'smtp.gmail.com',
+      description: "Serveur SMTP sortant utilise pour l'envoi des emails.",
+    },
+    {
+      cle: 'smtp_port',
+      valeur: process.env.MAIL_PORT ?? '587',
+      description: 'Port SMTP (STARTTLS).',
+    },
+    {
+      cle: 'smtp_from_email',
+      valeur: 'noreply@inubil.com',
+      description: "Adresse email affichee comme expediteur (From) des emails sortants — combinee avec le nom de l'application.",
+    },
+  ];
+  for (const c of configurationsEmail) {
+    await prisma.configurations.upsert({
+      where: { cle: c.cle },
+      update: {},
+      create: { cle: c.cle, valeur: c.valeur, type: 'string', description: c.description, modifiable_par: 'super_admin' },
+    });
+  }
+  console.log(`${configurationsEmail.length} configurations email upserted.`);
+
   // ── 8bis. Départements de test (Genie Informatique, Mecanique) ─────────────
   const departementsSeed = [
     { code: 'GI', nom: 'Génie Informatique', ordre: 1 },

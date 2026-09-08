@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import {
   LineChart, FileText, Bell, Users, ClipboardCheck, Settings, Building2,
   ShieldCheck, GraduationCap, Share2, UserPlus, Search, DatabaseBackup, ChevronDown,
+  Shield, AlertTriangle, Mail,
 } from 'lucide-react';
+import { SECTIONS_CONFIG, metaConfig } from './configurations-metadata';
 import { useAuth } from '../../core/auth/useAuth';
 import AccountMenu from '../../shared/components/AccountMenu/AccountMenu';
 import NotificationsBell from '../../shared/components/NotificationsBell/NotificationsBell';
@@ -113,6 +115,7 @@ export default function AdminInubil() {
   const [configsLoading, setConfigsLoading] = useState(true);
   const [configsError, setConfigsError] = useState(null);
   const [configEnEdition, setConfigEnEdition] = useState(null);
+  const [settingsSection, setSettingsSection] = useState('securite');
 
   const chargerConfigurations = async () => {
     setConfigsLoading(true);
@@ -681,45 +684,109 @@ export default function AdminInubil() {
           )}
 
           {/* VUE 6 : PARAMÈTRES SYSTÈME */}
-          {activeTab === 'settings' && (
-            <section className={styles.tableCard}>
-              <div className={styles.tableHeader}>
-                <div>
-                  <h3 className={styles.viewTitle}>Paramètres Système</h3>
-                  <p className={styles.viewSubtitle}>Clés de configuration globales de la plateforme.</p>
+          {activeTab === 'settings' && (() => {
+            const configsByCle = Object.fromEntries(configs.map((c) => [c.cle, c]));
+            const clesGroupees = new Set(SECTIONS_CONFIG.flatMap((s) => s.cles));
+            const configsAutres = configs.filter((c) => !clesGroupees.has(c.cle));
+
+            const onglets = [
+              ...SECTIONS_CONFIG.map((s) => ({
+                id: s.id,
+                titre: s.titre,
+                icone: s.id === 'securite'
+                  ? <Shield size={15} />
+                  : s.id === 'email'
+                    ? <Mail size={15} />
+                    : <FileText size={15} />,
+                items: s.cles.map((cle) => configsByCle[cle]).filter(Boolean),
+              })),
+              ...(configsAutres.length > 0
+                ? [{
+                    id: 'autres',
+                    titre: 'Autres',
+                    icone: <AlertTriangle size={15} />,
+                    warn: true,
+                    items: configsAutres,
+                  }]
+                : []),
+            ].filter((o) => o.items.length > 0);
+
+            const ongletActif = onglets.find((o) => o.id === settingsSection) ?? onglets[0];
+
+            const ligneConfig = (c) => {
+              const meta = metaConfig(c.cle);
+              return (
+                <div key={c.id} className={styles.settingRow}>
+                  <div className={styles.settingInfo}>
+                    <div className={styles.settingLabelRow}>
+                      <span className={styles.settingLabel}>{meta.label}</span>
+                      {!meta.connecte && (
+                        <span className={styles.disconnectedBadge}>
+                          <AlertTriangle size={11} /> Non connecté
+                        </span>
+                      )}
+                    </div>
+                    <span className={styles.settingKey}>{c.cle}</span>
+                    {c.description && <p className={styles.settingDesc}>{c.description}</p>}
+                  </div>
+                  <div className={styles.settingControl}>
+                    <span className={styles.settingValue}>{c.valeur}</span>
+                    <button className={styles.btnSecondary} onClick={() => setConfigEnEdition(c)}>Modifier</button>
+                  </div>
                 </div>
-              </div>
-              {configsError && <p className={styles.errorText}>{configsError}</p>}
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Clé</th>
-                    <th>Description</th>
-                    <th className={styles.tableActionsHead}>Valeur</th>
-                    <th className={styles.tableActionsHead}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {configsLoading && (
-                    <tr><td colSpan={4} className={styles.tableEmptyCell}>Chargement…</td></tr>
-                  )}
-                  {!configsLoading && configs.length === 0 && (
-                    <tr><td colSpan={4} className={styles.tableEmptyCell}>Aucun paramètre enregistré.</td></tr>
-                  )}
-                  {!configsLoading && configs.map((c) => (
-                    <tr key={c.id}>
-                      <td className={styles.mono}>{c.cle}</td>
-                      <td className={styles.descriptionCell}>{c.description ?? '—'}</td>
-                      <td className={`${styles.mono} ${styles.tableActionsCell}`}>{c.valeur}</td>
-                      <td className={styles.tableActionsCell}>
-                        <button className={styles.btnSecondary} onClick={() => setConfigEnEdition(c)}>Modifier</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          )}
+              );
+            };
+
+            return (
+              <>
+                <div className={styles.viewHeader}>
+                  <div>
+                    <h2 className={styles.viewTitle} style={{ fontSize: '1.15rem' }}>Paramètres Système</h2>
+                    <p className={styles.viewSubtitle}>Clés de configuration globales de la plateforme.</p>
+                  </div>
+                </div>
+
+                {configsError && <p className={styles.errorText}>{configsError}</p>}
+                {configsLoading && <p className={styles.chartLoadingState}>Chargement…</p>}
+
+                {!configsLoading && onglets.length > 0 && (
+                  <div className={styles.settingsTabsWrap}>
+                    <div className={styles.settingsTabBar} role="tablist">
+                      {onglets.map((o) => (
+                        <button
+                          key={o.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={ongletActif?.id === o.id}
+                          className={`${styles.settingsTab} ${ongletActif?.id === o.id ? styles.settingsTabActive : ''} ${o.warn ? styles.settingsTabWarn : ''}`}
+                          onClick={() => setSettingsSection(o.id)}
+                        >
+                          {o.icone}
+                          {o.titre}
+                        </button>
+                      ))}
+                    </div>
+
+                    {ongletActif?.warn && (
+                      <p className={styles.settingsTabWarnNote}>
+                        <AlertTriangle size={13} /> Présents en base mais non lus par le backend actuel — les modifier n'a aucun effet réel.
+                      </p>
+                    )}
+
+                    <div className={styles.settingsCard}>
+                      <div className={styles.settingsList}>
+                        {ongletActif?.items.map(ligneConfig)}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!configsLoading && configs.length === 0 && (
+                  <p className={styles.tableEmptyCell}>Aucun paramètre enregistré.</p>
+                )}
+              </>
+            );
+          })()}
 
           {/* VUE 7 : SAUVEGARDE MANUELLE */}
           {activeTab === 'backup' && (

@@ -795,3 +795,190 @@
   composes: btnPrimary;
   margin-top: 1rem;
 }
+
+/* Paramètres Système — tab bar + carte de la section active */
+.settingsTabsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.settingsTabBar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--outline-variant);
+  padding: 0 0.25rem;
+}
+
+.settingsTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 0.9rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.settingsTab:hover {
+  color: var(--on-surface);
+}
+
+.settingsTabActive {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.settingsTabWarn.settingsTabActive {
+  color: #a5680f;
+  border-bottom-color: #a5680f;
+}
+
+.settingsTabWarnNote {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.55rem 0.85rem;
+  background-color: rgba(200, 135, 26, 0.1);
+  color: #a5680f;
+  border-radius: 0.5rem;
+  font-size: 0.76rem;
+}
+
+.settingsCard {
+  background-color: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.settingsCardHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--outline-variant);
+  background-color: var(--surface-container-low);
+}
+
+.settingsCardIcon {
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  border-radius: 0.5rem;
+  background-color: rgba(43, 86, 203, 0.1);
+  color: #2b56cb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settingsCardIconWarn {
+  background-color: rgba(200, 135, 26, 0.14);
+  color: #a5680f;
+}
+
+.settingsCardTitle {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  align-self: center;
+}
+
+.settingsCardSubtitle {
+  margin: 0.2rem 0 0 0;
+  font-size: 0.72rem;
+  color: var(--on-surface-variant);
+}
+
+.settingsList {
+  display: flex;
+  flex-direction: column;
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.settingRow:last-child {
+  border-bottom: none;
+}
+
+.settingInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settingLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.settingLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.disconnectedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: rgba(200, 135, 26, 0.14);
+  color: #a5680f;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.settingKey {
+  font-family: ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--outline);
+}
+
+.settingDesc {
+  margin: 0.2rem 0 0 0;
+  font-size: 0.78rem;
+  color: var(--on-surface-variant);
+  line-height: 1.4;
+  max-width: 560px;
+}
+
+.settingControl {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-shrink: 0;
+}
+
+.settingValue {
+  font-family: ui-monospace, monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  background-color: rgba(43, 86, 203, 0.08);
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.4rem;
+  white-space: nowrap;
+}

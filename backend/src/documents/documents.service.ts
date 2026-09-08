@@ -62,7 +62,9 @@ export class DocumentsService {
    * d'universite). Tout autre utilisateur sans universite est refuse — ne pas
    * inferer un statut privilegie a partir d'un champ nullable.
    */
-  private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
+  private async getActeurUniversiteId(
+    acteurId: string,
+  ): Promise<string | null> {
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id: acteurId },
       select: {
@@ -70,7 +72,8 @@ export class DocumentsService {
         roles_utilisateurs_role_idToroles: { select: { nom: true } },
       },
     });
-    if (u?.roles_utilisateurs_role_idToroles?.nom === 'super_admin') return null;
+    if (u?.roles_utilisateurs_role_idToroles?.nom === 'super_admin')
+      return null;
     if (!u?.universite_id) {
       throw new ForbiddenException("Vous n'êtes pas associé à une université");
     }
@@ -82,7 +85,9 @@ export class DocumentsService {
     acteurUniversiteId: string | null,
   ): void {
     if (acteurUniversiteId !== null && docUniversiteId !== acteurUniversiteId) {
-      throw new ForbiddenException('Accès refusé : document d\'une autre université');
+      throw new ForbiddenException(
+        "Accès refusé : document d'une autre université",
+      );
     }
   }
 
@@ -104,8 +109,13 @@ export class DocumentsService {
     etudiantDepartementId: string | null,
     acteurDepartementIds: string[],
   ): void {
-    if (acteurDepartementIds.length > 0 && !acteurDepartementIds.includes(etudiantDepartementId ?? '')) {
-      throw new ForbiddenException('Accès refusé : document d\'un étudiant d\'un autre département');
+    if (
+      acteurDepartementIds.length > 0 &&
+      !acteurDepartementIds.includes(etudiantDepartementId ?? '')
+    ) {
+      throw new ForbiddenException(
+        "Accès refusé : document d'un étudiant d'un autre département",
+      );
     }
   }
 
@@ -154,7 +164,8 @@ export class DocumentsService {
     const typeDoc = await this.prisma.types_document.findFirst({
       where: { id: dto.type_document_id, est_actif: true },
     });
-    if (!typeDoc) throw new NotFoundException('Type de document introuvable ou inactif');
+    if (!typeDoc)
+      throw new NotFoundException('Type de document introuvable ou inactif');
 
     const dateEmission = new Date(dto.date_emission);
     const annee = dateEmission.getFullYear();
@@ -238,7 +249,8 @@ export class DocumentsService {
     if (query.type_document_id) where.type_document_id = query.type_document_id;
     if (query.date_debut || query.date_fin) {
       where.date_emission = {};
-      if (query.date_debut) where.date_emission.gte = new Date(query.date_debut);
+      if (query.date_debut)
+        where.date_emission.gte = new Date(query.date_debut);
       if (query.date_fin) where.date_emission.lte = new Date(query.date_fin);
     }
 
@@ -266,18 +278,28 @@ export class DocumentsService {
         where: { id: doc.etudiant_id },
         select: { departement_id: true },
       });
-      this.assertMemeDepartement(etudiant?.departement_id ?? null, acteurDeptIds);
+      this.assertMemeDepartement(
+        etudiant?.departement_id ?? null,
+        acteurDeptIds,
+      );
     }
     return doc;
   }
 
-  async modifier(id: string, dto: UpdateDocumentDto, acteurId: string, ip?: string) {
+  async modifier(
+    id: string,
+    dto: UpdateDocumentDto,
+    acteurId: string,
+    ip?: string,
+  ) {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const doc = await this.trouverOuEchouer(id);
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
 
     if (!['brouillon', 'rejete'].includes(doc.statut)) {
-      throw new BadRequestException('Seul un brouillon ou un document rejeté peut être modifié');
+      throw new BadRequestException(
+        'Seul un brouillon ou un document rejeté peut être modifié',
+      );
     }
 
     const { matieres, ...champs } = dto;
@@ -285,12 +307,22 @@ export class DocumentsService {
     const updated = await this.prisma.documents.update({
       where: { id },
       data: {
-        ...(champs.date_emission ? { date_emission: new Date(champs.date_emission) } : {}),
-        ...(champs.annee_academique !== undefined ? { annee_academique: champs.annee_academique } : {}),
-        ...(champs.lieu_delivrance !== undefined ? { lieu_delivrance: champs.lieu_delivrance } : {}),
+        ...(champs.date_emission
+          ? { date_emission: new Date(champs.date_emission) }
+          : {}),
+        ...(champs.annee_academique !== undefined
+          ? { annee_academique: champs.annee_academique }
+          : {}),
+        ...(champs.lieu_delivrance !== undefined
+          ? { lieu_delivrance: champs.lieu_delivrance }
+          : {}),
         ...(champs.filiere !== undefined ? { filiere: champs.filiere } : {}),
-        ...(champs.mention_id !== undefined ? { mention_id: champs.mention_id } : {}),
-        ...(champs.moyenne_generale !== undefined ? { moyenne_generale: champs.moyenne_generale } : {}),
+        ...(champs.mention_id !== undefined
+          ? { mention_id: champs.mention_id }
+          : {}),
+        ...(champs.moyenne_generale !== undefined
+          ? { moyenne_generale: champs.moyenne_generale }
+          : {}),
         ...(champs.note_sur !== undefined ? { note_sur: champs.note_sur } : {}),
         ...(champs.donnees !== undefined ? { donnees: champs.donnees } : {}),
         ...(matieres !== undefined
@@ -365,24 +397,32 @@ export class DocumentsService {
     }
 
     const dateEmission = new Date(doc.date_emission);
-    const annee  = dateEmission.getFullYear();
-    const mois   = String(dateEmission.getMonth() + 1).padStart(2, '0');
+    const annee = dateEmission.getFullYear();
+    const mois = String(dateEmission.getMonth() + 1).padStart(2, '0');
     const pdfKey = `universites/${doc.universite_id}/diplomes/${annee}/${mois}/${doc.numero_unique}.pdf`;
-    const s3Pdf  = await this.storage
+    const s3Pdf = await this.storage
       .uploadFile(fichierBuffer, pdfKey, 'application/pdf')
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
-        const code = (err as Record<string, unknown>)?.Code ?? (err as Record<string, unknown>)?.name ?? '';
-        this.logger.error(`Upload R2 PDF échoué pour doc ${id} : [${code}] ${msg}`);
+        const code =
+          (err as Record<string, unknown>)?.Code ??
+          (err as Record<string, unknown>)?.name ??
+          '';
+        this.logger.error(
+          `Upload R2 PDF échoué pour doc ${id} : [${code}] ${msg}`,
+        );
         return null;
       });
 
     const tailleKo = Math.ceil(fichierTailleOctets / 1024);
 
-    // Si le document était rejeté, le re-upload le remet en brouillon et efface le rejet
-    const resetRejet = doc.statut === 'rejete'
-      ? { statut: 'brouillon' as const, motif_rejet: null, rejete_par: null, rejete_le: null }
-      : {};
+    // Le dossier (donnees + PDF) est complet : passe en attente de validation.
+    // Efface aussi le rejet le cas echeant (re-upload apres un refus).
+    const devientEnAttente = doc.statut !== 'en_validation';
+    const resetRejet =
+      doc.statut === 'rejete'
+        ? { motif_rejet: null, rejete_par: null, rejete_le: null }
+        : {};
 
     const updated = await this.prisma.documents.update({
       where: { id },
@@ -390,6 +430,7 @@ export class DocumentsService {
         hash_sha256: hashSha256,
         pdf_taille_ko: tailleKo,
         pdf_url: s3Pdf?.key ?? null,
+        statut: 'en_validation',
         ...resetRejet,
       },
       include: { matieres_document: { orderBy: { ordre: 'asc' } } },
@@ -404,6 +445,18 @@ export class DocumentsService {
       ip,
     });
 
+    // Notifie les validateurs (directeur_pedagogique / responsable_universite) que
+    // le dossier est pret a etre signe. Fire & forget - un echec ne bloque pas l'upload.
+    if (devientEnAttente) {
+      this.notif
+        .notifierValidateurs(id)
+        .catch((err) =>
+          this.logger.error(
+            `Notification validateurs échouée pour doc ${id} : ${err.message}`,
+          ),
+        );
+    }
+
     return updated;
   }
 
@@ -414,9 +467,10 @@ export class DocumentsService {
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
 
     if (!['brouillon', 'en_validation'].includes(doc.statut)) {
-      const hint = doc.statut === 'rejete'
-        ? ' Un document rejeté doit d\'abord être corrigé (PDF re-uploadé via POST /documents/{id}/pdf) avant d\'être validé.'
-        : '';
+      const hint =
+        doc.statut === 'rejete'
+          ? " Un document rejeté doit d'abord être corrigé (PDF re-uploadé via POST /documents/{id}/pdf) avant d'être validé."
+          : '';
       throw new BadRequestException(
         `Impossible de valider un document en statut "${doc.statut}".${hint}`,
       );
@@ -428,22 +482,29 @@ export class DocumentsService {
       );
     }
 
-    const publicVerifyUrl = this.config.get<string>('PUBLIC_VERIFY_URL', 'https://verify.inubil.com');
+    const publicVerifyUrl = this.config.get<string>(
+      'PUBLIC_VERIFY_URL',
+      'https://verify.inubil.com',
+    );
     const urlVerification = `${publicVerifyUrl}/d/${doc.numero_unique}`;
 
-    const dateVal  = new Date(doc.date_emission);
-    const annee   = dateVal.getFullYear();
-    const mois    = String(dateVal.getMonth() + 1).padStart(2, '0');
+    const dateVal = new Date(doc.date_emission);
+    const annee = dateVal.getFullYear();
+    const mois = String(dateVal.getMonth() + 1).padStart(2, '0');
     const qrBuffer = await this.qr.generateQr(urlVerification);
     const qrKey = `universites/${doc.universite_id}/qrcodes/${annee}/${mois}/${doc.numero_unique}-qr.png`;
     let qrCodeUrl: string | null = null;
     const s3Qr = await this.storage
       .uploadFile(qrBuffer, qrKey, 'image/png')
       .catch((err: Error) => {
-        this.logger.error(`Upload R2 QR échoué pour doc ${id} : ${err.message}`);
+        this.logger.error(
+          `Upload R2 QR échoué pour doc ${id} : ${err.message}`,
+        );
         return null;
       });
-    if (s3Qr) { qrCodeUrl = s3Qr.key; }
+    if (s3Qr) {
+      qrCodeUrl = s3Qr.key;
+    }
 
     const maintenant = new Date();
 
@@ -472,31 +533,50 @@ export class DocumentsService {
       userAgent,
     });
 
-    this.notif.notifierEtudiant(id).catch((err) =>
-      this.logger.error(`Notification émission échouée pour doc ${id} : ${err.message}`),
-    );
+    this.notif
+      .notifierEtudiant(id)
+      .catch((err) =>
+        this.logger.error(
+          `Notification émission échouée pour doc ${id} : ${err.message}`,
+        ),
+      );
 
     if (updated.etudiants?.utilisateur_id) {
       this.notificationsInApp
         .creer({
           utilisateurId: updated.etudiants.utilisateur_id,
-          type:    'document_emis',
-          titre:   'Diplôme certifié',
+          type: 'document_emis',
+          titre: 'Diplôme certifié',
           message: `Votre document ${updated.numero_unique} a été validé et ancré sur la blockchain.`,
-          lien:    '/dashboard-etudiant',
+          lien: '/dashboard-etudiant',
         })
-        .catch((err) => this.logger.error(`Notification in-app émission échouée pour doc ${id} : ${err.message}`));
+        .catch((err) =>
+          this.logger.error(
+            `Notification in-app émission échouée pour doc ${id} : ${err.message}`,
+          ),
+        );
     }
 
-    this.enregistrerSurBlockchain(updated.id, doc.hash_sha256, updated.universite_id, updated.numero_unique)
-      .catch((err) =>
-        this.logger.error(`Blockchain enregistrement échoué pour doc ${id} : ${err.message}`),
-      );
+    this.enregistrerSurBlockchain(
+      updated.id,
+      doc.hash_sha256,
+      updated.universite_id,
+      updated.numero_unique,
+    ).catch((err) =>
+      this.logger.error(
+        `Blockchain enregistrement échoué pour doc ${id} : ${err.message}`,
+      ),
+    );
 
     return updated;
   }
 
-  async revoquer(id: string, dto: RevoquerDocumentDto, acteurId: string, ip?: string) {
+  async revoquer(
+    id: string,
+    dto: RevoquerDocumentDto,
+    acteurId: string,
+    ip?: string,
+  ) {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const doc = await this.trouverOuEchouer(id);
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
@@ -531,33 +611,47 @@ export class DocumentsService {
     });
 
     // Notification email étudiant en fire & forget - un échec mail ne fait pas échouer la révocation
-    this.notif.notifierRevocation(id).catch((err) =>
-      this.logger.error(`Notification révocation échouée pour doc ${id} : ${err.message}`),
-    );
+    this.notif
+      .notifierRevocation(id)
+      .catch((err) =>
+        this.logger.error(
+          `Notification révocation échouée pour doc ${id} : ${err.message}`,
+        ),
+      );
 
     if (updated.etudiants?.utilisateur_id) {
       this.notificationsInApp
         .creer({
           utilisateurId: updated.etudiants.utilisateur_id,
-          type:    'document_revoque',
-          titre:   'Diplôme révoqué',
+          type: 'document_revoque',
+          titre: 'Diplôme révoqué',
           message: `Votre document ${updated.numero_unique} a été révoqué par votre établissement.`,
-          lien:    '/dashboard-etudiant',
+          lien: '/dashboard-etudiant',
         })
-        .catch((err) => this.logger.error(`Notification in-app révocation échouée pour doc ${id} : ${err.message}`));
+        .catch((err) =>
+          this.logger.error(
+            `Notification in-app révocation échouée pour doc ${id} : ${err.message}`,
+          ),
+        );
     }
 
     // Blockchain fire & forget - révoque le diplôme on-chain sans bloquer la réponse
-    this.revoquerSurBlockchain(id, updated.numero_unique)
-      .catch((err) =>
-        this.logger.error(`Blockchain révocation échouée pour doc ${id} : ${err.message}`),
-      );
+    this.revoquerSurBlockchain(id, updated.numero_unique).catch((err) =>
+      this.logger.error(
+        `Blockchain révocation échouée pour doc ${id} : ${err.message}`,
+      ),
+    );
 
     return updated;
   }
 
   /** Rejet par le directeur pédagogique - le PDF reste sur R2, le statut passe à 'rejete'. */
-  async rejeter(id: string, dto: RejeterDocumentDto, acteurId: string, ip?: string) {
+  async rejeter(
+    id: string,
+    dto: RejeterDocumentDto,
+    acteurId: string,
+    ip?: string,
+  ) {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const doc = await this.trouverOuEchouer(id);
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
@@ -591,7 +685,6 @@ export class DocumentsService {
     return updated;
   }
 
-
   async getPdfUrl(
     id: string,
     acteurId: string,
@@ -623,12 +716,17 @@ export class DocumentsService {
     universiteId: string,
     numeroUnique: string,
   ): Promise<void> {
-    const result = await this.blockchain.enregistrerDiplome(numeroUnique, hashSha256, universiteId);
+    const result = await this.blockchain.enregistrerDiplome(
+      numeroUnique,
+      hashSha256,
+      universiteId,
+    );
     if (!result) return; // blockchain non configurée ou erreur déjà loggée
 
     const { txHash, blocNumero } = result;
     const contractAddress = this.config.get<string>('CONTRACT_ADDRESS') ?? '';
-    const reseau = (this.config.get<string>('POLYGON_NETWORK') ?? 'polygon_amoy') as 'polygon_amoy' | 'polygon_mainnet';
+    const reseau = (this.config.get<string>('POLYGON_NETWORK') ??
+      'polygon_amoy') as 'polygon_amoy' | 'polygon_mainnet';
 
     await this.prisma.documents.update({
       where: { id: docId },
@@ -640,10 +738,15 @@ export class DocumentsService {
       },
     });
 
-    this.logger.log(`Blockchain ✔ enregistrement doc ${docId} - tx: ${txHash}, bloc: ${blocNumero}`);
+    this.logger.log(
+      `Blockchain ✔ enregistrement doc ${docId} - tx: ${txHash}, bloc: ${blocNumero}`,
+    );
   }
 
-  private async revoquerSurBlockchain(docId: string, numeroUnique: string): Promise<void> {
+  private async revoquerSurBlockchain(
+    docId: string,
+    numeroUnique: string,
+  ): Promise<void> {
     const txHash = await this.blockchain.revoquerDiplome(numeroUnique);
     if (!txHash) return; // blockchain non configurée ou erreur déjà loggée
 
