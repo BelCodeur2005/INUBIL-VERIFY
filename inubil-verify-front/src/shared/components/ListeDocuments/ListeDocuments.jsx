@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, Eye, Download, X, Loader2, AlertTriangle, FileX } from 'lucide-react';
+import { Search, Eye, Download, X, Loader2, AlertTriangle, FileX, FileText } from 'lucide-react';
 import { listerDocuments, getUrlPdfPresignee } from '../../../core/documents/documents.api';
 import { listerDocumentsAdmin } from '../../../core/admin/admin.api';
 import { listerTypesDocument } from '../../../core/types-document/types-document.api';
@@ -9,6 +9,7 @@ import { rechercherEtudiants, getEtudiant } from '../../../core/etudiants/etudia
 import { getUniversite } from '../../../core/universites/universites.api';
 import { ApiError } from '../../../core/api/client';
 import { lirePreferences } from '../../../core/preferences/preferences';
+import Pagination from '../Pagination/Pagination';
 import styles from './ListeDocuments.module.css';
 
 // Liste reelle des documents (docs/ROLES_ET_PAGES.md §D item 18, GET /documents).
@@ -41,6 +42,11 @@ function classeStatut(valeur) {
   return STATUTS.find((s) => s.valeur === valeur)?.classe ?? 'statutBrouillon';
 }
 
+const LABEL_RESULTAT_MATIERE = { valide: 'Validé', ajourne: 'Ajourné', absent: 'Absent', dispense: 'Dispensé' };
+function libelleResultatMatiere(valeur) {
+  return LABEL_RESULTAT_MATIERE[valeur] ?? valeur;
+}
+
 export default function ListeDocuments({ admin = false }) {
   const location = useLocation();
   const etudiantInitial = location.state?.etudiantFiltre ?? null;
@@ -49,7 +55,7 @@ export default function ListeDocuments({ admin = false }) {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const limit = 20;
+  const limit = 50;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -342,36 +348,98 @@ export default function ListeDocuments({ admin = false }) {
           </table>
         </div>
 
-        <div className={styles.pagination}>
-          <span className={styles.paginInfo}>
-            {total === 0 ? 'Aucun résultat' : `Page ${page} sur ${totalPages} — ${total} document${total !== 1 ? 's' : ''}`}
-          </span>
-          <div className={styles.paginBtns}>
-            <button className={styles.paginBtn} disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>‹</button>
-            <button className={styles.paginBtn} disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>›</button>
-          </div>
-        </div>
+        <Pagination page={page} totalPages={totalPages} total={total} onChange={setPage} itemLabel="document" />
       </div>
 
       {documentDetail && (
         <div className={styles.modalOverlay} onClick={() => setDocumentDetail(null)}>
           <div className={styles.modalContainer} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3>{documentDetail.numero_unique}</h3>
+              <span className={styles.headerIcon}><FileText size={20} /></span>
+              <div className={styles.headerInfo}>
+                <h3>{nomType(documentDetail.type_document_id)}</h3>
+                <span className={styles.mono}>{documentDetail.numero_unique}</span>
+              </div>
+              <span className={`${styles.badge} ${styles[classeStatut(documentDetail.statut)]}`}>
+                {libelleStatut(documentDetail.statut)}
+              </span>
               <button className={styles.closeBtn} onClick={() => setDocumentDetail(null)}><X size={18} /></button>
             </div>
+
             <div className={styles.modalBody}>
-              <div className={styles.detailRow}><span>Étudiant</span><strong>{nomEtudiant(documentDetail.etudiant_id)} — {matriculeEtudiant(documentDetail.etudiant_id)}</strong></div>
-              {admin && <div className={styles.detailRow}><span>Établissement</span><strong>{nomUniversite(documentDetail.universite_id)}</strong></div>}
-              <div className={styles.detailRow}><span>Type de diplôme</span><strong>{nomType(documentDetail.type_document_id)}</strong></div>
-              <div className={styles.detailRow}><span>Filière</span><strong>{documentDetail.filiere || '—'}</strong></div>
-              <div className={styles.detailRow}><span>Mention</span><strong>{mentions.find((m) => m.id === documentDetail.mention_id)?.nom ?? '—'}</strong></div>
-              <div className={styles.detailRow}><span>Date d'émission</span><strong>{documentDetail.date_emission ? new Date(documentDetail.date_emission).toLocaleDateString('fr-FR') : '—'}</strong></div>
-              <div className={styles.detailRow}><span>Année académique</span><strong>{documentDetail.annee_academique || '—'}</strong></div>
-              <div className={styles.detailRow}><span>Statut</span><strong><span className={`${styles.badge} ${styles[classeStatut(documentDetail.statut)]}`}>{libelleStatut(documentDetail.statut)}</span></strong></div>
-              <div className={styles.detailRow}><span>Hash SHA-256</span><strong className={styles.mono}>{documentDetail.hash_sha256 ?? '—'}</strong></div>
-              <div className={styles.detailRow}><span>Ancrage blockchain</span><strong className={styles.mono}>{documentDetail.transaction_hash ?? 'Pas encore ancré'}</strong></div>
+              <section>
+                <h4>Étudiant</h4>
+                <div className={styles.champsGrid}>
+                  <div className={styles.champ}>
+                    <span className={styles.champLabel}>Nom</span>
+                    <span className={styles.champValeur}>{nomEtudiant(documentDetail.etudiant_id)}</span>
+                  </div>
+                  <div className={styles.champ}>
+                    <span className={styles.champLabel}>Matricule</span>
+                    <span className={styles.champValeur}>{matriculeEtudiant(documentDetail.etudiant_id) || '—'}</span>
+                  </div>
+                  {admin && (
+                    <div className={styles.champ}>
+                      <span className={styles.champLabel}>Établissement</span>
+                      <span className={styles.champValeur}>{nomUniversite(documentDetail.universite_id)}</span>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section>
+                <h4>Diplôme</h4>
+                <div className={styles.champsGrid}>
+                  <div className={styles.champ}>
+                    <span className={styles.champLabel}>Filière</span>
+                    <span className={styles.champValeur}>{documentDetail.filiere || '—'}</span>
+                  </div>
+                  <div className={styles.champ}>
+                    <span className={styles.champLabel}>Mention</span>
+                    <span className={styles.champValeur}>{mentions.find((m) => m.id === documentDetail.mention_id)?.nom ?? '—'}</span>
+                  </div>
+                  <div className={styles.champ}>
+                    <span className={styles.champLabel}>Date d'émission</span>
+                    <span className={styles.champValeur}>{documentDetail.date_emission ? new Date(documentDetail.date_emission).toLocaleDateString('fr-FR') : '—'}</span>
+                  </div>
+                  <div className={styles.champ}>
+                    <span className={styles.champLabel}>Année académique</span>
+                    <span className={styles.champValeur}>{documentDetail.annee_academique || '—'}</span>
+                  </div>
+                </div>
+              </section>
+
+              {documentDetail.matieres_document?.length > 0 && (
+                <section>
+                  <h4>Relevé des matières</h4>
+                  <div className={styles.matieresList}>
+                    {documentDetail.matieres_document.map((m) => (
+                      <div className={styles.matiereRow} key={m.id}>
+                        <span className={styles.champValeur}>{m.nom_matiere}</span>
+                        <span className={styles.matiereNote}>
+                          {m.note !== null ? `${m.note}/${m.note_max}` : libelleResultatMatiere(m.resultat)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section>
+                <h4>Intégrité &amp; blockchain</h4>
+                <div className={styles.codeBlock}>
+                  <span className={styles.champLabel}>Hash SHA-256</span>
+                  <span className={styles.codeValue}>{documentDetail.hash_sha256 ?? '—'}</span>
+                </div>
+                <div className={styles.codeBlock}>
+                  <span className={styles.champLabel}>Ancrage blockchain</span>
+                  {documentDetail.transaction_hash
+                    ? <span className={styles.codeValue}>{documentDetail.transaction_hash}</span>
+                    : <span className={styles.codeValueMuted}>Pas encore ancré</span>}
+                </div>
+              </section>
             </div>
+
             {documentDetail.pdf_url && (
               <div className={styles.modalFooter}>
                 <button type="button" className={styles.primaryBtn} onClick={() => telechargerPdf(documentDetail)}>

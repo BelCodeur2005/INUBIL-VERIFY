@@ -12,7 +12,6 @@ import VerificationPublique from './features/Public/VerificationPublique';
 import Verification from './features/Public/Verification';
 import PartageDocument from './features/Public/PartageDocument';
 import DashboardEtudiant from './features/Etudiant/DashboardEtudiant';
-import DashboardDirecteur from './features/DashboardDirecteur/DashboardDirecteur';
 import AdminInubil from './features/AdminInubil/AdminInubil';
 import RegistreLocal from './features/RegistreLocal/RegistreLocal';
 import Revocations from './features/ListeRevocations_Agent/ListeRevocations_Agent';
@@ -22,6 +21,8 @@ import JournalActivites from './features/JournalActivites/JournalActivites';
 import MonComptePage from './features/universite/mon-compte/MonComptePage';
 import EmissionDiplome from './shared/components/EmissionDiplome/EmissionDiplome';
 import FicheEtudiant from './shared/components/FicheEtudiant/FicheEtudiant';
+import FileValidation from './shared/components/FileValidation/FileValidation';
+import Referentiels from './shared/components/Referentiels/Referentiels';
 
 export default function App() {
   return (
@@ -42,6 +43,8 @@ export default function App() {
           <Route path="ajout" element={<EmissionDiplome />} />
           <Route path="etudiants" element={<FicheEtudiant />} />
           <Route path="registre" element={<RegistreLocal />} />
+          <Route path="referentiels" element={<Referentiels />} />
+          <Route path="validation" element={<FileValidation />} />
           <Route path="revocations" element={<Revocations />} />
           <Route path="parametres" element={<Parametres_Agent />} />
           <Route path="support" element={<Support_Agent />} />
@@ -49,11 +52,6 @@ export default function App() {
           <Route path="mon-compte" element={<MonComptePage />} />
 
         </Route>
-
-      
-
-        {/* 3. DASHBOARD DIRECTEUR */}
-        <Route path="/dashboard-directeur" element={<DashboardDirecteur />} />
 
         {/* 4. DASHBOARD ADMIN INUBIL */}
         <Route path="/admin-inubil" element={<AdminInubil />} />
