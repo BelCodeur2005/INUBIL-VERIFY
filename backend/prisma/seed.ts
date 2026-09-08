@@ -150,7 +150,7 @@ const ROLES_METIER: Array<{ nom: string; description: string; permissions: strin
       'api:read', 'api:create', 'api:delete',
       'webhook:read', 'webhook:create', 'webhook:edit', 'webhook:delete',
       'partner:read', 'partner:create', 'partner:edit', 'partner:delete',
-      'stats:read',
+      'stats:read', 'audit:read',
     ],
   },
   {

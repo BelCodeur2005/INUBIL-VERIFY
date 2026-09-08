@@ -14,12 +14,43 @@ export class AdminAuditService {
 
   // ─── Journal d'audit ────────────────────────────────────────────────────────
 
-  async lireJournal(query: AuditQueryDto): Promise<AuditListDto> {
+  /**
+   * Universite de l'acteur, ou null UNIQUEMENT si son role est explicitement
+   * "super_admin" ou "admin_istama" (supervision inter-universites) — verifie
+   * par nom de role, jamais devine depuis l'absence d'universite.
+   */
+  private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
+    const u = await this.prisma.utilisateurs.findFirst({
+      where: { id: acteurId },
+      select: {
+        universite_id: true,
+        roles_utilisateurs_role_idToroles: { select: { nom: true } },
+      },
+    });
+    const nomRole = u?.roles_utilisateurs_role_idToroles?.nom;
+    if (nomRole === 'super_admin' || nomRole === 'admin_istama') return null;
+    if (!u?.universite_id) {
+      throw new ForbiddenException("Vous n'êtes pas associé à une université");
+    }
+    return u.universite_id;
+  }
+
+  async lireJournal(query: AuditQueryDto, acteurId: string): Promise<AuditListDto> {
+    const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const page  = query.page  ?? 1;
     const limit = query.limit ?? 50;
     const skip  = (page - 1) * limit;
 
     const where: Prisma.journal_auditWhereInput = {};
+
+    // Scoping multi-tenant : un responsable_universite ne voit que les entrees
+    // dont l'auteur appartient a sa propre universite (les entrees sans auteur
+    // trace, ou dont l'auteur est admin_istama/super_admin, restent invisibles —
+    // meme logique que partout ailleurs dans l'app : scope par l'acteur, pas par
+    // l'entite affectee).
+    if (acteurUnivId !== null) {
+      where.utilisateurs = { universite_id: acteurUnivId };
+    }
 
     if (query.utilisateur_id)        where.utilisateur_id   = query.utilisateur_id;
     if (query.action)                where.action            = { contains: query.action, mode: 'insensitive' };

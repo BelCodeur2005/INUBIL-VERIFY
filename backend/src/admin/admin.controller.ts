@@ -74,11 +74,14 @@ export class AdminController {
 
   @Get('audit')
   @RequirePermissions(Permission.AUDIT_READ)
-  @ApiOperation({ summary: 'Journal d\'audit paginé avec filtres (permission audit:read)' })
+  @ApiOperation({
+    summary: 'Journal d\'audit paginé avec filtres (permission audit:read)',
+    description: 'Un acteur lié à une université ne voit que les entrées liées à celle-ci.',
+  })
   @ApiOkResponse({ description: 'Entrées d\'audit paginées.' })
   @ApiResponse({ status: 403, description: 'Permission audit:read requise.' })
-  journal(@Query() query: AuditQueryDto) {
-    return this.auditSvc.lireJournal(query);
+  journal(@Query() query: AuditQueryDto, @CurrentUser('id') acteurId: string) {
+    return this.auditSvc.lireJournal(query, acteurId);
   }
 
   // ── Documents admin ───────────────────────────────────────────────────────

@@ -61,7 +61,7 @@ student:read
 api:read, api:create, api:delete
 webhook:read, webhook:create, webhook:edit, webhook:delete
 partner:read, partner:create, partner:edit, partner:delete
-stats:read
+stats:read, audit:read
 ```
 
 ### `directeur_pedagogique`
@@ -175,8 +175,8 @@ Aucune permission RBAC. Accès via des endpoints protégés par JWT seul (`/etud
 - "Crédits" / "quotas blockchain" par établissement
 - Établissements partenaires actifs avec quota individuel (contraire à la décision mono-université)
 
-À noter également : `DashboardEtablissement.jsx` (index de `/universite`) affiche encore des données **entièrement fictives** (liste de diplômes, KPIs, statut de nœud blockchain) — non branché sur `GET /admin/statistiques` ni `GET /documents`, contrairement à ce que son apparence suggère. À corriger séparément.
+`DashboardEtablissement.jsx` (index de `/universite`) et `JournalActivites.jsx` (`/universite/journal`) affichaient tous deux des données **entièrement fictives** (registre de diplômes inventé, "statut de nœud" blockchain jamais implémenté, faux logs de transactions) — corrigés le 2026-09-08 : le premier branché sur `GET /documents` / `GET /admin/etudiants` / `GET /admin/statistiques*`, le second sur `GET /admin/audit` (permission `audit:read`, désormais accordée à `responsable_universite` avec scoping par université — cf. §2 ci-dessus).
 
 ---
 
-*Dernière mise à jour : fusion directeur_pedagogique / suppression DashboardDirecteur.jsx, session du 2026-09-07.*
+*Dernière mise à jour : journal d'audit réel + refonte visuelle (page /universite/journal et onglet admin), session du 2026-09-08.*

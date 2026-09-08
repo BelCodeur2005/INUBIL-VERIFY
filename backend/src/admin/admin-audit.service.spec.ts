@@ -72,11 +72,20 @@ describe('AdminAuditService', () => {
   // ── lireJournal ───────────────────────────────────────────────────────────
 
   describe('lireJournal', () => {
+    beforeEach(() => {
+      // Acteur super_admin par defaut (bypass le scope universite) — les tests qui
+      // exercent le scoping explicitement ecrasent ce mock via mockResolvedValueOnce.
+      prisma.utilisateurs.findFirst.mockResolvedValue({
+        universite_id: null,
+        roles_utilisateurs_role_idToroles: { nom: 'super_admin' },
+      });
+    });
+
     it('retourne le journal paginé', async () => {
       prisma.journal_audit.findMany.mockResolvedValue([makeAuditEntry()]);
       prisma.journal_audit.count.mockResolvedValue(1);
 
-      const result = await service.lireJournal({ page: 1, limit: 50 });
+      const result = await service.lireJournal({ page: 1, limit: 50 }, ACTEUR_ID);
 
       expect(result.total).toBe(1);
       expect(result.data).toHaveLength(1);
@@ -87,7 +96,7 @@ describe('AdminAuditService', () => {
       prisma.journal_audit.findMany.mockResolvedValue([]);
       prisma.journal_audit.count.mockResolvedValue(0);
 
-      await service.lireJournal({ utilisateur_id: ACTEUR_ID });
+      await service.lireJournal({ utilisateur_id: ACTEUR_ID }, ACTEUR_ID);
 
       expect(prisma.journal_audit.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -103,7 +112,7 @@ describe('AdminAuditService', () => {
       await service.lireJournal({
         date_debut: '2026-06-01',
         date_fin:   '2026-06-30',
-      });
+      }, ACTEUR_ID);
 
       expect(prisma.journal_audit.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -121,12 +130,31 @@ describe('AdminAuditService', () => {
       prisma.journal_audit.findMany.mockResolvedValue([]);
       prisma.journal_audit.count.mockResolvedValue(0);
 
-      await service.lireJournal({ action: 'ADMIN' });
+      await service.lireJournal({ action: 'ADMIN' }, ACTEUR_ID);
 
       expect(prisma.journal_audit.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             action: { contains: 'ADMIN', mode: 'insensitive' },
+          }),
+        }),
+      );
+    });
+
+    it('restreint a l\'universite de l\'acteur si celui-ci n\'est pas super_admin/admin_istama', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({
+        universite_id: 'univ-acteur',
+        roles_utilisateurs_role_idToroles: { nom: 'responsable_universite' },
+      });
+      prisma.journal_audit.findMany.mockResolvedValue([]);
+      prisma.journal_audit.count.mockResolvedValue(0);
+
+      await service.lireJournal({}, ACTEUR_ID);
+
+      expect(prisma.journal_audit.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            utilisateurs: { universite_id: 'univ-acteur' },
           }),
         }),
       );

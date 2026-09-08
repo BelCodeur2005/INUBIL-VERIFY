@@ -106,8 +106,8 @@ const navItems = [
 
 const bottomNavItems = [
   {
-    // Aucun des 3 rôles n'a de permission "audit"/"config" dédiée côté backend ;
-    // on réserve ces deux pages au rôle le plus élevé de ce layout en attendant.
+    // permission audit:read (responsable_universite uniquement, cf. seed.ts) —
+    // scope automatique a sa propre universite cote backend.
     path: '/universite/journal',
     label: 'Journal Activités',
     roles: [ROLES.RESPONSABLE],
