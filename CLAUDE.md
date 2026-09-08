@@ -26,7 +26,7 @@ docker-compose up      # or: make up (detached)
 
 Common `make` targets (wrap `docker-compose exec backend ...`): `make logs-back`, `make migrate`, `make studio` (Prisma Studio), `make reset-db`, `make shell-back`, `make shell-db` (psql). See `Makefile` for the full list.
 
-`docker-compose.yml`'s `frontend` service still runs `npx ng serve` (leftover from the abandoned Angular attempt) against a `frontend/` that has no `package.json` — that container will fail to start as-is. Fix the compose command once real React code and its dev script land; until then `docker-compose up backend postgres pgadmin` is the working subset. No CI/CD is configured (`.github/workflows` doesn't exist) — tests and lint are local-only right now.
+`docker-compose.yml`'s `frontend` service now builds `./inubil-verify-front` (Vite dev server, port 5173) — fixed 2026-09-07, was previously pointed at the abandoned `frontend/` Angular scaffold (`npx ng serve` against a folder with no `package.json`, which failed to start). `docker compose up` now brings up the real stack end-to-end. No CI/CD is configured (`.github/workflows` doesn't exist) — tests and lint are local-only right now.
 
 ## Backend (`backend/`, NestJS + Prisma)
 

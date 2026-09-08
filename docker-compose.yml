@@ -55,22 +55,20 @@ services:
     networks:
       - inubil-network
 
-  # ─── Frontend Angular (hot-reload) ─────────────────────────────────────────
+  # ─── Frontend React/Vite (hot-reload) ──────────────────────────────────────
   frontend:
     build:
-      context: ./frontend
+      context: ./inubil-verify-front
       dockerfile: Dockerfile
       target: development
     container_name: inubil_frontend
     restart: unless-stopped
-    env_file: .env
+    env_file: ./inubil-verify-front/.env
     ports:
-      - '4200:4200'
+      - '5173:5173'
     volumes:
-      - ./frontend:/app
+      - ./inubil-verify-front:/app
       - /app/node_modules
-    command: npx ng serve --host 0.0.0.0 --poll 2000
-
     depends_on:
       - backend
     networks:
