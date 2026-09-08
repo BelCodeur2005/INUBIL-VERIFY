@@ -25,7 +25,7 @@ import { rechercherEtudiants, creerEtudiant } from '../../../core/etudiants/etud
 import { listerTypesDocument } from '../../../core/types-document/types-document.api';
 import { listerMentions } from '../../../core/mentions/mentions.api';
 import { listerFilieres } from '../../../core/filieres/filieres.api';
-import { creerDocument, uploaderPdf } from '../../../core/documents/documents.api';
+import { creerDocument, uploaderPdf, listerDocuments } from '../../../core/documents/documents.api';
 import { ApiError } from '../../../core/api/client';
 import { lirePreferences } from '../../../core/preferences/preferences';
 import { matieresDepuisCsv, genererModeleCsv } from './matieresImport';
@@ -57,6 +57,44 @@ const MATIERE_VIDE = {
   note: '', note_max: '20', coefficient: '1', resultat: 'valide',
 };
 
+const LABEL_STATUT_DOUBLON = { brouillon: 'brouillon', en_validation: 'en validation', actif: 'actif' };
+
+// Plafond serveur pour l'upload de PDF (documents.controller.ts, parametre systeme
+// "pdf_max_taille_mo" — 20 Mo par defaut ET plafond serveur absolu, non depassable
+// meme si un admin configure une valeur plus haute). Utilise ici comme limite cote
+// client car agent_saisie n'a pas la permission config:read pour lire la valeur
+// eventuellement plus stricte configuree par son universite.
+const PDF_MAX_MO = 20;
+
+const ANNEE_ACADEMIQUE_REGEX = /^(\d{4})-(\d{4})$/;
+
+/** Une annee academique valide est soit vide, soit deux annees consecutives (ex: 2025-2026). */
+function anneeAcademiqueValide(valeur) {
+  if (!valeur) return true;
+  const m = valeur.match(ANNEE_ACADEMIQUE_REGEX);
+  return Boolean(m) && Number(m[2]) === Number(m[1]) + 1;
+}
+
+/**
+ * Deduit l'annee academique a partir d'une date d'emission (convention camerounaise :
+ * l'annee universitaire commence en septembre). Ex : 12/2026 ou 06/2027 -> "2026-2027".
+ */
+function anneeAcademiqueDepuisDate(dateIso) {
+  if (!dateIso) return '';
+  const [annee, mois] = dateIso.split('-').map(Number);
+  return mois >= 9 ? `${annee}-${annee + 1}` : `${annee - 1}-${annee}`;
+}
+
+/** Verifie qu'un fichier est bien un PDF sous la limite de taille, avant meme de l'attacher au dossier. */
+function validerFichierPdf(file) {
+  const estPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  if (!estPdf) return `« ${file.name} » n'est pas un fichier PDF.`;
+  if (file.size > PDF_MAX_MO * 1024 * 1024) {
+    return `« ${file.name} » (${(file.size / (1024 * 1024)).toFixed(1)} Mo) dépasse la limite de ${PDF_MAX_MO} Mo.`;
+  }
+  return null;
+}
+
 export default function EmissionDiplome() {
   const { utilisateur } = useAuth();
   const universiteId = utilisateur?.universite?.id;
@@ -80,6 +118,23 @@ export default function EmissionDiplome() {
   const [searchError, setSearchError] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [newStudent, setNewStudent] = useState({ nom: '', prenom: '', numero_etudiant: '', date_naissance: '' });
+
+  // Verification du matricule au blur (avant de remplir tout le reste du dossier) : le
+  // matricule est unique en base (numero_etudiant), donc un doublon echouera de toute
+  // facon a la soumission finale — autant prevenir l'agent tout de suite plutot qu'apres
+  // avoir saisi le diplome et attache le PDF.
+  const [matriculeDoublon, setMatriculeDoublon] = useState(null);
+  const verifierMatricule = async () => {
+    const matricule = newStudent.numero_etudiant.trim();
+    if (!matricule) { setMatriculeDoublon(null); return; }
+    try {
+      const res = await rechercherEtudiants(matricule);
+      const existant = (res.data ?? []).find((e) => e.numero_etudiant === matricule);
+      setMatriculeDoublon(existant ?? null);
+    } catch {
+      // non bloquant : un echec de cette verification ne doit jamais empecher la saisie
+    }
+  };
 
   useEffect(() => {
     if (studentMode !== 'search') return;
@@ -121,6 +176,23 @@ export default function EmissionDiplome() {
   const [diplome, setDiplome] = useState({ type_document_id: '', filiere_id: '', mention_id: '', date_emission: '', annee_academique: '' });
   const typeSelectionne = typesDocument.find((t) => t.id === diplome.type_document_id);
   const aDesMatieres = Boolean(typeSelectionne?.a_matieres);
+
+  // Tant que l'agent n'a jamais retouche l'annee academique a la main, elle est
+  // recalculee automatiquement a chaque changement de date d'emission (convention
+  // camerounaise : annee universitaire commencant en septembre) — evite les "2025-2026"
+  // vs "2025/26" vs oublis qui fragmentaient les filtres par annee.
+  const [anneeModifieeManuellement, setAnneeModifieeManuellement] = useState(false);
+  const majDateEmission = (valeur) => {
+    setDiplome((d) => ({
+      ...d,
+      date_emission: valeur,
+      annee_academique: anneeModifieeManuellement ? d.annee_academique : anneeAcademiqueDepuisDate(valeur),
+    }));
+  };
+  const majAnneeAcademique = (valeur) => {
+    setAnneeModifieeManuellement(true);
+    setDiplome((d) => ({ ...d, annee_academique: valeur }));
+  };
 
   const [matieres, setMatieres] = useState([]);
   const [importErreur, setImportErreur] = useState(null);
@@ -167,6 +239,7 @@ export default function EmissionDiplome() {
     if (brouillon.selectedStudent) setSelectedStudent(brouillon.selectedStudent);
     if (brouillon.newStudent) setNewStudent(brouillon.newStudent);
     if (brouillon.diplome) setDiplome(brouillon.diplome);
+    if (brouillon.anneeModifieeManuellement) setAnneeModifieeManuellement(true);
     if (brouillon.matieres) setMatieres(brouillon.matieres);
     setCurrentStep(Math.min(brouillon.currentStep ?? 1, 3));
     setBrouillonTraite(true);
@@ -179,6 +252,7 @@ export default function EmissionDiplome() {
 
   const step2Valid = Boolean(
     diplome.type_document_id && diplome.filiere_id && diplome.date_emission
+    && anneeAcademiqueValide(diplome.annee_academique)
     && (!aDesMatieres || (matieres.length > 0 && matieres.every((m) => m.nom_matiere.trim()))),
   );
 
@@ -225,8 +299,40 @@ export default function EmissionDiplome() {
     return () => { annule = true; };
   }, [universiteId]);
 
+  // Alerte non bloquante si un diplome du meme type existe deja pour cet etudiant
+  // (brouillon/en_validation/actif). Le seul garde-fou existant (hash_sha256 unique)
+  // ne bloque que si c'est exactement le meme fichier PDF, pas un second scan du
+  // meme diplome. Ne s'applique qu'en mode "recherche" : un etudiant tout juste
+  // cree via "Nouveau dossier" n'a par definition aucun document existant.
+  const [doublonDetecte, setDoublonDetecte] = useState(null);
+
+  useEffect(() => {
+    if (studentMode !== 'search' || !selectedStudent?.id || !diplome.type_document_id) return;
+    let annule = false;
+    listerDocuments({ etudiantId: selectedStudent.id, typeDocumentId: diplome.type_document_id, limit: 5 })
+      .then((res) => {
+        if (annule) return;
+        const existant = (res.items ?? []).find((d) => ['brouillon', 'en_validation', 'actif'].includes(d.statut));
+        setDoublonDetecte(existant
+          ? { ...existant, _pourEtudiantId: selectedStudent.id, _pourTypeId: diplome.type_document_id }
+          : null);
+      })
+      .catch(() => {}); // non bloquant : un echec de cette verification ne doit jamais empecher la saisie
+    return () => { annule = true; };
+  }, [studentMode, selectedStudent?.id, diplome.type_document_id]);
+
+  // Derive plutot que reinitialiser dans l'effet (evite un setState synchrone en tete d'effet,
+  // et efface instantanement l'alerte si l'etudiant/le type change avant que la nouvelle
+  // verification n'ait repondu).
+  const doublonPertinent = doublonDetecte
+    && doublonDetecte._pourEtudiantId === selectedStudent?.id
+    && doublonDetecte._pourTypeId === diplome.type_document_id
+    ? doublonDetecte
+    : null;
+
   // ── Document ──
   const [selectedFile, setSelectedFile] = useState(null);
+  const [fileError, setFileError] = useState(null);
   const step3Valid = Boolean(selectedFile);
 
   const stepValidity = { 1: step1Valid, 2: step2Valid, 3: step3Valid, 4: true };
@@ -241,10 +347,10 @@ export default function EmissionDiplome() {
   useEffect(() => {
     if (!brouillonTraite || submitResult) return;
     const timeout = setTimeout(() => {
-      sauvegarderBrouillon({ studentMode, selectedStudent, newStudent, diplome, matieres, currentStep });
+      sauvegarderBrouillon({ studentMode, selectedStudent, newStudent, diplome, anneeModifieeManuellement, matieres, currentStep });
     }, 400);
     return () => clearTimeout(timeout);
-  }, [brouillonTraite, submitResult, studentMode, selectedStudent, newStudent, diplome, matieres, currentStep]);
+  }, [brouillonTraite, submitResult, studentMode, selectedStudent, newStudent, diplome, anneeModifieeManuellement, matieres, currentStep]);
 
   // Reinitialise l'etudiant et le fichier, mais GARDE volontairement l'etape 2
   // (type de diplome, filiere, mention, date d'emission, annee academique) : une
@@ -260,8 +366,10 @@ export default function EmissionDiplome() {
     setSearchQuery('');
     setSearchResults([]);
     setNewStudent({ nom: '', prenom: '', numero_etudiant: '', date_naissance: '' });
+    setMatriculeDoublon(null);
     setMatieres([]);
     setSelectedFile(null);
+    setFileError(null);
   };
 
   const soumettreDossier = async () => {
@@ -339,15 +447,25 @@ export default function EmissionDiplome() {
   const goBack = () => setCurrentStep((s) => Math.max(s - 1, 1));
 
   const handleBrowseClick = () => fileInputRef.current?.click();
+  const traiterFichierChoisi = (file) => {
+    if (!file) return;
+    const erreur = validerFichierPdf(file);
+    if (erreur) {
+      setFileError(erreur);
+      setSelectedFile(null);
+      return;
+    }
+    setFileError(null);
+    setSelectedFile(file);
+  };
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) setSelectedFile(file);
+    traiterFichierChoisi(e.target.files[0]);
+    e.target.value = ''; // permet de re-choisir le meme fichier corrige sans le renommer
   };
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) setSelectedFile(file);
+    traiterFichierChoisi(e.dataTransfer.files[0]);
   };
 
   const nextLabel = {
@@ -508,13 +626,25 @@ export default function EmissionDiplome() {
                 </div>
                 <div className={styles.inputGroup}>
                   <label>Matricule</label>
-                  <input type="text" value={newStudent.numero_etudiant} onChange={(e) => setNewStudent({ ...newStudent, numero_etudiant: e.target.value })} placeholder="INUB-2026-XXXX" />
+                  <input
+                    type="text"
+                    value={newStudent.numero_etudiant}
+                    onChange={(e) => { setNewStudent({ ...newStudent, numero_etudiant: e.target.value }); setMatriculeDoublon(null); }}
+                    onBlur={verifierMatricule}
+                    placeholder="INUB-2026-XXXX"
+                  />
                 </div>
                 <div className={styles.inputGroup}>
                   <label>Date de naissance</label>
                   <input type="date" value={newStudent.date_naissance} onChange={(e) => setNewStudent({ ...newStudent, date_naissance: e.target.value })} />
                 </div>
               </div>
+            )}
+
+            {studentMode === 'create' && matriculeDoublon && (
+              <p className={styles.doublonWarning}>
+                <AlertTriangle size={14} /> Ce matricule existe déjà — {matriculeDoublon.prenom} {matriculeDoublon.nom}. Utilisez plutôt « Rechercher un étudiant existant » ci-dessus.
+              </p>
             )}
           </section>
         )}
@@ -558,13 +688,30 @@ export default function EmissionDiplome() {
               </div>
               <div className={styles.inputGroup}>
                 <label>Date d'émission</label>
-                <input type="date" value={diplome.date_emission} onChange={(e) => setDiplome({ ...diplome, date_emission: e.target.value })} />
+                <input type="date" value={diplome.date_emission} onChange={(e) => majDateEmission(e.target.value)} />
               </div>
               <div className={styles.inputGroup}>
                 <label>Année académique</label>
-                <input type="text" value={diplome.annee_academique} onChange={(e) => setDiplome({ ...diplome, annee_academique: e.target.value })} placeholder="ex : 2025-2026" />
+                <input
+                  type="text"
+                  value={diplome.annee_academique}
+                  onChange={(e) => majAnneeAcademique(e.target.value)}
+                  placeholder="ex : 2025-2026"
+                  aria-invalid={!anneeAcademiqueValide(diplome.annee_academique)}
+                />
+                {!anneeAcademiqueValide(diplome.annee_academique) && (
+                  <span className={styles.champErreur}>Format attendu : AAAA-AAAA (deux années consécutives).</span>
+                )}
               </div>
             </div>
+
+            {doublonPertinent && (
+              <p className={styles.doublonWarning}>
+                <AlertTriangle size={14} />
+                {etudiant?.prenom} {etudiant?.nom} a déjà un document « {typesDocument.find((t) => t.id === diplome.type_document_id)?.nom} »
+                ({doublonPertinent.numero_unique}, {LABEL_STATUT_DOUBLON[doublonPertinent.statut] ?? doublonPertinent.statut}) — vérifiez qu'il ne s'agit pas d'un doublon avant de continuer.
+              </p>
+            )}
 
             {aDesMatieres && (
               <div className={styles.matieresBlock}>
@@ -679,9 +826,11 @@ export default function EmissionDiplome() {
             >
               <FileUp size={28} className={styles.uploadIcon} />
               <p className={styles.uploadMainText}>Glissez-déposez le scan du diplôme (PDF)</p>
-              <p className={styles.uploadSubText}>Taille maximale : 10 Mo</p>
+              <p className={styles.uploadSubText}>Taille maximale : {PDF_MAX_MO} Mo</p>
               <button type="button" className={styles.browseBtn} onClick={handleBrowseClick}>Parcourir les fichiers</button>
             </div>
+
+            {fileError && <p className={styles.errorText}><AlertTriangle size={14} /> {fileError}</p>}
 
             {selectedFile && (
               <div className={styles.fileCard}>
@@ -690,7 +839,7 @@ export default function EmissionDiplome() {
                   <p className={styles.fileName}>{selectedFile.name}</p>
                   <p className={styles.fileStatus}>{(selectedFile.size / (1024 * 1024)).toFixed(2)} Mo — prêt</p>
                 </div>
-                <button type="button" className={styles.removeFileBtn} onClick={() => setSelectedFile(null)}>
+                <button type="button" className={styles.removeFileBtn} onClick={() => { setSelectedFile(null); setFileError(null); }}>
                   <X size={16} />
                 </button>
               </div>
