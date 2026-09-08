@@ -5,6 +5,7 @@ import { listerDocuments, getUrlPdfPresignee, exporterDocumentsCsv } from '../..
 import { listerDocumentsAdmin } from '../../../core/admin/admin.api';
 import { listerTypesDocument } from '../../../core/types-document/types-document.api';
 import { listerMentions } from '../../../core/mentions/mentions.api';
+import { listerFilieres } from '../../../core/filieres/filieres.api';
 import { rechercherEtudiants, getEtudiant } from '../../../core/etudiants/etudiants.api';
 import { getUniversite } from '../../../core/universites/universites.api';
 import { ApiError } from '../../../core/api/client';
@@ -61,6 +62,7 @@ export default function ListeDocuments({ admin = false }) {
 
   const [typesDocument, setTypesDocument] = useState([]);
   const [mentions, setMentions] = useState([]);
+  const [filieres, setFilieres] = useState([]);
   const [etudiantsCache, setEtudiantsCache] = useState({});
   const [universitesCache, setUniversitesCache] = useState({});
 
@@ -92,6 +94,7 @@ export default function ListeDocuments({ admin = false }) {
   useEffect(() => {
     listerTypesDocument({}).then(setTypesDocument).catch(() => {});
     listerMentions({}).then(setMentions).catch(() => {});
+    listerFilieres({}).then(setFilieres).catch(() => {});
   }, []);
 
   // Recherche étudiant (filtre) — débattue.
@@ -189,6 +192,7 @@ export default function ListeDocuments({ admin = false }) {
   const filtresActifs = Boolean(statutFiltre || typeFiltre || dateDebut || dateFin || etudiantFiltre);
 
   const nomType = (id) => typesDocument.find((t) => t.id === id)?.nom ?? '—';
+  const nomFiliere = (id) => filieres.find((f) => f.id === id)?.nom ?? '—';
   const nomEtudiant = (id) => {
     const e = etudiantsCache[id];
     return e ? `${e.prenom} ${e.nom}` : '…';
@@ -342,7 +346,7 @@ export default function ListeDocuments({ admin = false }) {
                   </td>
                   {admin && <td>{nomUniversite(doc.universite_id)}</td>}
                   <td>{nomType(doc.type_document_id)}</td>
-                  <td>{doc.filiere || '—'}</td>
+                  <td>{nomFiliere(doc.filiere_id)}</td>
                   <td className={styles.dateCell}>{doc.date_emission ? new Date(doc.date_emission).toLocaleDateString('fr-FR') : '—'}</td>
                   <td>
                     <span className={`${styles.badge} ${styles[classeStatut(doc.statut)]}`}>{libelleStatut(doc.statut)}</span>
@@ -415,7 +419,7 @@ export default function ListeDocuments({ admin = false }) {
                 <div className={styles.champsGrid}>
                   <div className={styles.champ}>
                     <span className={styles.champLabel}>Filière</span>
-                    <span className={styles.champValeur}>{documentDetail.filiere || '—'}</span>
+                    <span className={styles.champValeur}>{nomFiliere(documentDetail.filiere_id)}</span>
                   </div>
                   <div className={styles.champ}>
                     <span className={styles.champLabel}>Mention</span>

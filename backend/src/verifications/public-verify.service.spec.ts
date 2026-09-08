@@ -9,34 +9,46 @@ import { BlockchainService } from '../blockchain/blockchain.service';
 import { ConfigurationsService } from '../configurations/configurations.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
-const HASH_REEL  = 'a'.repeat(64);
-const HASH_FAUX  = 'b'.repeat(64);
-const VERIF_ID   = 'vid-0000-0000-0000-000000000001';
-const DOC_ID     = 'doc-0000-0000-0000-000000000002';
+const HASH_REEL = 'a'.repeat(64);
+const HASH_FAUX = 'b'.repeat(64);
+const VERIF_ID = 'vid-0000-0000-0000-000000000001';
+const DOC_ID = 'doc-0000-0000-0000-000000000002';
 
 const makeDoc = (statut = 'actif') => ({
   id: DOC_ID,
   numero_unique: 'INUB-2026-0001',
   url_verification: 'https://verify.inubil.com/d/INUB-2026-0001',
-  filiere: 'Licence en Informatique',
+  filieres: { nom: 'Licence en Informatique' },
   annee_academique: '2025-2026',
   date_emission: new Date('2026-06-12'),
   moyenne_generale: 13.5,
   statut,
   hash_sha256: HASH_REEL,
   deleted_at: null,
-  etudiants:         { prenom: 'Bertrand', nom: 'KAMGA' },
-  universites:       { nom: 'ISTAMA INUBIL' },
-  types_document:    { nom: 'Licence', categorie: 'diplome', a_matieres: false },
+  etudiants: { prenom: 'Bertrand', nom: 'KAMGA' },
+  universites: { nom: 'ISTAMA INUBIL' },
+  types_document: { nom: 'Licence', categorie: 'diplome', a_matieres: false },
   mentions_document: { nom: 'Assez Bien' },
   matieres_document: [
-    { nom_matiere: 'Algorithmique', note: 14, note_max: 20, resultat: 'valide', semestre: 1 },
-    { nom_matiere: 'Base de données', note: 13, note_max: 20, resultat: 'valide', semestre: 1 },
+    {
+      nom_matiere: 'Algorithmique',
+      note: 14,
+      note_max: 20,
+      resultat: 'valide',
+      semestre: 1,
+    },
+    {
+      nom_matiere: 'Base de données',
+      note: 13,
+      note_max: 20,
+      resultat: 'valide',
+      semestre: 1,
+    },
   ],
 });
 
 const makePrisma = () => ({
-  documents:     { findFirst: jest.fn() },
+  documents: { findFirst: jest.fn() },
   verifications: { create: jest.fn().mockResolvedValue({ id: VERIF_ID }) },
 });
 
@@ -45,7 +57,9 @@ const makeHash = () => ({
 });
 
 const makeRapportPdf = () => ({
-  generateRapport: jest.fn().mockResolvedValue(Buffer.from('%PDF-fake-rapport')),
+  generateRapport: jest
+    .fn()
+    .mockResolvedValue(Buffer.from('%PDF-fake-rapport')),
 });
 
 const makeBlockchain = () => ({
@@ -57,7 +71,11 @@ const makeConfig = () => ({
 });
 
 const makeConfigurations = () => ({
-  get: jest.fn().mockImplementation((_cle: string, defaut?: string) => Promise.resolve(defaut)),
+  get: jest
+    .fn()
+    .mockImplementation((_cle: string, defaut?: string) =>
+      Promise.resolve(defaut),
+    ),
 });
 
 const makeNotificationsInApp = () => ({
@@ -74,23 +92,23 @@ describe('PublicVerifyService', () => {
   let notificationsInApp: ReturnType<typeof makeNotificationsInApp>;
 
   beforeEach(async () => {
-    prisma         = makePrisma();
-    hash           = makeHash();
-    rapportPdf     = makeRapportPdf();
-    blockchain     = makeBlockchain();
+    prisma = makePrisma();
+    hash = makeHash();
+    rapportPdf = makeRapportPdf();
+    blockchain = makeBlockchain();
     configurations = makeConfigurations();
     notificationsInApp = makeNotificationsInApp();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PublicVerifyService,
-        { provide: PrismaService,                 useValue: prisma         },
-        { provide: HashService,                   useValue: hash           },
-        { provide: RapportVerificationPdfService, useValue: rapportPdf     },
-        { provide: BlockchainService,             useValue: blockchain     },
-        { provide: ConfigService,                 useValue: makeConfig()   },
-        { provide: ConfigurationsService,         useValue: configurations },
-        { provide: NotificationsService,          useValue: notificationsInApp },
+        { provide: PrismaService, useValue: prisma },
+        { provide: HashService, useValue: hash },
+        { provide: RapportVerificationPdfService, useValue: rapportPdf },
+        { provide: BlockchainService, useValue: blockchain },
+        { provide: ConfigService, useValue: makeConfig() },
+        { provide: ConfigurationsService, useValue: configurations },
+        { provide: NotificationsService, useValue: notificationsInApp },
       ],
     }).compile();
 
@@ -111,7 +129,7 @@ describe('PublicVerifyService', () => {
       expect(res.verification_id).toBe(VERIF_ID);
     });
 
-    it('notifie l\'etudiant in-app quand son compte est lie', async () => {
+    it("notifie l'etudiant in-app quand son compte est lie", async () => {
       const doc = makeDoc('actif');
       (doc as any).etudiants.utilisateur_id = 'usr-0000-0000-0000-000000000009';
       prisma.documents.findFirst.mockResolvedValue(doc);
@@ -126,7 +144,7 @@ describe('PublicVerifyService', () => {
       );
     });
 
-    it('ne notifie personne si le document n\'a pas de compte etudiant lie', async () => {
+    it("ne notifie personne si le document n'a pas de compte etudiant lie", async () => {
       prisma.documents.findFirst.mockResolvedValue(makeDoc('actif'));
 
       await service.verifierParIdentifiant('INUB-2026-0001');
@@ -252,11 +270,13 @@ describe('PublicVerifyService', () => {
       configurations.get.mockResolvedValue('1'); // 1 Mo
       const gros = Buffer.alloc(2 * 1024 * 1024); // 2 Mo
 
-      await expect(service.verifierParUpload(gros)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.verifierParUpload(gros)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
       expect(prisma.documents.findFirst).not.toHaveBeenCalled();
     });
 
-    it('accepte un fichier sous la limite par defaut si le parametre n\'est pas configure', async () => {
+    it("accepte un fichier sous la limite par defaut si le parametre n'est pas configure", async () => {
       configurations.get.mockResolvedValue(undefined);
       prisma.documents.findFirst.mockResolvedValue(makeDoc());
       const petit = Buffer.from('%PDF-1.4 fake');
@@ -332,10 +352,15 @@ describe('PublicVerifyService', () => {
     it('retourne un buffer PDF et un nom de fichier', async () => {
       prisma.documents.findFirst.mockResolvedValue(makeDoc());
 
-      const { buffer, filename } = await service.genererRapport('INUB-2026-0001', '1.2.3.4');
+      const { buffer, filename } = await service.genererRapport(
+        'INUB-2026-0001',
+        '1.2.3.4',
+      );
 
       expect(Buffer.isBuffer(buffer)).toBe(true);
-      expect(filename).toMatch(/^rapport-verification-INUB-2026-0001-\d{4}-\d{2}-\d{2}\.pdf$/);
+      expect(filename).toMatch(
+        /^rapport-verification-INUB-2026-0001-\d{4}-\d{2}-\d{2}\.pdf$/,
+      );
     });
 
     it('logue dans verifications avec rapport_genere:true', async () => {
@@ -353,7 +378,8 @@ describe('PublicVerifyService', () => {
     it('fonctionne si le document est introuvable (non_trouve)', async () => {
       prisma.documents.findFirst.mockResolvedValue(null);
 
-      const { buffer, filename } = await service.genererRapport('INUB-XXXX-9999');
+      const { buffer, filename } =
+        await service.genererRapport('INUB-XXXX-9999');
 
       expect(Buffer.isBuffer(buffer)).toBe(true);
       expect(filename).toContain('INUB-XXXX-9999');

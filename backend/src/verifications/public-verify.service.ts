@@ -160,7 +160,7 @@ export class PublicVerifyService {
         ? {
             numero_unique: doc.numero_unique,
             etudiant_nom: `${doc.etudiants.prenom} ${doc.etudiants.nom}`,
-            filiere: doc.filiere ?? undefined,
+            filiere: doc.filieres?.nom ?? undefined,
             mention: doc.mentions_document?.nom ?? undefined,
             universite: doc.universites.nom,
             date_emission: doc.date_emission,
@@ -190,6 +190,7 @@ export class PublicVerifyService {
           select: { nom: true, categorie: true, a_matieres: true },
         },
         mentions_document: { select: { nom: true } },
+        filieres: { select: { nom: true } },
         matieres_document: {
           orderBy: [{ semestre: 'asc' }, { ordre: 'asc' }],
           select: {
@@ -259,7 +260,7 @@ export class PublicVerifyService {
       url_verification: doc.url_verification ?? null,
       type_document: doc.types_document.nom,
       categorie: doc.types_document.categorie,
-      filiere: doc.filiere ?? null,
+      filiere: doc.filieres?.nom ?? null,
       annee_academique: doc.annee_academique ?? null,
       date_emission: doc.date_emission,
       etudiant_nom: `${doc.etudiants.prenom} ${doc.etudiants.nom}`,

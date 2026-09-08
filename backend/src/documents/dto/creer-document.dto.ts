@@ -49,7 +49,10 @@ export class CreerMatiereDto {
   @IsPositive()
   note_max?: number;
 
-  @ApiPropertyOptional({ enum: ['valide', 'ajourne', 'absent', 'dispense'], example: 'valide' })
+  @ApiPropertyOptional({
+    enum: ['valide', 'ajourne', 'absent', 'dispense'],
+    example: 'valide',
+  })
   @IsOptional()
   @IsIn(['valide', 'ajourne', 'absent', 'dispense'])
   resultat?: string;
@@ -74,15 +77,26 @@ export class CreerMatiereDto {
 }
 
 export class CreerDocumentDto {
-  @ApiProperty({ format: 'uuid', example: 'b1e2d3f4-0000-0000-0000-000000000001', description: 'ID de l\'étudiant' })
+  @ApiProperty({
+    format: 'uuid',
+    example: 'b1e2d3f4-0000-0000-0000-000000000001',
+    description: "ID de l'étudiant",
+  })
   @IsUUID()
   etudiant_id: string;
 
-  @ApiProperty({ format: 'uuid', example: 'a1b2c3d4-0000-0000-0000-000000000002', description: 'ID du type de document (Licence, Master, etc.)' })
+  @ApiProperty({
+    format: 'uuid',
+    example: 'a1b2c3d4-0000-0000-0000-000000000002',
+    description: 'ID du type de document (Licence, Master, etc.)',
+  })
   @IsUUID()
   type_document_id: string;
 
-  @ApiProperty({ example: '2026-06-12', description: 'Date d\'émission officielle du document (ISO 8601)' })
+  @ApiProperty({
+    example: '2026-06-12',
+    description: "Date d'émission officielle du document (ISO 8601)",
+  })
   @IsDateString()
   date_emission: string;
 
@@ -96,12 +110,20 @@ export class CreerDocumentDto {
   @IsString()
   lieu_delivrance?: string;
 
-  @ApiPropertyOptional({ example: 'Licence en Informatique option Génie Logiciel' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    example: 'd1e2f3a4-0000-0000-0000-000000000004',
+    description: 'ID de la filière (référentiel filieres)',
+  })
   @IsOptional()
-  @IsString()
-  filiere?: string;
+  @IsUUID()
+  filiere_id?: string;
 
-  @ApiPropertyOptional({ format: 'uuid', example: 'c1d2e3f4-0000-0000-0000-000000000003', description: 'ID de la mention (Très Bien, Bien, etc.)' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    example: 'c1d2e3f4-0000-0000-0000-000000000003',
+    description: 'ID de la mention (Très Bien, Bien, etc.)',
+  })
   @IsOptional()
   @IsUUID()
   mention_id?: string;
@@ -118,11 +140,17 @@ export class CreerDocumentDto {
   @IsPositive()
   note_sur?: number;
 
-  @ApiPropertyOptional({ example: { promotion: 'Major de promotion' }, description: 'Données supplémentaires libres (JSON)' })
+  @ApiPropertyOptional({
+    example: { promotion: 'Major de promotion' },
+    description: 'Données supplémentaires libres (JSON)',
+  })
   @IsOptional()
   donnees?: Record<string, any>;
 
-  @ApiPropertyOptional({ type: [CreerMatiereDto], description: 'Liste des matières (pour un relevé de notes)' })
+  @ApiPropertyOptional({
+    type: [CreerMatiereDto],
+    description: 'Liste des matières (pour un relevé de notes)',
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

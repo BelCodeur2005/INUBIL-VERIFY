@@ -4,6 +4,7 @@ import { useAuth } from '../../../core/auth/useAuth';
 import { listerDocuments, getUrlPdfPresignee, validerDocument, rejeterDocument } from '../../../core/documents/documents.api';
 import { listerTypesDocument } from '../../../core/types-document/types-document.api';
 import { listerMentions } from '../../../core/mentions/mentions.api';
+import { listerFilieres } from '../../../core/filieres/filieres.api';
 import { getEtudiant } from '../../../core/etudiants/etudiants.api';
 import { ApiError } from '../../../core/api/client';
 import styles from './FileValidation.module.css';
@@ -27,6 +28,7 @@ export default function FileValidation() {
 
   const [typesDocument, setTypesDocument] = useState([]);
   const [mentions, setMentions] = useState([]);
+  const [filieres, setFilieres] = useState([]);
   const [etudiantsCache, setEtudiantsCache] = useState({});
 
   const [enCoursId, setEnCoursId] = useState(null);
@@ -37,6 +39,7 @@ export default function FileValidation() {
   useEffect(() => {
     listerTypesDocument({}).then(setTypesDocument).catch(() => {});
     listerMentions({}).then(setMentions).catch(() => {});
+    listerFilieres({}).then(setFilieres).catch(() => {});
   }, []);
 
   const chargerFile = async () => {
@@ -70,6 +73,7 @@ export default function FileValidation() {
 
   const nomType = (id) => typesDocument.find((t) => t.id === id)?.nom ?? '—';
   const nomMention = (id) => mentions.find((m) => m.id === id)?.nom;
+  const nomFiliere = (id) => filieres.find((f) => f.id === id)?.nom;
   const nomEtudiant = (id) => {
     const e = etudiantsCache[id];
     return e ? `${e.prenom} ${e.nom}` : '…';
@@ -152,7 +156,7 @@ export default function FileValidation() {
             <div className={styles.cardBody}>
               <div className={styles.field}>
                 <span>Étudiant</span>
-                <strong>{nomEtudiant(doc.etudiant_id)} {matriculeEtudiant(doc.etudiant_id) && `— ${matriculeEtudiant(doc.etudiant_id)}`}</strong>
+                <strong>{nomEtudiant(doc.etudiant_id)} {matriculeEtudiant(doc.etudiant_id) && `(${matriculeEtudiant(doc.etudiant_id)})`}</strong>
               </div>
               <div className={styles.field}>
                 <span>Type de diplôme</span>
@@ -160,7 +164,7 @@ export default function FileValidation() {
               </div>
               <div className={styles.field}>
                 <span>Filière</span>
-                <strong>{doc.filiere || '—'}</strong>
+                <strong>{nomFiliere(doc.filiere_id) || '—'}</strong>
               </div>
               <div className={styles.field}>
                 <span>Mention</span>

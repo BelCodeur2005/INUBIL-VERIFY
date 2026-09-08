@@ -21,6 +21,7 @@ import { PartagesModule } from './partages/partages.module';
 import { TypesDocumentModule } from './types-document/types-document.module';
 import { MentionsModule } from './mentions/mentions.module';
 import { DepartementsModule } from './departements/departements.module';
+import { FilieresModule } from './filieres/filieres.module';
 import { EtudiantsAdminModule } from './etudiants-admin/etudiants-admin.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -58,6 +59,7 @@ import { BackupModule } from './backup/backup.module';
     TypesDocumentModule,
     MentionsModule,
     DepartementsModule,
+    FilieresModule,
     EtudiantsAdminModule,
     BlockchainModule,
     NotificationsModule,
@@ -68,9 +70,6 @@ import { BackupModule } from './backup/backup.module';
     BackupModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-  ],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

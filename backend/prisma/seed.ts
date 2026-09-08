@@ -79,6 +79,12 @@ const PERMISSIONS: Array<{ nom: string; module: string; description: string }> =
   { nom: 'dept:edit',   module: 'departements', description: 'Modifier un departement' },
   { nom: 'dept:delete', module: 'departements', description: 'Supprimer un departement' },
 
+  // ── Filières ─────────────────────────────────────────────────────────────
+  { nom: 'fil:read',   module: 'filieres', description: 'Consulter les filieres de l\'universite' },
+  { nom: 'fil:create', module: 'filieres', description: 'Creer une filiere' },
+  { nom: 'fil:edit',   module: 'filieres', description: 'Modifier une filiere' },
+  { nom: 'fil:delete', module: 'filieres', description: 'Supprimer une filiere' },
+
   // ── Statistiques & Audit ─────────────────────────────────────────────────
   { nom: 'stats:read', module: 'statistiques', description: 'Consulter les statistiques de la plateforme' },
   { nom: 'audit:read', module: 'audit',        description: "Consulter le journal d'audit" },
@@ -137,6 +143,7 @@ const ROLES_METIER: Array<{ nom: string; description: string; permissions: strin
       'stats:read', 'audit:read',
       'doc:read',
       'dept:read',
+      'fil:read',
     ],
   },
   {
@@ -147,6 +154,7 @@ const ROLES_METIER: Array<{ nom: string; description: string; permissions: strin
       'doc:create', 'doc:validate', 'doc:revoke', 'doc:read',
       'student:read',
       'dept:read', 'dept:create', 'dept:edit', 'dept:delete',
+      'fil:read', 'fil:create', 'fil:edit', 'fil:delete',
       'api:read', 'api:create', 'api:delete',
       'webhook:read', 'webhook:create', 'webhook:edit', 'webhook:delete',
       'partner:read', 'partner:create', 'partner:edit', 'partner:delete',
@@ -156,14 +164,14 @@ const ROLES_METIER: Array<{ nom: string; description: string; permissions: strin
   {
     nom: 'directeur_pedagogique',
     description: 'Validation academique — cumule les droits de saisie de agent_saisie (peut aussi saisir), plus valider/rejeter/revoquer',
-    permissions: ['doc:create', 'doc:validate', 'doc:revoke', 'doc:read', 'student:read', 'dept:read', 'stats:read'],
+    permissions: ['doc:create', 'doc:validate', 'doc:revoke', 'doc:read', 'student:read', 'dept:read', 'fil:read', 'stats:read'],
   },
   {
     nom: 'agent_saisie',
     description: 'Saisie des diplomes et fiches etudiant — pas de droit de validation ni de revocation. ' +
       'Un compte sans departement associe (scolarite) saisit pour tous les departements ; avec un ou plusieurs ' +
       'departements (chef de departement), restreint a ceux-ci (cf. etudiants-admin.service.ts / documents.service.ts).',
-    permissions: ['doc:create', 'doc:read', 'student:read', 'dept:read'],
+    permissions: ['doc:create', 'doc:read', 'student:read', 'dept:read', 'fil:read'],
   },
   {
     nom: 'etudiant',
@@ -391,6 +399,28 @@ async function main(): Promise<void> {
     });
   }
   console.log(`${mentions.length} mentions upserted pour ${universite.nom_court}.`);
+
+  // ── 7bis. Filières ──────────────────────────────────────────────────────────
+  const filieresSeed = [
+    { code: 'INFO', nom: 'Informatique', ordre: 1 },
+    { code: 'GLSI', nom: "Génie Logiciel et Systèmes d'Information", ordre: 2 },
+    { code: 'RT',   nom: 'Réseaux et Télécommunications', ordre: 3 },
+  ];
+
+  for (const f of filieresSeed) {
+    await prisma.filieres.upsert({
+      where: { code_universite_id: { code: f.code, universite_id: universite.id } },
+      update: { nom: f.nom },
+      create: {
+        code: f.code,
+        nom: f.nom,
+        universite_id: universite.id,
+        est_actif: true,
+        ordre: f.ordre,
+      },
+    });
+  }
+  console.log(`${filieresSeed.length} filières upserted pour ${universite.nom_court}.`);
 
   // ── 8. Configurations système ───────────────────────────────────────────────
   const configurationsSysteme = [
@@ -681,6 +711,9 @@ async function main(): Promise<void> {
     const mentionAB = await prisma.mentions_document.findFirst({
       where: { code: 'AB', universite_id: universite.id },
     });
+    const filiereInfo = await prisma.filieres.findFirst({
+      where: { code: 'INFO', universite_id: universite.id },
+    });
     const etudiantKamga = await prisma.etudiants.findFirst({
       where: { numero_etudiant: numeroEtudiant, deleted_at: null },
     });
@@ -732,7 +765,7 @@ async function main(): Promise<void> {
           date_emission: new Date('2026-07-15'),
           annee_academique: '2025-2026',
           lieu_delivrance: 'Douala',
-          filiere: 'Informatique',
+          filiere_id: filiereInfo?.id ?? null,
           mention_id: mentionAB?.id ?? null,
           moyenne_generale: 13.5,
           statut: 'brouillon',

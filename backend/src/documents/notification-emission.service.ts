@@ -116,6 +116,7 @@ export class NotificationEmissionService {
         },
         universites: { select: { nom: true } },
         types_document: { select: { nom: true } },
+        filieres: { select: { nom: true } },
       },
     });
 
@@ -141,7 +142,7 @@ export class NotificationEmissionService {
       doc.url_verification ??
       `https://verify.inubil.com/d/${doc.numero_unique}`;
     const nomUniversite = doc.universites.nom;
-    const filiere = doc.filiere ?? doc.types_document.nom;
+    const filiere = doc.filieres?.nom ?? doc.types_document.nom;
 
     const parametres = {
       prenomNom,

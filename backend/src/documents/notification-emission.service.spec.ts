@@ -18,7 +18,7 @@ const makeDoc = (overrides: any = {}) => ({
   id: DOC_ID,
   numero_unique: NUM_UNIQUE,
   url_verification: `https://verify.inubil.com/d/${NUM_UNIQUE}`,
-  filiere: 'Licence en Informatique',
+  filieres: { nom: 'Licence en Informatique' },
   universite_id: UNIV_ID,
   etudiants: {
     id: ETU_ID,

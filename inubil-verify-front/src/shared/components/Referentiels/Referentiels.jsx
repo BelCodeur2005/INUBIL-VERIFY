@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Search, Plus, Pencil, Trash2, X, Loader2, AlertTriangle, Save,
-  FileText, Award, ListChecks, Building2, UserCog,
+  FileText, Award, ListChecks, Building2, UserCog, BookOpen,
 } from 'lucide-react';
 import {
   listerTypesDocument, creerTypeDocument, modifierTypeDocument, supprimerTypeDocument,
@@ -12,6 +12,9 @@ import {
 import {
   listerDepartements, creerDepartement, modifierDepartement, supprimerDepartement,
 } from '../../../core/departements/departements.api';
+import {
+  listerFilieres, creerFiliere, modifierFiliere, supprimerFiliere,
+} from '../../../core/filieres/filieres.api';
 import { listerUtilisateurs, assignerDepartementsUtilisateur } from '../../../core/utilisateurs/utilisateurs.api';
 import { listerRoles } from '../../../core/roles/roles.api';
 import { useAuth } from '../../../core/auth/useAuth';
@@ -42,6 +45,7 @@ const TYPE_VIDE = {
 
 const MENTION_VIDE = { code: '', nom: '', note_min: '', note_max: '', ordre: 0 };
 const DEPARTEMENT_VIDE = { code: '', nom: '', ordre: 0 };
+const FILIERE_VIDE = { code: '', nom: '', ordre: 0 };
 
 function nettoyerNombre(v) {
   return v === '' || v === null || v === undefined ? undefined : Number(v);
@@ -123,6 +127,32 @@ const CONFIGS = {
     creer: creerDepartement,
     modifier: modifierDepartement,
     supprimer: supprimerDepartement,
+    versForm(item) {
+      return { code: item.code ?? '', nom: item.nom ?? '', ordre: item.ordre ?? 0 };
+    },
+    construirePayload(form) {
+      return {
+        code: form.code.trim().toUpperCase(),
+        nom: form.nom.trim(),
+        ordre: Number(form.ordre) || 0,
+      };
+    },
+  },
+  filieres: {
+    titre: 'Filières',
+    nomSingulier: 'cette filière',
+    article: 'une filière',
+    genreNouveau: 'Nouvelle',
+    icone: BookOpen,
+    champVide: FILIERE_VIDE,
+    // Reserve a responsable_universite (permission fil:create/edit/delete) — les autres
+    // roles de ce layout (agent_saisie, directeur_pedagogique) ont fil:read seulement,
+    // meme repartition que departements (cf. seed.ts).
+    rolesEcriture: ['responsable_universite'],
+    lister: () => listerFilieres({ estActif: null }),
+    creer: creerFiliere,
+    modifier: modifierFiliere,
+    supprimer: supprimerFiliere,
     versForm(item) {
       return { code: item.code ?? '', nom: item.nom ?? '', ordre: item.ordre ?? 0 };
     },

@@ -15,43 +15,49 @@
  */
 export enum Permission {
   // ── Universités ────────────────────────────────────────────────────────────
-  UNIV_READ     = 'univ:read',
-  UNIV_CREATE   = 'univ:create',
-  UNIV_EDIT     = 'univ:edit',
-  UNIV_DELETE   = 'univ:delete',
-  UNIV_APPROVE  = 'univ:approve',
+  UNIV_READ = 'univ:read',
+  UNIV_CREATE = 'univ:create',
+  UNIV_EDIT = 'univ:edit',
+  UNIV_DELETE = 'univ:delete',
+  UNIV_APPROVE = 'univ:approve',
   UNIV_ACTIVATE = 'univ:activate',
-  UNIV_SUSPEND  = 'univ:suspend',
-  UNIV_REJECT   = 'univ:reject',
+  UNIV_SUSPEND = 'univ:suspend',
+  UNIV_REJECT = 'univ:reject',
 
   // ── Rôles & Permissions ────────────────────────────────────────────────────
-  ROLE_READ   = 'role:read',
+  ROLE_READ = 'role:read',
   ROLE_CREATE = 'role:create',
-  ROLE_EDIT   = 'role:edit',
+  ROLE_EDIT = 'role:edit',
   ROLE_DELETE = 'role:delete',
   ROLE_ASSIGN = 'role:assign',
 
   // ── Utilisateurs ──────────────────────────────────────────────────────────
-  USER_READ        = 'user:read',
-  USER_EDIT        = 'user:edit',
+  USER_READ = 'user:read',
+  USER_EDIT = 'user:edit',
   USER_ASSIGN_ROLE = 'user:assign_role',
 
   // ── Documents / Diplômes ──────────────────────────────────────────────────
-  DOC_READ     = 'doc:read',
-  DOC_CREATE   = 'doc:create',
+  DOC_READ = 'doc:read',
+  DOC_CREATE = 'doc:create',
   DOC_VALIDATE = 'doc:validate',
-  DOC_REVOKE   = 'doc:revoke',
-  DOC_DELETE   = 'doc:delete',
-  DOC_SHARE    = 'doc:share',
+  DOC_REVOKE = 'doc:revoke',
+  DOC_DELETE = 'doc:delete',
+  DOC_SHARE = 'doc:share',
 
   // ── Étudiants ─────────────────────────────────────────────────────────────
   STUDENT_READ = 'student:read',
 
   // ── Départements ──────────────────────────────────────────────────────────
-  DEPT_READ   = 'dept:read',
+  DEPT_READ = 'dept:read',
   DEPT_CREATE = 'dept:create',
-  DEPT_EDIT   = 'dept:edit',
+  DEPT_EDIT = 'dept:edit',
   DEPT_DELETE = 'dept:delete',
+
+  // ── Filières ──────────────────────────────────────────────────────────────
+  FIL_READ = 'fil:read',
+  FIL_CREATE = 'fil:create',
+  FIL_EDIT = 'fil:edit',
+  FIL_DELETE = 'fil:delete',
 
   // ── Statistiques & Audit ──────────────────────────────────────────────────
   STATS_READ = 'stats:read',
@@ -65,20 +71,20 @@ export enum Permission {
   CONFIG_EDIT = 'config:edit',
 
   // ── Clés API ──────────────────────────────────────────────────────────────
-  API_READ   = 'api:read',
+  API_READ = 'api:read',
   API_CREATE = 'api:create',
   API_DELETE = 'api:delete',
 
   // ── Webhooks ──────────────────────────────────────────────────────────────
-  WEBHOOK_READ   = 'webhook:read',
+  WEBHOOK_READ = 'webhook:read',
   WEBHOOK_CREATE = 'webhook:create',
-  WEBHOOK_EDIT   = 'webhook:edit',
+  WEBHOOK_EDIT = 'webhook:edit',
   WEBHOOK_DELETE = 'webhook:delete',
 
   // ── Partenariats ──────────────────────────────────────────────────────────
-  PARTNER_READ   = 'partner:read',
+  PARTNER_READ = 'partner:read',
   PARTNER_CREATE = 'partner:create',
-  PARTNER_EDIT   = 'partner:edit',
+  PARTNER_EDIT = 'partner:edit',
   PARTNER_DELETE = 'partner:delete',
 }
 

@@ -4,44 +4,50 @@ import { PublicPartagesService } from './public-partages.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
-const TOKEN    = 'a'.repeat(64);
+const TOKEN = 'a'.repeat(64);
 const PARTAGE_ID = 'par-0000-0000-0000-000000000001';
-const DOC_ID     = 'doc-0000-0000-0000-000000000002';
+const DOC_ID = 'doc-0000-0000-0000-000000000002';
 
 const makeDoc = (overrides = {}) => ({
-  id:               DOC_ID,
-  numero_unique:    'INUB-2026-0001',
-  filiere:          'Licence en Informatique',
+  id: DOC_ID,
+  numero_unique: 'INUB-2026-0001',
+  filieres: { nom: 'Licence en Informatique' },
   annee_academique: '2025-2026',
-  date_emission:    new Date('2026-06-01'),
-  statut:           'actif',
+  date_emission: new Date('2026-06-01'),
+  statut: 'actif',
   moyenne_generale: 13.5,
   url_verification: 'https://verify.inubil.com/d/INUB-2026-0001',
-  etudiants:         { prenom: 'Bertrand', nom: 'KAMGA' },
-  universites:       { nom: 'ISTAMA INUBIL' },
-  types_document:    { nom: 'Licence', categorie: 'diplome' },
+  etudiants: { prenom: 'Bertrand', nom: 'KAMGA' },
+  universites: { nom: 'ISTAMA INUBIL' },
+  types_document: { nom: 'Licence', categorie: 'diplome' },
   mentions_document: { nom: 'Assez Bien' },
   matieres_document: [
-    { nom_matiere: 'Algorithmique', note: 14, note_max: 20, resultat: 'valide', semestre: 1 },
+    {
+      nom_matiere: 'Algorithmique',
+      note: 14,
+      note_max: 20,
+      resultat: 'valide',
+      semestre: 1,
+    },
   ],
   ...overrides,
 });
 
 const makePartage = (overrides = {}) => ({
-  id:                   PARTAGE_ID,
-  token_acces:          TOKEN,
-  statut:               'actif',
-  date_expiration:      null,
-  nb_consultations:     2,
+  id: PARTAGE_ID,
+  token_acces: TOKEN,
+  statut: 'actif',
+  date_expiration: null,
+  nb_consultations: 2,
   derniere_consultation: null,
-  documents:            makeDoc(),
+  documents: makeDoc(),
   ...overrides,
 });
 
 const makePrisma = () => ({
   partages_document: {
     findFirst: jest.fn(),
-    update:    jest.fn().mockResolvedValue({}),
+    update: jest.fn().mockResolvedValue({}),
   },
 });
 
@@ -97,9 +103,17 @@ describe('PublicPartagesService', () => {
     expect(result.partage.nb_consultations).toBe(3); // 2 + 1
   });
 
-  it('notifie l\'etudiant in-app quand son compte est lie', async () => {
+  it("notifie l'etudiant in-app quand son compte est lie", async () => {
     prisma.partages_document.findFirst.mockResolvedValue(
-      makePartage({ documents: makeDoc({ etudiants: { prenom: 'Bertrand', nom: 'KAMGA', utilisateur_id: 'usr-0000-0000-0000-000000000009' } }) }),
+      makePartage({
+        documents: makeDoc({
+          etudiants: {
+            prenom: 'Bertrand',
+            nom: 'KAMGA',
+            utilisateur_id: 'usr-0000-0000-0000-000000000009',
+          },
+        }),
+      }),
     );
 
     await service.accederParToken(TOKEN);
@@ -112,7 +126,7 @@ describe('PublicPartagesService', () => {
     );
   });
 
-  it('ne notifie personne si le document n\'a pas de compte etudiant lie', async () => {
+  it("ne notifie personne si le document n'a pas de compte etudiant lie", async () => {
     prisma.partages_document.findFirst.mockResolvedValue(makePartage());
 
     await service.accederParToken(TOKEN);
@@ -120,7 +134,7 @@ describe('PublicPartagesService', () => {
     expect(notificationsInApp.creer).not.toHaveBeenCalled();
   });
 
-  it('retourne la date d\'expiration dans le partage', async () => {
+  it("retourne la date d'expiration dans le partage", async () => {
     const expiration = new Date('2027-01-01');
     prisma.partages_document.findFirst.mockResolvedValue(
       makePartage({ date_expiration: expiration }),
@@ -136,13 +150,19 @@ describe('PublicPartagesService', () => {
   it('lève NotFoundException si le token est introuvable', async () => {
     prisma.partages_document.findFirst.mockResolvedValue(null);
 
-    await expect(service.accederParToken(TOKEN)).rejects.toThrow(NotFoundException);
+    await expect(service.accederParToken(TOKEN)).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
-  it('lève NotFoundException si le partage est révoqué (sécurité : pas de révélation d\'état)', async () => {
-    prisma.partages_document.findFirst.mockResolvedValue(makePartage({ statut: 'revoque' }));
+  it("lève NotFoundException si le partage est révoqué (sécurité : pas de révélation d'état)", async () => {
+    prisma.partages_document.findFirst.mockResolvedValue(
+      makePartage({ statut: 'revoque' }),
+    );
 
-    await expect(service.accederParToken(TOKEN)).rejects.toThrow(NotFoundException);
+    await expect(service.accederParToken(TOKEN)).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   // ── expiration ────────────────────────────────────────────────────────────
@@ -162,7 +182,9 @@ describe('PublicPartagesService', () => {
       makePartage({ date_expiration: datePassee, statut: 'actif' }),
     );
 
-    try { await service.accederParToken(TOKEN); } catch {}
+    try {
+      await service.accederParToken(TOKEN);
+    } catch {}
 
     expect(prisma.partages_document.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { statut: 'expire' } }),
@@ -185,7 +207,7 @@ describe('PublicPartagesService', () => {
     await expect(service.accederParToken(TOKEN)).resolves.toBeDefined();
   });
 
-  it('accepte un partage dont la date d\'expiration est dans le futur', async () => {
+  it("accepte un partage dont la date d'expiration est dans le futur", async () => {
     const futur = new Date();
     futur.setFullYear(futur.getFullYear() + 1);
     prisma.partages_document.findFirst.mockResolvedValue(

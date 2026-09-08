@@ -411,6 +411,44 @@
 
 .addMatiereBtn:hover { background: #dbe6fd; }
 
+.matieresActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.importMatiereBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #33456b;
+  border: 1px solid #dbe2f0;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.importMatiereBtn:hover { background: #f8fafc; }
+
+.modeleLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 0 0 12px 0;
+  color: #2b56cb;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .matieresEmpty {
   display: flex;
   align-items: center;
@@ -771,4 +809,82 @@
   color: #64748b;
   max-width: 420px;
   margin: 0 0 12px 0;
+}
+
+.successHint {
+  font-size: 0.8rem;
+  color: #2b56cb;
+  background: rgba(43, 86, 203, 0.08);
+  padding: 8px 14px;
+  border-radius: 8px;
+  max-width: 420px;
+  margin: 0 0 20px 0;
+}
+
+/* Écran de reprise de brouillon */
+.draftCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  animation: stepIn 0.3s ease both;
+}
+
+.draftIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #fffbeb;
+  color: #b45309;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.draftTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.draftText {
+  font-size: 0.9rem;
+  color: #64748b;
+  max-width: 420px;
+  margin: 0 0 8px 0;
+}
+
+.draftActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.draftPrimaryBtn {
+  margin-left: 0;
+}
+
+.draftSecondaryBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.draftSecondaryBtn:hover {
+  background: #f8fafc;
 }

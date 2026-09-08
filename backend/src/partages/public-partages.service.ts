@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, GoneException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  GoneException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
@@ -27,13 +32,22 @@ export class PublicPartagesService {
       include: {
         documents: {
           include: {
-            etudiants:         { select: { prenom: true, nom: true, utilisateur_id: true } },
-            universites:       { select: { nom: true } },
-            types_document:    { select: { nom: true, categorie: true } },
+            etudiants: {
+              select: { prenom: true, nom: true, utilisateur_id: true },
+            },
+            universites: { select: { nom: true } },
+            types_document: { select: { nom: true, categorie: true } },
             mentions_document: { select: { nom: true } },
+            filieres: { select: { nom: true } },
             matieres_document: {
               orderBy: [{ semestre: 'asc' }, { ordre: 'asc' }],
-              select: { nom_matiere: true, note: true, note_max: true, resultat: true, semestre: true },
+              select: {
+                nom_matiere: true,
+                note: true,
+                note_max: true,
+                resultat: true,
+                semestre: true,
+              },
             },
           },
         },
@@ -69,7 +83,7 @@ export class PublicPartagesService {
     await this.prisma.partages_document.update({
       where: { id: partage.id },
       data: {
-        nb_consultations:     { increment: 1 },
+        nb_consultations: { increment: 1 },
         derniere_consultation: maintenant,
       },
     });
@@ -81,42 +95,49 @@ export class PublicPartagesService {
       this.notificationsInApp
         .creer({
           utilisateurId,
-          type:    'partage_consulte',
-          titre:   'Lien de partage consulté',
+          type: 'partage_consulte',
+          titre: 'Lien de partage consulté',
           message: `Le lien de partage de votre document ${doc.numero_unique} vient d'être consulté.`,
-          lien:    '/dashboard-etudiant',
+          lien: '/dashboard-etudiant',
         })
-        .catch((err) => this.logger.error(`Notification in-app consultation partage echouee (partage ${partage.id}) : ${err.message}`));
+        .catch((err) =>
+          this.logger.error(
+            `Notification in-app consultation partage echouee (partage ${partage.id}) : ${err.message}`,
+          ),
+        );
     }
 
-    const matieres: MatierePartageDto[] = (doc.matieres_document ?? []).map((m) => ({
-      nom_matiere: m.nom_matiere,
-      note:        m.note !== null ? Number(m.note) : null,
-      note_max:    Number(m.note_max),
-      resultat:    m.resultat,
-      semestre:    m.semestre ?? null,
-    }));
+    const matieres: MatierePartageDto[] = (doc.matieres_document ?? []).map(
+      (m) => ({
+        nom_matiere: m.nom_matiere,
+        note: m.note !== null ? Number(m.note) : null,
+        note_max: Number(m.note_max),
+        resultat: m.resultat,
+        semestre: m.semestre ?? null,
+      }),
+    );
 
     const documentDto: DocumentPartageDto = {
-      numero_unique:    doc.numero_unique,
-      type_document:    (doc as any).types_document.nom,
-      categorie:        (doc as any).types_document.categorie,
-      filiere:          doc.filiere ?? null,
+      numero_unique: doc.numero_unique,
+      type_document: (doc as any).types_document.nom,
+      categorie: (doc as any).types_document.categorie,
+      filiere: (doc as any).filieres?.nom ?? null,
       annee_academique: doc.annee_academique ?? null,
-      date_emission:    doc.date_emission,
-      etudiant_nom:     `${(doc as any).etudiants.prenom} ${(doc as any).etudiants.nom}`,
-      mention:          (doc as any).mentions_document?.nom ?? null,
-      moyenne_generale: doc.moyenne_generale !== null ? Number(doc.moyenne_generale) : null,
+      date_emission: doc.date_emission,
+      etudiant_nom: `${(doc as any).etudiants.prenom} ${(doc as any).etudiants.nom}`,
+      mention: (doc as any).mentions_document?.nom ?? null,
+      moyenne_generale:
+        doc.moyenne_generale !== null ? Number(doc.moyenne_generale) : null,
       matieres,
-      universite:       (doc as any).universites.nom,
-      statut:           doc.statut,
+      universite: (doc as any).universites.nom,
+      statut: doc.statut,
       url_verification: doc.url_verification ?? null,
     };
 
     return {
       document: documentDto,
       partage: {
-        date_expiration:  partage.date_expiration ?? null,
+        date_expiration: partage.date_expiration ?? null,
         nb_consultations: partage.nb_consultations + 1,
       },
     };

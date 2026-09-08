@@ -16,14 +16,20 @@ import {
   BookOpen,
   Plus,
   Trash2,
+  FileSpreadsheet,
+  Download,
+  History,
 } from 'lucide-react';
 import { useAuth } from '../../../core/auth/useAuth';
 import { rechercherEtudiants, creerEtudiant } from '../../../core/etudiants/etudiants.api';
 import { listerTypesDocument } from '../../../core/types-document/types-document.api';
 import { listerMentions } from '../../../core/mentions/mentions.api';
+import { listerFilieres } from '../../../core/filieres/filieres.api';
 import { creerDocument, uploaderPdf } from '../../../core/documents/documents.api';
 import { ApiError } from '../../../core/api/client';
 import { lirePreferences } from '../../../core/preferences/preferences';
+import { matieresDepuisCsv, genererModeleCsv } from './matieresImport';
+import { sauvegarderBrouillon, chargerBrouillon, effacerBrouillon, brouillonEstVide, formaterAge } from './brouillonEmission';
 import styles from './EmissionDiplome.module.css';
 
 // Stepper d'emission de diplome — branche sur le backend reel :
@@ -58,6 +64,13 @@ export default function EmissionDiplome() {
   const [currentStep, setCurrentStep] = useState(1);
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Brouillon local (localStorage) — protege contre une coupure reseau/onglet ferme
+  // par erreur en cours de saisie. Charge une seule fois au montage ; l'agent choisit
+  // explicitement de le reprendre ou de recommencer avant que le stepper s'affiche.
+  const [brouillon] = useState(() => chargerBrouillon());
+  const [brouillonTraite, setBrouillonTraite] = useState(false);
+  const brouillonProposable = !brouillonTraite && !brouillonEstVide(brouillon);
 
   // ── Étudiant ──
   const [studentMode, setStudentMode] = useState('search');
@@ -102,13 +115,16 @@ export default function EmissionDiplome() {
   // ── Diplôme (référentiels réels) ──
   const [typesDocument, setTypesDocument] = useState([]);
   const [mentions, setMentions] = useState([]);
+  const [filieres, setFilieres] = useState([]);
   const [loadingReferentiels, setLoadingReferentiels] = useState(true);
   const [referentielsError, setReferentielsError] = useState(null);
-  const [diplome, setDiplome] = useState({ type_document_id: '', filiere: '', mention_id: '', date_emission: '', annee_academique: '' });
+  const [diplome, setDiplome] = useState({ type_document_id: '', filiere_id: '', mention_id: '', date_emission: '', annee_academique: '' });
   const typeSelectionne = typesDocument.find((t) => t.id === diplome.type_document_id);
   const aDesMatieres = Boolean(typeSelectionne?.a_matieres);
 
   const [matieres, setMatieres] = useState([]);
+  const [importErreur, setImportErreur] = useState(null);
+  const importInputRef = useRef(null);
   const ajouterMatiere = () => setMatieres((prev) => [...prev, { ...MATIERE_VIDE }]);
   const retirerMatiere = (idx) => setMatieres((prev) => prev.filter((_, i) => i !== idx));
   const majMatiere = (idx, champ) => (e) => {
@@ -116,8 +132,53 @@ export default function EmissionDiplome() {
     setMatieres((prev) => prev.map((m, i) => (i === idx ? { ...m, [champ]: valeur } : m)));
   };
 
+  const handleImportClick = () => importInputRef.current?.click();
+  const handleImportFile = async (e) => {
+    const fichier = e.target.files[0];
+    e.target.value = ''; // permet de reimporter le meme fichier corrige sans le renommer
+    if (!fichier) return;
+    setImportErreur(null);
+    try {
+      const texte = await fichier.text();
+      const importees = matieresDepuisCsv(texte);
+      setMatieres(importees);
+    } catch (err) {
+      setImportErreur(err.message || "Impossible de lire ce fichier.");
+    }
+  };
+  const handleTelechargerModele = () => {
+    const csv = genererModeleCsv();
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const lien = document.createElement('a');
+    lien.href = url;
+    lien.download = 'modele-releve-de-notes.csv';
+    document.body.appendChild(lien);
+    lien.click();
+    lien.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  // Reprise du brouillon : le fichier PDF n'est jamais sauvegarde (voir brouillonEmission.js),
+  // donc on ne restaure jamais directement a l'etape Document/Recapitulatif — l'agent est
+  // ramene a l'etape Document pour rejoindre son fichier avant de continuer.
+  const reprendreBrouillon = () => {
+    if (brouillon.studentMode) setStudentMode(brouillon.studentMode);
+    if (brouillon.selectedStudent) setSelectedStudent(brouillon.selectedStudent);
+    if (brouillon.newStudent) setNewStudent(brouillon.newStudent);
+    if (brouillon.diplome) setDiplome(brouillon.diplome);
+    if (brouillon.matieres) setMatieres(brouillon.matieres);
+    setCurrentStep(Math.min(brouillon.currentStep ?? 1, 3));
+    setBrouillonTraite(true);
+  };
+
+  const demarrerAZero = () => {
+    effacerBrouillon();
+    setBrouillonTraite(true);
+  };
+
   const step2Valid = Boolean(
-    diplome.type_document_id && diplome.filiere && diplome.date_emission
+    diplome.type_document_id && diplome.filiere_id && diplome.date_emission
     && (!aDesMatieres || (matieres.length > 0 && matieres.every((m) => m.nom_matiere.trim()))),
   );
 
@@ -138,11 +199,13 @@ export default function EmissionDiplome() {
     Promise.all([
       listerTypesDocument({ universiteId }),
       listerMentions({ universiteId }),
+      listerFilieres({ universiteId }),
     ])
-      .then(([types, mentionsRes]) => {
+      .then(([types, mentionsRes, filieresRes]) => {
         if (annule) return;
         setTypesDocument(types ?? []);
         setMentions(mentionsRes ?? []);
+        setFilieres(filieresRes ?? []);
 
         const nomParDefaut = lirePreferences().typeDocumentParDefaut;
         if (nomParDefaut) {
@@ -173,6 +236,21 @@ export default function EmissionDiplome() {
   const [submitError, setSubmitError] = useState(null);
   const [submitResult, setSubmitResult] = useState(null);
 
+  // Sauvegarde locale debattue (400ms), une fois que l'agent a explicitement choisi de
+  // reprendre ou d'ecarter le brouillon precedent — jamais pendant l'ecran de succes.
+  useEffect(() => {
+    if (!brouillonTraite || submitResult) return;
+    const timeout = setTimeout(() => {
+      sauvegarderBrouillon({ studentMode, selectedStudent, newStudent, diplome, matieres, currentStep });
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [brouillonTraite, submitResult, studentMode, selectedStudent, newStudent, diplome, matieres, currentStep]);
+
+  // Reinitialise l'etudiant et le fichier, mais GARDE volontairement l'etape 2
+  // (type de diplome, filiere, mention, date d'emission, annee academique) : une
+  // session d'emission traite typiquement toute une promotion avec ces memes
+  // informations, seuls l'etudiant et le PDF changent d'un diplome au suivant.
+  // Les matieres restent reinitialisees : les notes sont propres a chaque etudiant.
   const resetWizard = () => {
     setSubmitResult(null);
     setSubmitError(null);
@@ -182,7 +260,6 @@ export default function EmissionDiplome() {
     setSearchQuery('');
     setSearchResults([]);
     setNewStudent({ nom: '', prenom: '', numero_etudiant: '', date_naissance: '' });
-    setDiplome({ type_document_id: '', filiere: '', mention_id: '', date_emission: '', annee_academique: '' });
     setMatieres([]);
     setSelectedFile(null);
   };
@@ -211,7 +288,7 @@ export default function EmissionDiplome() {
         etudiant_id: etudiantId,
         type_document_id: diplome.type_document_id,
         date_emission: diplome.date_emission,
-        filiere: diplome.filiere,
+        filiere_id: diplome.filiere_id || undefined,
         ...(diplome.annee_academique ? { annee_academique: diplome.annee_academique } : {}),
         ...(diplome.mention_id ? { mention_id: diplome.mention_id } : {}),
         ...(aDesMatieres && matieres.length > 0
@@ -234,6 +311,7 @@ export default function EmissionDiplome() {
 
       const documentAvecPdf = await uploaderPdf(document.id, selectedFile);
 
+      effacerBrouillon();
       setSubmitResult({
         etudiantNom: `${etudiant?.prenom ?? ''} ${etudiant?.nom ?? ''}`.trim(),
         numeroUnique: documentAvecPdf.numero_unique,
@@ -291,9 +369,37 @@ export default function EmissionDiplome() {
             (<code className={styles.hashInline}>{submitResult.hash?.slice(0, 16)}…</code>).
             Il reste en attente de validation avant ancrage blockchain.
           </p>
+          <p className={styles.successHint}>
+            Les informations du diplôme ({typesDocument.find((t) => t.id === diplome.type_document_id)?.nom}
+            {diplome.filiere_id ? ` — ${filieres.find((f) => f.id === diplome.filiere_id)?.nom ?? ''}` : ''}) restent pré-remplies pour l'étudiant suivant.
+          </p>
           <button type="button" className={styles.primaryBtn} onClick={resetWizard}>
             Émettre un autre diplôme
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (brouillonProposable) {
+    const etapeAvancee = (brouillon.currentStep ?? 1) >= 3;
+    return (
+      <div className={styles.page}>
+        <div className={styles.draftCard}>
+          <div className={styles.draftIcon}><History size={28} /></div>
+          <h2 className={styles.draftTitle}>Brouillon en cours retrouvé</h2>
+          <p className={styles.draftText}>
+            Un dossier non terminé a été sauvegardé {formaterAge(brouillon.sauvegardeLe)} sur cet appareil.
+            {etapeAvancee && ' Le fichier PDF devra être rejoint à nouveau.'}
+          </p>
+          <div className={styles.draftActions}>
+            <button type="button" className={styles.draftSecondaryBtn} onClick={demarrerAZero}>
+              Recommencer à zéro
+            </button>
+            <button type="button" className={`${styles.primaryBtn} ${styles.draftPrimaryBtn}`} onClick={reprendreBrouillon}>
+              Reprendre mon brouillon
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -429,8 +535,15 @@ export default function EmissionDiplome() {
                 </select>
               </div>
               <div className={`${styles.inputGroup} ${styles.colSpan2}`}>
-                <label>Domaine d'études / Spécialité</label>
-                <input type="text" value={diplome.filiere} onChange={(e) => setDiplome({ ...diplome, filiere: e.target.value })} placeholder="ex : Génie Logiciel et Systèmes d'Information" />
+                <label>Filière</label>
+                <select
+                  value={diplome.filiere_id}
+                  onChange={(e) => setDiplome({ ...diplome, filiere_id: e.target.value })}
+                  disabled={loadingReferentiels}
+                >
+                  <option value="" disabled>{loadingReferentiels ? 'Chargement...' : 'Choisir...'}</option>
+                  {filieres.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+                </select>
               </div>
               <div className={styles.inputGroup}>
                 <label>Mention</label>
@@ -462,10 +575,33 @@ export default function EmissionDiplome() {
                       Ce type de document affiche un relevé de notes — renseignez au moins une matière.
                     </p>
                   </div>
-                  <button type="button" className={styles.addMatiereBtn} onClick={ajouterMatiere}>
-                    <Plus size={14} /> Ajouter une matière
-                  </button>
+                  <div className={styles.matieresActions}>
+                    <input
+                      type="file"
+                      ref={importInputRef}
+                      onChange={handleImportFile}
+                      accept=".csv,text/csv"
+                      style={{ display: 'none' }}
+                    />
+                    <button type="button" className={styles.importMatiereBtn} onClick={handleImportClick}>
+                      <FileSpreadsheet size={14} /> Importer un fichier
+                    </button>
+                    <button type="button" className={styles.addMatiereBtn} onClick={ajouterMatiere}>
+                      <Plus size={14} /> Ajouter une matière
+                    </button>
+                  </div>
                 </div>
+
+                {importErreur && (
+                  <p className={styles.errorText}>
+                    <AlertTriangle size={14} /> {importErreur}
+                  </p>
+                )}
+                {matieres.length === 0 && (
+                  <button type="button" className={styles.modeleLink} onClick={handleTelechargerModele}>
+                    <Download size={12} /> Télécharger un modèle de fichier (CSV)
+                  </button>
+                )}
 
                 {matieres.length === 0 ? (
                   <div className={styles.matieresEmpty}>
@@ -573,7 +709,7 @@ export default function EmissionDiplome() {
               <div className={styles.recapBlock}>
                 <h3 className={styles.recapTitle}><GraduationCap size={16} /> Diplôme</h3>
                 <p><strong>{typesDocument.find((t) => t.id === diplome.type_document_id)?.nom}</strong></p>
-                <p className={styles.recapMuted}>{diplome.filiere}</p>
+                <p className={styles.recapMuted}>{filieres.find((f) => f.id === diplome.filiere_id)?.nom}</p>
                 <p className={styles.recapMuted}>
                   {diplome.mention_id ? `Mention ${mentions.find((m) => m.id === diplome.mention_id)?.nom} — ` : ''}
                   {diplome.annee_academique}

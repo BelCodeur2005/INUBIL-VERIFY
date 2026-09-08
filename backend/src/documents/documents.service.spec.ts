@@ -161,7 +161,7 @@ describe('DocumentsService', () => {
       etudiant_id: ETUDIANT_ID,
       type_document_id: TYPE_ID,
       date_emission: '2026-06-12',
-      filiere: 'Licence Informatique',
+      filiere_id: 'fff-filiere-0000-0000-000000000006',
     };
 
     it("crée un brouillon et logue l'audit", async () => {
@@ -312,12 +312,12 @@ describe('DocumentsService', () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
       prisma.documents.findFirst.mockResolvedValue(makeDocument());
       prisma.documents.update.mockResolvedValue(
-        makeDocument({ filiere: 'Master Info' }),
+        makeDocument({ filiere_id: 'fff-filiere-0000-0000-000000000006' }),
       );
 
       const result = await service.modifier(
         DOC_ID,
-        { filiere: 'Master Info' },
+        { filiere_id: 'fff-filiere-0000-0000-000000000006' },
         ACTEUR_ID,
       );
 
@@ -607,6 +607,50 @@ describe('DocumentsService', () => {
 
       expect(notif.notifierCreateur).toHaveBeenCalledWith(DOC_ID, 'valide');
     });
+
+    it("lève ForbiddenException si l'etudiant appartient a un autre departement que celui du chef de departement", async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue({
+        ...makeActeur(),
+        departements: [{ id: 'dept-meca' }],
+      });
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({
+          statut: 'brouillon',
+          pdf_url: FAKE_PDF_KEY,
+          hash_sha256: FAKE_HASH,
+        }),
+      );
+      prisma.etudiants.findFirst.mockResolvedValue({
+        departement_id: 'dept-info',
+      });
+
+      await expect(service.valider(DOC_ID, ACTEUR_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.documents.update).not.toHaveBeenCalled();
+    });
+
+    it('autorise un chef de departement a valider un document de son propre departement', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue({
+        ...makeActeur(),
+        departements: [{ id: 'dept-info' }],
+      });
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({
+          statut: 'brouillon',
+          pdf_url: FAKE_PDF_KEY,
+          hash_sha256: FAKE_HASH,
+        }),
+      );
+      prisma.etudiants.findFirst.mockResolvedValue({
+        departement_id: 'dept-info',
+      });
+      prisma.documents.update.mockResolvedValue(
+        makeDocument({ statut: 'actif' }),
+      );
+
+      await expect(service.valider(DOC_ID, ACTEUR_ID)).resolves.toBeDefined();
+    });
   });
 
   // ── rejeter ────────────────────────────────────────────────────────────
@@ -667,6 +711,44 @@ describe('DocumentsService', () => {
         BadRequestException,
       );
       expect(prisma.documents.update).not.toHaveBeenCalled();
+    });
+
+    it("lève ForbiddenException si l'etudiant appartient a un autre departement que celui du chef de departement", async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue({
+        ...makeActeur(),
+        departements: [{ id: 'dept-meca' }],
+      });
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({ statut: 'brouillon' }),
+      );
+      prisma.etudiants.findFirst.mockResolvedValue({
+        departement_id: 'dept-info',
+      });
+
+      await expect(service.rejeter(DOC_ID, dto, ACTEUR_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.documents.update).not.toHaveBeenCalled();
+    });
+
+    it('autorise un chef de departement a rejeter un document de son propre departement', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue({
+        ...makeActeur(),
+        departements: [{ id: 'dept-info' }],
+      });
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({ statut: 'brouillon' }),
+      );
+      prisma.etudiants.findFirst.mockResolvedValue({
+        departement_id: 'dept-info',
+      });
+      prisma.documents.update.mockResolvedValue(
+        makeDocument({ statut: 'rejete', motif_rejet: dto.motif }),
+      );
+
+      await expect(
+        service.rejeter(DOC_ID, dto, ACTEUR_ID),
+      ).resolves.toBeDefined();
     });
   });
 

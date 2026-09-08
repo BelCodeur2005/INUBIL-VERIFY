@@ -183,7 +183,7 @@ export class DocumentsService {
         date_emission: dateEmission,
         annee_academique: champs.annee_academique ?? null,
         lieu_delivrance: champs.lieu_delivrance ?? null,
-        filiere: champs.filiere ?? null,
+        filiere_id: champs.filiere_id ?? null,
         mention_id: champs.mention_id ?? null,
         moyenne_generale: champs.moyenne_generale ?? null,
         note_sur: champs.note_sur ?? 20,
@@ -298,6 +298,7 @@ export class DocumentsService {
         universites: { select: { nom: true } },
         types_document: { select: { nom: true } },
         mentions_document: { select: { nom: true } },
+        filieres: { select: { nom: true } },
       },
     });
 
@@ -310,7 +311,7 @@ export class DocumentsService {
       { header: 'N° étudiant', value: (d) => d.etudiants.numero_etudiant },
       { header: 'Université', value: (d) => d.universites.nom },
       { header: 'Type de document', value: (d) => d.types_document.nom },
-      { header: 'Filière', value: (d) => d.filiere },
+      { header: 'Filière', value: (d) => d.filieres?.nom },
       { header: 'Mention', value: (d) => d.mentions_document?.nom },
       { header: 'Statut', value: (d) => d.statut },
       {
@@ -370,7 +371,9 @@ export class DocumentsService {
         ...(champs.lieu_delivrance !== undefined
           ? { lieu_delivrance: champs.lieu_delivrance }
           : {}),
-        ...(champs.filiere !== undefined ? { filiere: champs.filiere } : {}),
+        ...(champs.filiere_id !== undefined
+          ? { filiere_id: champs.filiere_id }
+          : {}),
         ...(champs.mention_id !== undefined
           ? { mention_id: champs.mention_id }
           : {}),
@@ -517,8 +520,19 @@ export class DocumentsService {
   /** Validation par le directeur - approuve le document, génère le QR, déclenche la blockchain. */
   async valider(id: string, acteurId: string, ip?: string, userAgent?: string) {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
+    const acteurDeptIds = await this.getActeurDepartementIds(acteurId);
     const doc = await this.trouverOuEchouer(id);
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
+    if (acteurDeptIds.length > 0) {
+      const etudiant = await this.prisma.etudiants.findFirst({
+        where: { id: doc.etudiant_id },
+        select: { departement_id: true },
+      });
+      this.assertMemeDepartement(
+        etudiant?.departement_id ?? null,
+        acteurDeptIds,
+      );
+    }
 
     if (!['brouillon', 'en_validation'].includes(doc.statut)) {
       const hint =
@@ -713,8 +727,19 @@ export class DocumentsService {
     ip?: string,
   ) {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
+    const acteurDeptIds = await this.getActeurDepartementIds(acteurId);
     const doc = await this.trouverOuEchouer(id);
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
+    if (acteurDeptIds.length > 0) {
+      const etudiant = await this.prisma.etudiants.findFirst({
+        where: { id: doc.etudiant_id },
+        select: { departement_id: true },
+      });
+      this.assertMemeDepartement(
+        etudiant?.departement_id ?? null,
+        acteurDeptIds,
+      );
+    }
 
     if (!['brouillon', 'en_validation'].includes(doc.statut)) {
       throw new BadRequestException(
