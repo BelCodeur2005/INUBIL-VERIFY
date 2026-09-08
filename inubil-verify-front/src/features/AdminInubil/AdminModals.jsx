@@ -158,29 +158,6 @@ export function NodeDetailsModal({ node, onClose }) {
   );
 }
 
-// 5. Drawer Inspection Log — champs reels de AuditEntryDto (GET /admin/audit).
-export function AuditLogDetailsModal({ log, onClose }) {
-  return (
-    <div className={drawerStyles.drawerOverlay} onClick={onClose}>
-      <div className={drawerStyles.drawerPanel} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-          <h3 style={{ margin: 0, color: 'var(--primary)' }}>Détails de l'Événement</h3>
-          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
-        </div>
-        <div style={{ fontSize: '0.85rem', lineHeight: '1.6' }}>
-          <p>Horodatage : <strong>{new Date(log.created_at).toLocaleString('fr-FR')}</strong></p>
-          <p>Opérateur : <strong>{log.nom_utilisateur ?? 'Système'}</strong></p>
-          <p>Module : <strong>{log.module}</strong></p>
-          <p>Action Réalisée : <strong>{log.action}</strong></p>
-          {log.table_concernee && <p>Table concernée : <strong>{log.table_concernee}</strong></p>}
-          {log.enregistrement_id && <p>ID enregistrement : <strong style={{ fontFamily: 'monospace' }}>{log.enregistrement_id}</strong></p>}
-          <p>Adresse IP Source : <strong style={{ fontFamily: 'monospace' }}>{log.ip_address ?? '—'}</strong></p>
-          {log.user_agent && <p>Client : <span style={{ fontSize: '0.75rem' }}>{log.user_agent}</span></p>}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // 6. Drawer Modifier un Paramètre Système — PUT /configurations/:cle.
 export function ConfigEditDrawer({ config, onClose, onSaved }) {
@@ -265,7 +242,7 @@ const btnCancelStyle = {
 
 const btnSubmitStyle = {
   padding: '0.5rem 1rem',
-  backgroundColor: '#002c53',
+  backgroundColor: '#2b56cb',
   color: '#fff',
   border: 'none',
   borderRadius: '6px',
