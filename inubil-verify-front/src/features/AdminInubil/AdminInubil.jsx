@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../core/auth/useAuth';
 import AccountMenu from '../../shared/components/AccountMenu/AccountMenu';
 import NotificationsBell from '../../shared/components/NotificationsBell/NotificationsBell';
+import NotificationsPanel from '../../shared/components/NotificationsPanel/NotificationsPanel';
 import MonCompte from '../../shared/components/MonCompte/MonCompte';
 import styles from './AdminInubil.module.css';
 import {
@@ -44,63 +44,37 @@ const ROLE_LABELS = {
 // TendanceChart et RepartitionDocuments sont maintenant des composants partages
 // (voir shared/components/) — reutilises tels quels par DashboardEtablissement.jsx.
 
-// Item de sidebar avec sous-menu en flyout collé au bord droit de la sidebar.
-// Le panneau est positionné en `fixed` (via portail) à partir de la position réelle
-// du bouton : .navSection a overflow-y:auto, ce qui force aussi overflow-x à rogner
-// tout enfant en position absolute qui déborderait à droite de la sidebar.
-function FlyoutNavItem({ label, icon, isOpen, isChildActive, onToggle, children }) {
-  const buttonRef = useRef(null);
-  const panelRef = useRef(null);
-  const [panelPos, setPanelPos] = useState(null);
-
-  const handleToggle = () => {
-    if (!isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPanelPos({ top: rect.top, left: rect.right + 8 });
-    }
-    onToggle();
-  };
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e) => {
-      if (buttonRef.current?.contains(e.target) || panelRef.current?.contains(e.target)) return;
-      onToggle();
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onToggle]);
-
+// Item de sidebar avec sous-menu en accordéon : les sous-items se déplient sous le
+// parent, dans la sidebar foncée elle-même (remplace l'ancien flyout en popup blanc
+// détaché à côté de la sidebar, jugé visuellement incohérent avec le reste).
+function AccordionNavItem({ label, icon, isOpen, isChildActive, onToggle, children }) {
   return (
-    <div className={styles.flyoutWrapper}>
+    <div className={styles.accordionWrapper}>
       <button
-        ref={buttonRef}
         className={isChildActive ? styles.navItemActive : styles.navItem}
-        onClick={handleToggle}
+        onClick={onToggle}
+        aria-expanded={isOpen}
       >
         <span className="material-symbols-outlined">{icon}</span>
         <span>{label}</span>
-        <span className={`material-symbols-outlined ${styles.flyoutChevron}`}>chevron_right</span>
+        <span className={`material-symbols-outlined ${styles.accordionChevron} ${isOpen ? styles.accordionChevronOpen : ''}`}>
+          expand_more
+        </span>
       </button>
-      {isOpen && panelPos && createPortal(
-        <div ref={panelRef} className={styles.flyoutPanel} style={{ top: panelPos.top, left: panelPos.left }}>
-          {children}
-        </div>,
-        document.body,
-      )}
+      {isOpen && <div className={styles.accordionPanel}>{children}</div>}
     </div>
   );
 }
 
 export default function AdminInubil() {
   const [activeTab, setActiveTab] = useState('statistiques');
-  const [openFlyout, setOpenFlyout] = useState(null);
+  const [openAccordion, setOpenAccordion] = useState(null);
   const { utilisateur, logout } = useAuth();
 
-  const toggleFlyout = (id) => setOpenFlyout((prev) => (prev === id ? null : id));
-  const selectFromFlyout = (tab) => {
+  const toggleAccordion = (id) => setOpenAccordion((prev) => (prev === id ? null : id));
+  const selectFromAccordion = (tab) => {
     setActiveTab(tab);
-    setOpenFlyout(null);
+    setOpenAccordion(null);
   };
 
   const prenom = utilisateur?.prenom ?? '';
@@ -340,26 +314,33 @@ export default function AdminInubil() {
             <span className="material-symbols-outlined">description</span>
             <span>Documents</span>
           </button>
-          <FlyoutNavItem
+          <button
+            className={activeTab === 'notifications' ? styles.navItemActive : styles.navItem}
+            onClick={() => setActiveTab('notifications')}
+          >
+            <span className="material-symbols-outlined">notifications</span>
+            <span>Notifications</span>
+          </button>
+          <AccordionNavItem
             label="Utilisateurs & Rôles"
             icon="manage_accounts"
-            isOpen={openFlyout === 'users-roles'}
+            isOpen={openAccordion === 'users-roles'}
             isChildActive={activeTab === 'users' || activeTab === 'roles'}
-            onToggle={() => toggleFlyout('users-roles')}
+            onToggle={() => toggleAccordion('users-roles')}
           >
             <button
-              className={activeTab === 'users' ? styles.flyoutItemActive : styles.flyoutItem}
-              onClick={() => selectFromFlyout('users')}
+              className={activeTab === 'users' ? styles.accordionItemActive : styles.accordionItem}
+              onClick={() => selectFromAccordion('users')}
             >
               Utilisateurs
             </button>
             <button
-              className={activeTab === 'roles' ? styles.flyoutItemActive : styles.flyoutItem}
-              onClick={() => selectFromFlyout('roles')}
+              className={activeTab === 'roles' ? styles.accordionItemActive : styles.accordionItem}
+              onClick={() => selectFromAccordion('roles')}
             >
               Rôles & Permissions
             </button>
-          </FlyoutNavItem>
+          </AccordionNavItem>
           {/* Infrastructures & Nœuds : retire — aucun backend ne l'alimente (pas de "noeud prive"
               administre par INUBIL, juste un acces RPC public au reseau Polygon Amoy/Mainnet). */}
 
@@ -375,26 +356,26 @@ export default function AdminInubil() {
 
         {/* Navigation bas — épinglée au fond de la sidebar, comme /universite */}
         <nav className={styles.navBottom}>
-          <FlyoutNavItem
+          <AccordionNavItem
             label="Administration"
             icon="admin_panel_settings"
-            isOpen={openFlyout === 'admin'}
+            isOpen={openAccordion === 'admin'}
             isChildActive={activeTab === 'settings' || activeTab === 'backup'}
-            onToggle={() => toggleFlyout('admin')}
+            onToggle={() => toggleAccordion('admin')}
           >
             <button
-              className={activeTab === 'settings' ? styles.flyoutItemActive : styles.flyoutItem}
-              onClick={() => selectFromFlyout('settings')}
+              className={activeTab === 'settings' ? styles.accordionItemActive : styles.accordionItem}
+              onClick={() => selectFromAccordion('settings')}
             >
               Paramètres Système
             </button>
             <button
-              className={activeTab === 'backup' ? styles.flyoutItemActive : styles.flyoutItem}
-              onClick={() => selectFromFlyout('backup')}
+              className={activeTab === 'backup' ? styles.accordionItemActive : styles.accordionItem}
+              onClick={() => selectFromAccordion('backup')}
             >
               Sauvegarde Manuelle
             </button>
-          </FlyoutNavItem>
+          </AccordionNavItem>
         </nav>
       </aside>
 
@@ -409,7 +390,7 @@ export default function AdminInubil() {
           </div>
 
           <div className={styles.headerRight}>
-            <NotificationsBell />
+            <NotificationsBell onClick={() => setActiveTab('notifications')} />
             <AccountMenu
               prenom={prenom}
               nom={nom}
@@ -524,6 +505,19 @@ export default function AdminInubil() {
 
           {/* VUE : DOCUMENTS (toutes universités) */}
           {activeTab === 'documents' && <ListeDocuments admin />}
+
+          {/* VUE : NOTIFICATIONS */}
+          {activeTab === 'notifications' && (
+            <>
+              <div className={styles.viewHeader}>
+                <div>
+                  <h2 className={styles.viewTitle} style={{ fontSize: '1.15rem' }}>Notifications</h2>
+                  <p className={styles.viewSubtitle}>Émissions, validations et révocations concernant votre activité.</p>
+                </div>
+              </div>
+              <NotificationsPanel />
+            </>
+          )}
 
           {/* VUE 2 : GESTION DES UTILISATEURS */}
           {activeTab === 'users' && (

@@ -49,7 +49,9 @@ export default function DashboardEtablissement() {
   const [erreur, setErreur] = useState(null);
 
   const [documentsRecents, setDocumentsRecents] = useState([]);
-  const [compteurs, setCompteurs] = useState({ actifs: 0, brouillons: 0, enValidation: 0, revoques: 0, etudiants: 0 });
+  const [compteurs, setCompteurs] = useState({
+    actifs: 0, brouillons: 0, enValidation: 0, revoques: 0, rejetes: 0, expires: 0, etudiants: 0,
+  });
   const [typesDocument, setTypesDocument] = useState([]);
   const [etudiantsCache, setEtudiantsCache] = useState({});
 
@@ -65,12 +67,14 @@ export default function DashboardEtablissement() {
       setChargement(true);
       setErreur(null);
       try {
-        const [recents, actifs, brouillons, enValidation, revoques, etudiants, types] = await Promise.all([
+        const [recents, actifs, brouillons, enValidation, revoques, rejetes, expires, etudiants, types] = await Promise.all([
           listerDocuments({ limit: 8 }),
           listerDocuments({ statut: 'actif', limit: 1 }),
           listerDocuments({ statut: 'brouillon', limit: 1 }),
           listerDocuments({ statut: 'en_validation', limit: 1 }),
           listerDocuments({ statut: 'revoque', limit: 1 }),
+          listerDocuments({ statut: 'rejete', limit: 1 }),
+          listerDocuments({ statut: 'expire', limit: 1 }),
           rechercherEtudiants(undefined, { limit: 1 }),
           listerTypesDocument({ estActif: null }),
         ]);
@@ -82,6 +86,8 @@ export default function DashboardEtablissement() {
           brouillons: brouillons.total ?? 0,
           enValidation: enValidation.total ?? 0,
           revoques: revoques.total ?? 0,
+          rejetes: rejetes.total ?? 0,
+          expires: expires.total ?? 0,
           etudiants: etudiants.total ?? 0,
         });
         setTypesDocument(types ?? []);
@@ -159,7 +165,14 @@ export default function DashboardEtablissement() {
           <div className={styles.kpiTexts}>
             <span className={styles.kpiLabel}>Documents actifs</span>
             <span className={styles.kpiValue}>{chargement ? '—' : compteurs.actifs}</span>
-            {compteurs.revoques > 0 && <span className={styles.kpiSub}>{compteurs.revoques} révoqué{compteurs.revoques > 1 ? 's' : ''}</span>}
+            {(compteurs.revoques > 0 || compteurs.expires > 0) && (
+              <span className={styles.kpiSub}>
+                {[
+                  compteurs.revoques > 0 && `${compteurs.revoques} révoqué${compteurs.revoques > 1 ? 's' : ''}`,
+                  compteurs.expires > 0 && `${compteurs.expires} expiré${compteurs.expires > 1 ? 's' : ''}`,
+                ].filter(Boolean).join(' · ')}
+              </span>
+            )}
           </div>
         </div>
 
@@ -174,6 +187,9 @@ export default function DashboardEtablissement() {
             <span className={styles.kpiLabel}>En attente de validation</span>
             <span className={styles.kpiValue}>{chargement ? '—' : enAttente}</span>
             <span className={styles.kpiSub}>{compteurs.brouillons} brouillon{compteurs.brouillons > 1 ? 's' : ''} · {compteurs.enValidation} en cours</span>
+            {compteurs.rejetes > 0 && (
+              <span className={styles.kpiSubWarn}>{compteurs.rejetes} rejeté{compteurs.rejetes > 1 ? 's' : ''} — à corriger</span>
+            )}
           </div>
         </button>
 

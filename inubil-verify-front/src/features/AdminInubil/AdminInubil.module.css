@@ -125,54 +125,57 @@
   background-color: transparent;
 }
 
-/* ── Sous-menu en flyout collé au bord droit de la sidebar ── */
-.flyoutWrapper {
-  position: relative;
+/* ── Sous-menu en accordéon, integre a la sidebar (remplace l'ancien flyout en
+   popup blanc detache) ── */
+.accordionWrapper {
+  display: flex;
+  flex-direction: column;
 }
 
-.flyoutChevron {
+.accordionChevron {
   margin-left: auto;
   font-size: 1.1rem !important;
   opacity: 0.6;
+  transition: transform 0.15s ease;
 }
 
-.flyoutPanel {
-  position: fixed;
-  min-width: 220px;
-  background-color: #ffffff;
-  border: 1px solid var(--outline-variant);
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-  padding: 0.4rem;
+.accordionChevronOpen {
+  transform: rotate(180deg);
+}
+
+.accordionPanel {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  z-index: 40;
+  gap: 1px;
+  margin: 2px 0 4px 1.1rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.flyoutItem {
+.accordionItem {
   display: flex;
   align-items: center;
-  padding: 0.55rem 0.75rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 0.4rem;
   background: transparent;
   border: none;
-  color: var(--on-surface);
-  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   text-align: left;
-  transition: background-color 0.15s;
+  transition: background-color 0.15s, color 0.15s;
 }
 
-.flyoutItem:hover {
-  background-color: var(--surface-container-low);
+.accordionItem:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
-.flyoutItemActive {
-  composes: flyoutItem;
-  background-color: var(--surface-container-low);
-  color: var(--primary);
+.accordionItemActive {
+  composes: accordionItem;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--luxury-gold);
   font-weight: 700;
 }
 

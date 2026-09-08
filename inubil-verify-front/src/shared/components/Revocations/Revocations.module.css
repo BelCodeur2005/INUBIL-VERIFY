@@ -253,26 +253,39 @@
 .paginBtn:hover:not(:disabled) { border-color: #2b56cb; color: #2b56cb; }
 .paginBtn:disabled { opacity: 0.4; cursor: default; }
 
-/* ── Modale de confirmation ── */
+/* ── Drawer de confirmation ── */
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(15, 23, 42, 0.5);
   display: flex;
-  align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   z-index: 100;
-  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .modalContainer {
   background: #ffffff;
-  border-radius: 12px;
   width: 100%;
   max-width: 460px;
-  max-height: 88vh;
+  height: 100%;
   overflow-y: auto;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
+  animation: slideInRight 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modalOverlay, .modalContainer { animation: none; }
 }
 
 .modalHeader {

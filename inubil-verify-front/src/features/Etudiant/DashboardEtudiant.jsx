@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../../core/auth/useAuth';
 import AccountMenu from '../../shared/components/AccountMenu/AccountMenu';
 import NotificationsBell from '../../shared/components/NotificationsBell/NotificationsBell';
+import NotificationsPanel from '../../shared/components/NotificationsPanel/NotificationsPanel';
 import Logo_Inubil from '../../assets/Logo_Inubil.png';
 import styles from './DashboardEtudiant.module.css';
 import MesDiplomes from './Mes-diplomes/MesDiplomes.jsx';
@@ -71,6 +72,14 @@ export default function DashboardEtudiant() {
             <span>Vérifications</span>
           </button>
 
+          <button
+            onClick={() => setActiveMenu('notifications')}
+            className={`${styles.navBtn} ${activeMenu === 'notifications' ? styles.navBtnActive : ''}`}
+          >
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: activeMenu === 'notifications' ? "'FILL' 1" : "'FILL' 0" }}>notifications</span>
+            <span>Notifications</span>
+          </button>
+
         </nav>
 
         <nav className={styles.navBottom}>
@@ -94,7 +103,7 @@ export default function DashboardEtudiant() {
             <input type="search" placeholder="Rechercher un diplôme, une vérification..." className={styles.searchInput} />
           </div>
           <div className={styles.headerActions}>
-            <NotificationsBell />
+            <NotificationsBell onClick={() => setActiveMenu('notifications')} />
             <AccountMenu
               prenom={prenom}
               nom={nom}
@@ -120,6 +129,8 @@ export default function DashboardEtudiant() {
           {activeMenu === 'views' && <VerificationsActivite />}
 
           {activeMenu === 'settings' && <ParametresEtudiants />}
+
+          {activeMenu === 'notifications' && <NotificationsPanel />}
         </div>
       </main>
     </div>

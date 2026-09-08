@@ -4,6 +4,7 @@ import { useAuth } from '../../../core/auth/useAuth';
 import AccountMenu from '../../components/AccountMenu/AccountMenu';
 import NotificationsBell from '../../components/NotificationsBell/NotificationsBell';
 import { rechercherEtudiants } from '../../../core/etudiants/etudiants.api';
+import { listerDocuments } from '../../../core/documents/documents.api';
 import { ApiError } from '../../../core/api/client';
 import styles from './AppLayout.module.css';
 import Logo_Inubil from '../../../assets/Logo_Inubil.png';
@@ -58,7 +59,6 @@ const navItems = [
   {
     path: '/universite/registre',
     label: 'Registre Local',
-    badge: '1.2K',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="3" width="20" height="14" rx="2"/>
@@ -146,6 +146,13 @@ const bottomNavItems = [
 export default function AppLayout() {
   const { utilisateur, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Total reel de documents du registre — badge de nav "Registre Local"
+  // (remplace un badge factice fixe "1.2K" jamais branche a une donnee).
+  const [totalDocuments, setTotalDocuments] = useState(null);
+  useEffect(() => {
+    listerDocuments({ limit: 1 }).then((res) => setTotalDocuments(res.total ?? 0)).catch(() => {});
+  }, []);
 
   // ── Recherche globale (étudiants par nom/prénom/matricule) ──────────────────
   const [rechercheTexte, setRechercheTexte] = useState('');
@@ -236,7 +243,9 @@ export default function AppLayout() {
             >
               <span className={styles.navIcon}>{item.icon}</span>
               <span className={styles.navLabel}>{item.label}</span>
-              {item.badge && <span className={styles.navBadge}>{item.badge}</span>}
+              {item.path === '/universite/registre' && totalDocuments !== null && (
+                <span className={styles.navBadge}>{totalDocuments.toLocaleString('fr-FR')}</span>
+              )}
               {item.dot && <span className={styles.navDot}></span>}
             </NavLink>
           ))}
@@ -307,7 +316,7 @@ export default function AppLayout() {
           {/* Actions droite */}
           <div className={styles.headerRight}>
             {/* Cloche notifications */}
-            <NotificationsBell />
+            <NotificationsBell onClick={() => navigate('/universite/notifications')} />
 
             {/* Profil */}
             <AccountMenu

@@ -23,6 +23,7 @@ import EmissionDiplome from './shared/components/EmissionDiplome/EmissionDiplome
 import FicheEtudiant from './shared/components/FicheEtudiant/FicheEtudiant';
 import FileValidation from './shared/components/FileValidation/FileValidation';
 import Referentiels from './shared/components/Referentiels/Referentiels';
+import NotificationsPage from './features/universite/notifications/NotificationsPage';
 
 export default function App() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="support" element={<Support_Agent />} />
           <Route path="journal" element={<JournalActivites />} />
           <Route path="mon-compte" element={<MonComptePage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
 
         </Route>
 
