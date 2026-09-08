@@ -1,0 +1,109 @@
+.analyticsCard {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.analyticsCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.viewTitle {
+  margin: 0;
+  color: #0b192c;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.viewSubtitle {
+  margin: 3px 0 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 24px;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.legendDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+/* Couleurs — validées via dataviz/validate_palette.js (CVD + contraste) */
+.dotActif          { background-color: #10b981; }
+.dotEnValidation   { background-color: #c8871a; }
+.dotRevoque        { background-color: #ba1a1a; }
+.segActif          { background-color: #10b981; }
+.segEnValidation   { background-color: #c8871a; }
+.segRevoque        { background-color: #ba1a1a; }
+
+.repartitionTrack {
+  display: flex;
+  gap: 2px;
+  height: 28px;
+  border-radius: 7px;
+  overflow: hidden;
+  background-color: #e7e8e9;
+}
+
+.repartitionSegment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  transition: flex-grow 0.25s ease;
+}
+
+.repartitionSegment span {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.repartitionLegend {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 4px;
+}
+
+.repartitionLegendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.75rem;
+}
+
+.repartitionLegendLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #191c1d;
+}
+
+.repartitionLegendValue {
+  font-weight: 700;
+  color: #191c1d;
+}
+
+.repartitionLegendPct {
+  font-size: 0.68rem;
+  color: #737780;
+  font-weight: 500;
+}

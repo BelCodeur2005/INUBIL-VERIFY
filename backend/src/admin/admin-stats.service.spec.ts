@@ -38,9 +38,13 @@ describe('AdminStatsService', () => {
         .mockResolvedValueOnce(7);  // total
       prisma.documents.count
         .mockResolvedValueOnce(100) // total
-        .mockResolvedValueOnce(80)  // actifs
+        .mockResolvedValueOnce(12)  // brouillons
         .mockResolvedValueOnce(10)  // en_validation
-        .mockResolvedValueOnce(10); // revoques
+        .mockResolvedValueOnce(80)  // actifs
+        .mockResolvedValueOnce(10)  // revoques
+        .mockResolvedValueOnce(3)   // rejetes
+        .mockResolvedValueOnce(1)   // expires
+        .mockResolvedValueOnce(75); // ancres_blockchain
       prisma.verifications.count
         .mockResolvedValueOnce(500) // total
         .mockResolvedValueOnce(42); // ce_mois
@@ -53,9 +57,13 @@ describe('AdminStatsService', () => {
       expect(result.universites.actives).toBe(5);
       expect(result.universites.total).toBe(7);
       expect(result.documents.total).toBe(100);
-      expect(result.documents.actifs).toBe(80);
+      expect(result.documents.brouillons).toBe(12);
       expect(result.documents.en_validation).toBe(10);
+      expect(result.documents.actifs).toBe(80);
       expect(result.documents.revoques).toBe(10);
+      expect(result.documents.rejetes).toBe(3);
+      expect(result.documents.expires).toBe(1);
+      expect(result.documents.ancres_blockchain).toBe(75);
       expect(result.verifications.total).toBe(500);
       expect(result.verifications.ce_mois).toBe(42);
       expect(result.etudiants).toBe(200);

@@ -12,12 +12,16 @@ import {
 } from './AdminModals';
 import { listerConfigurations } from '../../core/configurations/configurations.api';
 import ListeDocuments from '../../shared/components/ListeDocuments/ListeDocuments';
+import TendanceChart from '../../shared/components/TendanceChart/TendanceChart';
+import { plageJours } from '../../shared/components/TendanceChart/plageJours';
+import RepartitionDocuments from '../../shared/components/RepartitionDocuments/RepartitionDocuments';
 import { listerRoles } from '../../core/roles/roles.api';
 import {
   listerUtilisateursAdmin,
   activerUtilisateurAdmin,
   desactiverUtilisateurAdmin,
   getStatistiquesGlobales,
+  getStatistiquesGraphe,
   declencherBackup,
   listerJournalAudit,
 } from '../../core/admin/admin.api';
@@ -25,16 +29,20 @@ import { assignerRole } from '../../core/utilisateurs/utilisateurs.api';
 import { ApiError } from '../../core/api/client';
 
 const LABELS_STATUT_UTILISATEUR = {
-  actif: 'Actif',
-  inactif: 'Inactif',
-  suspendu: 'Suspendu',
-  en_attente_email: 'Email non vérifié',
+  actif:         { label: 'Actif',    classe: 'statusActif' },
+  en_validation: { label: 'En cours', classe: 'statusEnCours' },
+  brouillon:     { label: 'En cours', classe: 'statusEnCours' },
+  revoque:       { label: 'Révoqué',  classe: 'statusRevoque' },
+  expire:        { label: 'Expiré',   classe: 'statusExpireDoc' },
 };
 
 const ROLE_LABELS = {
   super_admin: 'Super Administrateur',
   admin_istama: 'Administration INUBIL',
 };
+
+// TendanceChart et RepartitionDocuments sont maintenant des composants partages
+// (voir shared/components/) — reutilises tels quels par DashboardEtablissement.jsx.
 
 // Item de sidebar avec sous-menu en flyout collé au bord droit de la sidebar.
 // Le panneau est positionné en `fixed` (via portail) à partir de la position réelle
@@ -103,6 +111,14 @@ export default function AdminInubil() {
   const handleLogout = async () => {
     await logout();
   };
+
+  // ── Toast de retour d'action (remplace window.alert()) ──
+  const [toast, setToast] = useState(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   // États des Modales
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -189,6 +205,29 @@ export default function AdminInubil() {
     return () => { annule = true; };
   }, []);
 
+  // ── Tendance 30 jours (GET /admin/statistiques/graphe) ──
+  const [graphePoints, setGraphePoints] = useState([]);
+  const [grapheLoading, setGrapheLoading] = useState(true);
+  const [grapheError, setGrapheError] = useState(null);
+
+  useEffect(() => {
+    let annule = false;
+    const jours = plageJours(30);
+    getStatistiquesGraphe({ granularite: 'jour', debut: jours[0], fin: jours[jours.length - 1] })
+      .then((res) => {
+        if (annule) return;
+        const parJour = new Map((res ?? []).map((p) => [p.date, p]));
+        setGraphePoints(jours.map((date) => ({
+          date,
+          documents_emis: parJour.get(date)?.documents_emis ?? 0,
+          verifications: parJour.get(date)?.verifications ?? 0,
+        })));
+      })
+      .catch((err) => { if (!annule) setGrapheError(err instanceof ApiError ? err.message : 'Impossible de charger la tendance.'); })
+      .finally(() => { if (!annule) setGrapheLoading(false); });
+    return () => { annule = true; };
+  }, []);
+
   // ── Rôles (partagé entre l'onglet Utilisateurs et l'onglet Rôles & Permissions) ──
   const [roles, setRoles] = useState([]);
   const [rolesLoading, setRolesLoading] = useState(true);
@@ -242,12 +281,14 @@ export default function AdminInubil() {
     try {
       if (u.statut === 'actif') {
         await desactiverUtilisateurAdmin(u.id);
+        setToast({ type: 'success', message: `${u.prenom} ${u.nom} désactivé.` });
       } else {
         await activerUtilisateurAdmin(u.id);
+        setToast({ type: 'success', message: `${u.prenom} ${u.nom} activé.` });
       }
       await chargerUtilisateurs();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : 'Action impossible.');
+      setToast({ type: 'error', message: err instanceof ApiError ? err.message : 'Action impossible.' });
     } finally {
       setActionEnCours(null);
     }
@@ -258,9 +299,10 @@ export default function AdminInubil() {
     setActionEnCours(u.id);
     try {
       await assignerRole(u.id, roleId);
+      setToast({ type: 'success', message: 'Rôle mis à jour.' });
       await chargerUtilisateurs();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : 'Impossible de changer le rôle.');
+      setToast({ type: 'error', message: err instanceof ApiError ? err.message : 'Impossible de changer le rôle.' });
     } finally {
       setActionEnCours(null);
     }
@@ -387,47 +429,97 @@ export default function AdminInubil() {
         <main className={styles.mainContent}>
           {/* VUE 1 : STATISTIQUES GLOBALES */}
           {activeTab === 'statistiques' && (
-            <section className={styles.tableCard}>
-              <div className={styles.tableHeader}>
+            <>
+              <div className={styles.viewHeader}>
                 <div>
-                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Statistiques Globales</h3>
-                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Chiffres agrégés de la plateforme, toutes universités confondues.</p>
+                  <h2 className={styles.viewTitle} style={{ fontSize: '1.15rem' }}>Statistiques Globales</h2>
+                  <p className={styles.viewSubtitle}>Chiffres agrégés de la plateforme, toutes universités confondues.</p>
                 </div>
               </div>
-              {statsError && <p style={{ color: '#ba1a1a', fontSize: '0.8rem' }}>{statsError}</p>}
-              {statsLoading && <p style={{ fontSize: '0.8rem' }}>Chargement…</p>}
+
+              {statsError && <p className={styles.errorText}>{statsError}</p>}
+              {statsLoading && <p className={styles.chartLoadingState}>Chargement…</p>}
+
               {!statsLoading && stats && (
-                <section className={styles.kpiGrid}>
-                  <div className={styles.kpiCard}>
-                    <p className={styles.kpiLabel}>UNIVERSITÉS</p>
-                    <h3 className={styles.kpiValue}>{stats.universites.total}</h3>
-                    <p className={styles.kpiSub}>{stats.universites.actives} active{stats.universites.actives > 1 ? 's' : ''}</p>
-                  </div>
-                  <div className={styles.kpiCard}>
-                    <p className={styles.kpiLabel}>DOCUMENTS ÉMIS</p>
-                    <h3 className={styles.kpiValue}>{stats.documents.total}</h3>
-                    <p className={styles.kpiSub}>{stats.documents.actifs} actifs · {stats.documents.en_validation} en validation · {stats.documents.revoques} révoqués</p>
-                  </div>
-                  <div className={styles.kpiCard}>
-                    <p className={styles.kpiLabel}>VÉRIFICATIONS</p>
-                    <h3 className={styles.kpiValue}>{stats.verifications.total}</h3>
-                    <p className={styles.kpiSub}>{stats.verifications.ce_mois} ce mois-ci</p>
-                  </div>
-                  <div className={styles.kpiCard}>
-                    <p className={styles.kpiLabel}>ÉTUDIANTS</p>
-                    <h3 className={styles.kpiValue}>{stats.etudiants}</h3>
-                  </div>
-                  <div className={styles.kpiCard}>
-                    <p className={styles.kpiLabel}>UTILISATEURS</p>
-                    <h3 className={styles.kpiValue}>{stats.utilisateurs}</h3>
-                  </div>
-                  <div className={styles.kpiCard}>
-                    <p className={styles.kpiLabel}>PARTAGES ACTIFS</p>
-                    <h3 className={styles.kpiValue}>{stats.partages.actifs}</h3>
-                  </div>
-                </section>
+                <>
+                  <section className={styles.kpiGrid}>
+                    <div className={styles.kpiCard}>
+                      <div className={`${styles.kpiIconWrap} ${styles.kpiBlue}`}>
+                        <span className="material-symbols-outlined">account_balance</span>
+                      </div>
+                      <div>
+                        <p className={styles.kpiLabel}>Universités</p>
+                        <h3 className={styles.kpiValue}>{stats.universites.total}</h3>
+                        <p className={styles.kpiSub}>{stats.universites.actives} active{stats.universites.actives > 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+
+                    <div className={styles.kpiCard}>
+                      <div className={`${styles.kpiIconWrap} ${styles.kpiGold}`}>
+                        <span className="material-symbols-outlined">description</span>
+                      </div>
+                      <div>
+                        <p className={styles.kpiLabel}>Documents émis</p>
+                        <h3 className={styles.kpiValue}>{stats.documents.total}</h3>
+                        <p className={styles.kpiSub}>{stats.documents.actifs} actifs · {stats.documents.en_validation} en validation · {stats.documents.revoques} révoqués</p>
+                      </div>
+                    </div>
+
+                    <div className={styles.kpiCard}>
+                      <div className={`${styles.kpiIconWrap} ${styles.kpiGreen}`}>
+                        <span className="material-symbols-outlined">verified</span>
+                      </div>
+                      <div>
+                        <p className={styles.kpiLabel}>Vérifications</p>
+                        <h3 className={styles.kpiValue}>{stats.verifications.total}</h3>
+                        <p className={styles.kpiSub}>{stats.verifications.ce_mois} ce mois-ci</p>
+                      </div>
+                    </div>
+
+                    <div className={styles.kpiCard}>
+                      <div className={`${styles.kpiIconWrap} ${styles.kpiPurple}`}>
+                        <span className="material-symbols-outlined">school</span>
+                      </div>
+                      <div>
+                        <p className={styles.kpiLabel}>Étudiants</p>
+                        <h3 className={styles.kpiValue}>{stats.etudiants}</h3>
+                      </div>
+                    </div>
+
+                    <div className={styles.kpiCard}>
+                      <div className={`${styles.kpiIconWrap} ${styles.kpiSlate}`}>
+                        <span className="material-symbols-outlined">group</span>
+                      </div>
+                      <div>
+                        <p className={styles.kpiLabel}>Utilisateurs</p>
+                        <h3 className={styles.kpiValue}>{stats.utilisateurs}</h3>
+                      </div>
+                    </div>
+
+                    <div className={styles.kpiCard}>
+                      <div className={`${styles.kpiIconWrap} ${styles.kpiTeal}`}>
+                        <span className="material-symbols-outlined">share</span>
+                      </div>
+                      <div>
+                        <p className={styles.kpiLabel}>Partages actifs</p>
+                        <h3 className={styles.kpiValue}>{stats.partages.actifs}</h3>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className={styles.analyticsRow}>
+                    {grapheError ? (
+                      <div className={styles.analyticsCard}><p className={styles.errorText}>{grapheError}</p></div>
+                    ) : grapheLoading ? (
+                      <div className={styles.analyticsCard}><p className={styles.chartLoadingState}>Chargement de la tendance…</p></div>
+                    ) : (
+                      <TendanceChart points={graphePoints} />
+                    )}
+                    <RepartitionDocuments documents={stats.documents} />
+                  </section>
+                </>
               )}
-            </section>
+            </>
           )}
 
           {/* VUE : DOCUMENTS (toutes universités) */}
@@ -438,26 +530,26 @@ export default function AdminInubil() {
             <section className={styles.tableCard}>
               <div className={styles.tableHeader}>
                 <div>
-                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Gestion des Utilisateurs</h3>
-                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>{usersState.total} compte{usersState.total > 1 ? 's' : ''} sur la plateforme.</p>
+                  <h3 className={styles.viewTitle}>Gestion des Utilisateurs</h3>
+                  <p className={styles.viewSubtitle}>{usersState.total} compte{usersState.total > 1 ? 's' : ''} sur la plateforme.</p>
                 </div>
                 <button className={styles.btnPrimary} onClick={() => setIsUserModalOpen(true)}>
                   <span className="material-symbols-outlined">person_add</span> Inviter un Collaborateur
                 </button>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem', margin: '0 0 1rem', flexWrap: 'wrap' }}>
+              <div className={styles.filterRow}>
                 <input
                   type="search"
                   placeholder="Rechercher nom, prénom, email…"
                   value={usersSearch}
                   onChange={(e) => { setUsersPage(1); setUsersSearch(e.target.value); }}
-                  style={{ flex: '1 1 220px', padding: '0.5rem 0.75rem', borderRadius: '0.375rem', border: '1px solid var(--outline-variant)', fontSize: '0.8rem' }}
+                  className={styles.filterInput}
                 />
                 <select
                   value={usersFiltreStatut}
                   onChange={(e) => { setUsersPage(1); setUsersFiltreStatut(e.target.value); }}
-                  style={{ padding: '0.5rem 0.75rem', borderRadius: '0.375rem', border: '1px solid var(--outline-variant)', fontSize: '0.8rem' }}
+                  className={styles.filterSelect}
                 >
                   <option value="">Tous les statuts</option>
                   {Object.entries(LABELS_STATUT_UTILISATEUR).map(([val, label]) => (
@@ -467,14 +559,14 @@ export default function AdminInubil() {
                 <select
                   value={usersFiltreRole}
                   onChange={(e) => { setUsersPage(1); setUsersFiltreRole(e.target.value); }}
-                  style={{ padding: '0.5rem 0.75rem', borderRadius: '0.375rem', border: '1px solid var(--outline-variant)', fontSize: '0.8rem' }}
+                  className={styles.filterSelect}
                 >
                   <option value="">Tous les rôles</option>
                   {roles.map((r) => <option key={r.id} value={r.id}>{r.nom}</option>)}
                 </select>
               </div>
 
-              {usersError && <p style={{ color: '#ba1a1a', fontSize: '0.8rem' }}>{usersError}</p>}
+              {usersError && <p className={styles.errorText}>{usersError}</p>}
 
               <table className={styles.table}>
                 <thead>
@@ -489,10 +581,10 @@ export default function AdminInubil() {
                 </thead>
                 <tbody>
                   {usersLoading && (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Chargement…</td></tr>
+                    <tr><td colSpan={6} className={styles.tableEmptyCell}>Chargement…</td></tr>
                   )}
                   {!usersLoading && usersState.data.length === 0 && (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Aucun utilisateur ne correspond à ces filtres.</td></tr>
+                    <tr><td colSpan={6} className={styles.tableEmptyCell}>Aucun utilisateur ne correspond à ces filtres.</td></tr>
                   )}
                   {!usersLoading && usersState.data.map((usr) => (
                     <tr key={usr.id}>
@@ -505,7 +597,7 @@ export default function AdminInubil() {
                           value={usr.role?.id ?? ''}
                           onChange={(e) => changerRoleUtilisateur(usr, e.target.value)}
                           disabled={actionEnCours === usr.id || rolesLoading}
-                          style={{ fontSize: '0.7rem', padding: '0.2rem 0.4rem', borderRadius: '0.375rem', border: '1px solid var(--outline-variant)' }}
+                          className={styles.roleSelect}
                         >
                           <option value="" disabled>Sans rôle</option>
                           {roles.map((r) => <option key={r.id} value={r.id}>{r.nom}</option>)}
@@ -535,7 +627,7 @@ export default function AdminInubil() {
               </table>
 
               {usersState.totalPages > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                <div className={styles.paginationBar}>
                   <button
                     className={styles.btnSecondary}
                     onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
@@ -543,7 +635,7 @@ export default function AdminInubil() {
                   >
                     Précédent
                   </button>
-                  <span style={{ fontSize: '0.75rem', alignSelf: 'center' }}>Page {usersState.page} / {usersState.totalPages}</span>
+                  <span className={styles.paginationInfo}>Page {usersState.page} / {usersState.totalPages}</span>
                   <button
                     className={styles.btnSecondary}
                     onClick={() => setUsersPage((p) => Math.min(usersState.totalPages, p + 1))}
@@ -561,29 +653,29 @@ export default function AdminInubil() {
             <section className={styles.tableCard}>
               <div className={styles.tableHeader}>
                 <div>
-                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Journal des Logs d'Audit Globaux</h3>
-                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>{auditState.total} entrée{auditState.total > 1 ? 's' : ''}.</p>
+                  <h3 className={styles.viewTitle}>Journal des Logs d'Audit Globaux</h3>
+                  <p className={styles.viewSubtitle}>{auditState.total} entrée{auditState.total > 1 ? 's' : ''}.</p>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem', margin: '0 0 1rem', flexWrap: 'wrap' }}>
+              <div className={styles.filterRow}>
                 <input
                   type="text"
                   placeholder="Filtrer par action (ex: CREATE_DOCUMENT)"
                   value={auditFiltreAction}
                   onChange={(e) => { setAuditPage(1); setAuditFiltreAction(e.target.value); }}
-                  style={{ flex: '1 1 220px', padding: '0.5rem 0.75rem', borderRadius: '0.375rem', border: '1px solid var(--outline-variant)', fontSize: '0.8rem' }}
+                  className={styles.filterInput}
                 />
                 <input
                   type="text"
                   placeholder="Filtrer par module (ex: documents)"
                   value={auditFiltreModule}
                   onChange={(e) => { setAuditPage(1); setAuditFiltreModule(e.target.value); }}
-                  style={{ flex: '1 1 220px', padding: '0.5rem 0.75rem', borderRadius: '0.375rem', border: '1px solid var(--outline-variant)', fontSize: '0.8rem' }}
+                  className={styles.filterInput}
                 />
               </div>
 
-              {auditError && <p style={{ color: '#ba1a1a', fontSize: '0.8rem' }}>{auditError}</p>}
+              {auditError && <p className={styles.errorText}>{auditError}</p>}
 
               <table className={styles.table}>
                 <thead>
@@ -598,10 +690,10 @@ export default function AdminInubil() {
                 </thead>
                 <tbody>
                   {auditLoading && (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Chargement…</td></tr>
+                    <tr><td colSpan={6} className={styles.tableEmptyCell}>Chargement…</td></tr>
                   )}
                   {!auditLoading && auditState.data.length === 0 && (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Aucune entrée ne correspond à ces filtres.</td></tr>
+                    <tr><td colSpan={6} className={styles.tableEmptyCell}>Aucune entrée ne correspond à ces filtres.</td></tr>
                   )}
                   {!auditLoading && auditState.data.map((log) => (
                     <tr key={log.id}>
@@ -619,7 +711,7 @@ export default function AdminInubil() {
               </table>
 
               {auditTotalPages > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                <div className={styles.paginationBar}>
                   <button
                     className={styles.btnSecondary}
                     onClick={() => setAuditPage((p) => Math.max(1, p - 1))}
@@ -627,7 +719,7 @@ export default function AdminInubil() {
                   >
                     Précédent
                   </button>
-                  <span style={{ fontSize: '0.75rem', alignSelf: 'center' }}>Page {auditState.page} / {auditTotalPages}</span>
+                  <span className={styles.paginationInfo}>Page {auditState.page} / {auditTotalPages}</span>
                   <button
                     className={styles.btnSecondary}
                     onClick={() => setAuditPage((p) => Math.min(auditTotalPages, p + 1))}
@@ -645,11 +737,11 @@ export default function AdminInubil() {
             <section className={styles.tableCard}>
               <div className={styles.tableHeader}>
                 <div>
-                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Rôles & Permissions</h3>
-                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Catalogue des rôles métier et de leurs permissions RBAC.</p>
+                  <h3 className={styles.viewTitle}>Rôles & Permissions</h3>
+                  <p className={styles.viewSubtitle}>Catalogue des rôles métier et de leurs permissions RBAC.</p>
                 </div>
               </div>
-              {rolesError && <p style={{ color: '#ba1a1a', fontSize: '0.8rem' }}>{rolesError}</p>}
+              {rolesError && <p className={styles.errorText}>{rolesError}</p>}
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -661,7 +753,7 @@ export default function AdminInubil() {
                 </thead>
                 <tbody>
                   {rolesLoading && (
-                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Chargement…</td></tr>
+                    <tr><td colSpan={4} className={styles.tableEmptyCell}>Chargement…</td></tr>
                   )}
                   {!rolesLoading && roles.map((r) => (
                     <tr key={r.id}>
@@ -681,11 +773,11 @@ export default function AdminInubil() {
             <section className={styles.tableCard}>
               <div className={styles.tableHeader}>
                 <div>
-                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Paramètres Système</h3>
-                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Clés de configuration globales de la plateforme.</p>
+                  <h3 className={styles.viewTitle}>Paramètres Système</h3>
+                  <p className={styles.viewSubtitle}>Clés de configuration globales de la plateforme.</p>
                 </div>
               </div>
-              {configsError && <p style={{ color: '#ba1a1a', fontSize: '0.8rem' }}>{configsError}</p>}
+              {configsError && <p className={styles.errorText}>{configsError}</p>}
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -697,10 +789,10 @@ export default function AdminInubil() {
                 </thead>
                 <tbody>
                   {configsLoading && (
-                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Chargement…</td></tr>
+                    <tr><td colSpan={4} className={styles.tableEmptyCell}>Chargement…</td></tr>
                   )}
                   {!configsLoading && configs.length === 0 && (
-                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: '1.5rem', fontSize: '0.8rem' }}>Aucun paramètre enregistré.</td></tr>
+                    <tr><td colSpan={4} className={styles.tableEmptyCell}>Aucun paramètre enregistré.</td></tr>
                   )}
                   {!configsLoading && configs.map((c) => (
                     <tr key={c.id}>
@@ -723,7 +815,7 @@ export default function AdminInubil() {
               <div className={styles.bentoCard} style={{ gridColumn: 'span 6' }}>
                 <h3 style={{ color: 'var(--primary)', margin: '0 0 0.5rem 0' }}>Sauvegarde Manuelle</h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Déclenche un backup immédiat de la base (pg_dump) vers le stockage configuré.</p>
-                {backupErreur && <p style={{ color: '#ba1a1a', fontSize: '0.8rem' }}>{backupErreur}</p>}
+                {backupErreur && <p className={styles.errorText}>{backupErreur}</p>}
                 {backupResultat && (
                   <p style={{ color: '#166534', fontSize: '0.8rem' }}>
                     {backupResultat.message} — <span className={styles.mono}>{backupResultat.fichier}</span> ({backupResultat.tailleMo} Mo)
@@ -756,6 +848,12 @@ export default function AdminInubil() {
           onClose={() => setConfigEnEdition(null)}
           onSaved={chargerConfigurations}
         />
+      )}
+
+      {toast && (
+        <div className={toast.type === 'error' ? styles.actionToastError : styles.actionToastSuccess}>
+          {toast.message}
+        </div>
       )}
     </div>
   );

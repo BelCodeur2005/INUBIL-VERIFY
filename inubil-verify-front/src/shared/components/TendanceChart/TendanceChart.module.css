@@ -1,0 +1,131 @@
+.analyticsCard {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.analyticsCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.viewTitle {
+  margin: 0;
+  color: #0b192c;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.viewSubtitle {
+  margin: 3px 0 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.ghostToggleBtn {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  color: #2b56cb;
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ghostToggleBtn:hover { background-color: #f8fafc; }
+
+.chartLegend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.legendDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.chartSvgWrap { width: 100%; }
+
+.chartSvgWrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.chartTooltipBox {
+  background-color: #0b192c;
+  border-radius: 6px;
+  padding: 6px 9px;
+  color: #ffffff;
+  font-size: 0.62rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.chartTooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.chartEmptyState {
+  padding: 32px 16px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.miniTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.miniTable th {
+  text-align: left;
+  padding: 6px 10px;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.6rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.miniTable td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.miniTableScroll {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+/* Couleurs de série — validées via dataviz/validate_palette.js (CVD + contraste) */
+.seriesDocumentsStroke { stroke: #0350bd; }
+.seriesDocumentsFill   { fill: #0350bd; opacity: 0.12; }
+.seriesVerificationsStroke { stroke: #c8871a; }
+.seriesVerificationsFill   { fill: #c8871a; opacity: 0.12; }
+.dotDocuments      { background-color: #0350bd; }
+.dotVerifications  { background-color: #c8871a; }

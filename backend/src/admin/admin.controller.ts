@@ -107,8 +107,11 @@ export class AdminController {
   @ApiOperation({ summary: 'Lister les utilisateurs avec filtres (permission user:read)' })
   @ApiOkResponse({ description: 'Liste paginée d\'utilisateurs.' })
   @ApiResponse({ status: 403, description: 'Permission user:read requise.' })
-  listerUtilisateurs(@Query() query: UtilisateurQueryDto) {
-    return this.utilisateurs.lister(query);
+  listerUtilisateurs(
+    @Query() query: UtilisateurQueryDto,
+    @CurrentUser('id') acteurId: string,
+  ) {
+    return this.utilisateurs.lister(query, acteurId);
   }
 
   @Patch('utilisateurs/:id/activer')

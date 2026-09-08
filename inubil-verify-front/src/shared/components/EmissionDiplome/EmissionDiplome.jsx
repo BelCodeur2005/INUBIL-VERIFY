@@ -13,6 +13,9 @@ import {
   Sparkles,
   Loader2,
   AlertTriangle,
+  BookOpen,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '../../../core/auth/useAuth';
 import { rechercherEtudiants, creerEtudiant } from '../../../core/etudiants/etudiants.api';
@@ -35,6 +38,18 @@ const STEPS = [
   { id: 3, label: 'Document', icon: FileUp },
   { id: 4, label: 'Récapitulatif', icon: ClipboardCheck },
 ];
+
+const RESULTATS_MATIERE = [
+  { valeur: 'valide', label: 'Validé' },
+  { valeur: 'ajourne', label: 'Ajourné' },
+  { valeur: 'absent', label: 'Absent' },
+  { valeur: 'dispense', label: 'Dispensé' },
+];
+
+const MATIERE_VIDE = {
+  code_matiere: '', nom_matiere: '', credits: '', semestre: '',
+  note: '', note_max: '20', coefficient: '1', resultat: 'valide',
+};
 
 export default function EmissionDiplome() {
   const { utilisateur } = useAuth();
@@ -90,7 +105,33 @@ export default function EmissionDiplome() {
   const [loadingReferentiels, setLoadingReferentiels] = useState(true);
   const [referentielsError, setReferentielsError] = useState(null);
   const [diplome, setDiplome] = useState({ type_document_id: '', filiere: '', mention_id: '', date_emission: '', annee_academique: '' });
-  const step2Valid = Boolean(diplome.type_document_id && diplome.filiere && diplome.date_emission);
+  const typeSelectionne = typesDocument.find((t) => t.id === diplome.type_document_id);
+  const aDesMatieres = Boolean(typeSelectionne?.a_matieres);
+
+  const [matieres, setMatieres] = useState([]);
+  const ajouterMatiere = () => setMatieres((prev) => [...prev, { ...MATIERE_VIDE }]);
+  const retirerMatiere = (idx) => setMatieres((prev) => prev.filter((_, i) => i !== idx));
+  const majMatiere = (idx, champ) => (e) => {
+    const valeur = e.target.value;
+    setMatieres((prev) => prev.map((m, i) => (i === idx ? { ...m, [champ]: valeur } : m)));
+  };
+
+  const step2Valid = Boolean(
+    diplome.type_document_id && diplome.filiere && diplome.date_emission
+    && (!aDesMatieres || (matieres.length > 0 && matieres.every((m) => m.nom_matiere.trim()))),
+  );
+
+  // Moyenne generale calculee automatiquement (note ponderee par coefficient, ramenee
+  // sur 20 quel que soit le bareme de chaque matiere) — non modifiable manuellement,
+  // pour eviter toute incoherence avec les notes saisies par matiere.
+  const moyenneCalculee = (() => {
+    const notees = matieres.filter((m) => m.note !== '' && Number(m.note_max) > 0);
+    if (notees.length === 0) return null;
+    const sommePonderee = notees.reduce((acc, m) => acc + (Number(m.note) / Number(m.note_max)) * 20 * Number(m.coefficient || 1), 0);
+    const sommeCoeff = notees.reduce((acc, m) => acc + Number(m.coefficient || 1), 0);
+    if (sommeCoeff === 0) return null;
+    return Math.round((sommePonderee / sommeCoeff) * 100) / 100;
+  })();
 
   useEffect(() => {
     let annule = false;
@@ -142,6 +183,7 @@ export default function EmissionDiplome() {
     setSearchResults([]);
     setNewStudent({ nom: '', prenom: '', numero_etudiant: '', date_naissance: '' });
     setDiplome({ type_document_id: '', filiere: '', mention_id: '', date_emission: '', annee_academique: '' });
+    setMatieres([]);
     setSelectedFile(null);
   };
 
@@ -172,6 +214,22 @@ export default function EmissionDiplome() {
         filiere: diplome.filiere,
         ...(diplome.annee_academique ? { annee_academique: diplome.annee_academique } : {}),
         ...(diplome.mention_id ? { mention_id: diplome.mention_id } : {}),
+        ...(aDesMatieres && matieres.length > 0
+          ? {
+              matieres: matieres.map((m, i) => ({
+                code_matiere: m.code_matiere.trim() || undefined,
+                nom_matiere: m.nom_matiere.trim(),
+                credits: m.credits !== '' ? Number(m.credits) : undefined,
+                semestre: m.semestre !== '' ? Number(m.semestre) : undefined,
+                note: m.note !== '' ? Number(m.note) : undefined,
+                note_max: m.note_max !== '' ? Number(m.note_max) : undefined,
+                coefficient: m.coefficient !== '' ? Number(m.coefficient) : undefined,
+                resultat: m.resultat,
+                ordre: i,
+              })),
+              ...(moyenneCalculee !== null ? { moyenne_generale: moyenneCalculee } : {}),
+            }
+          : {}),
       });
 
       const documentAvecPdf = await uploaderPdf(document.id, selectedFile);
@@ -394,6 +452,83 @@ export default function EmissionDiplome() {
                 <input type="text" value={diplome.annee_academique} onChange={(e) => setDiplome({ ...diplome, annee_academique: e.target.value })} placeholder="ex : 2025-2026" />
               </div>
             </div>
+
+            {aDesMatieres && (
+              <div className={styles.matieresBlock}>
+                <div className={styles.matieresHeader}>
+                  <div>
+                    <h3 className={styles.matieresTitle}><BookOpen size={16} /> Matières</h3>
+                    <p className={styles.matieresSubtitle}>
+                      Ce type de document affiche un relevé de notes — renseignez au moins une matière.
+                    </p>
+                  </div>
+                  <button type="button" className={styles.addMatiereBtn} onClick={ajouterMatiere}>
+                    <Plus size={14} /> Ajouter une matière
+                  </button>
+                </div>
+
+                {matieres.length === 0 ? (
+                  <div className={styles.matieresEmpty}>
+                    <AlertTriangle size={16} /> Aucune matière renseignée — cliquez sur « Ajouter une matière ».
+                  </div>
+                ) : (
+                  <>
+                    <div className={styles.matiereTable}>
+                      {matieres.map((m, idx) => (
+                        <div className={styles.matiereCard} key={idx}>
+                          <div className={styles.matiereCardTop}>
+                            <input
+                              type="text"
+                              className={styles.matiereCode}
+                              value={m.code_matiere}
+                              onChange={majMatiere(idx, 'code_matiere')}
+                              placeholder="Code"
+                            />
+                            <input
+                              type="text"
+                              className={styles.matiereNomInput}
+                              value={m.nom_matiere}
+                              onChange={majMatiere(idx, 'nom_matiere')}
+                              placeholder="Nom de la matière — ex : Algorithmique"
+                            />
+                            <button type="button" className={styles.removeMatiereBtn} title="Retirer" onClick={() => retirerMatiere(idx)}>
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                          <div className={styles.matiereCardGrid}>
+                            <label>Crédits
+                              <input type="number" min={0} value={m.credits} onChange={majMatiere(idx, 'credits')} />
+                            </label>
+                            <label>Semestre
+                              <input type="number" min={1} max={6} value={m.semestre} onChange={majMatiere(idx, 'semestre')} />
+                            </label>
+                            <label>Note
+                              <input type="number" min={0} step="0.01" value={m.note} onChange={majMatiere(idx, 'note')} />
+                            </label>
+                            <label>Barème
+                              <input type="number" min={1} step="0.5" value={m.note_max} onChange={majMatiere(idx, 'note_max')} />
+                            </label>
+                            <label>Coeff.
+                              <input type="number" min={0} step="0.5" value={m.coefficient} onChange={majMatiere(idx, 'coefficient')} />
+                            </label>
+                            <label>Résultat
+                              <select value={m.resultat} onChange={majMatiere(idx, 'resultat')}>
+                                {RESULTATS_MATIERE.map((r) => <option key={r.valeur} value={r.valeur}>{r.label}</option>)}
+                              </select>
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className={styles.moyenneBar}>
+                      <span>Moyenne générale calculée</span>
+                      <strong>{moyenneCalculee !== null ? `${moyenneCalculee}/20` : '—'}</strong>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </section>
         )}
 
@@ -443,6 +578,11 @@ export default function EmissionDiplome() {
                   {diplome.mention_id ? `Mention ${mentions.find((m) => m.id === diplome.mention_id)?.nom} — ` : ''}
                   {diplome.annee_academique}
                 </p>
+                {aDesMatieres && (
+                  <p className={styles.recapMuted}>
+                    {matieres.length} matière{matieres.length > 1 ? 's' : ''} renseignée{matieres.length > 1 ? 's' : ''}
+                  </p>
+                )}
               </div>
               <div className={styles.recapBlock}>
                 <h3 className={styles.recapTitle}><FileText size={16} /> Document</h3>
