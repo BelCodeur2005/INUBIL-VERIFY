@@ -125,6 +125,12 @@ export class DocumentResponseDto {
   @ApiPropertyOptional({ format: 'uuid' })
   saisi_par: string | null;
 
+  @ApiPropertyOptional({
+    example: 'Bertrand KAMGA',
+    description: "Nom de l'agent ayant saisi le document — present uniquement sur la liste (GET /documents), pas sur le detail.",
+  })
+  saisi_par_nom: string | null;
+
   @ApiPropertyOptional({ format: 'uuid' })
   valide_par: string | null;
 

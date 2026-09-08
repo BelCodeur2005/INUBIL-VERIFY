@@ -270,14 +270,29 @@ export class DocumentsService {
       this.prisma.documents.count({ where }),
       this.prisma.documents.findMany({
         where,
-        include: { matieres_document: { orderBy: { ordre: 'asc' } } },
+        include: {
+          matieres_document: { orderBy: { ordre: 'asc' } },
+          utilisateurs_documents_saisi_parToutilisateurs: {
+            select: { nom: true, prenom: true },
+          },
+        },
         orderBy: { created_at: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
     ]);
 
-    return { total, page, limit, items };
+    // Nom de l'agent qui a saisi le document, resolu ici plutot que de faire porter
+    // au frontend l'appel a GET /utilisateurs/:id (directeur_pedagogique n'a pas la
+    // permission user:read — seul doc:read, deja requis pour cette route, est necessaire).
+    const itemsAvecCreateur = items.map((d) => ({
+      ...d,
+      saisi_par_nom: d.utilisateurs_documents_saisi_parToutilisateurs
+        ? `${d.utilisateurs_documents_saisi_parToutilisateurs.prenom} ${d.utilisateurs_documents_saisi_parToutilisateurs.nom}`
+        : null,
+    }));
+
+    return { total, page, limit, items: itemsAvecCreateur };
   }
 
   /** Export CSV des documents visibles par l'acteur — memes filtres que lister(), sans pagination (plafond 10 000 lignes). */

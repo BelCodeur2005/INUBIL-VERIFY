@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FileCheck2, ShieldCheck, XCircle, FileText, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Search, FileCheck2, ShieldCheck, XCircle, FileText, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../../core/auth/useAuth';
 import { listerDocuments, getUrlPdfPresignee, validerDocument, rejeterDocument } from '../../../core/documents/documents.api';
 import { listerTypesDocument } from '../../../core/types-document/types-document.api';
@@ -18,6 +18,20 @@ import styles from './FileValidation.module.css';
 // Rejeter) restent dans la meme carte plutot qu'une table + navigation separee, pour que le
 // motif de rejet et le justificatif restent visibles au moment de decider.
 
+/**
+ * "il y a X" depuis created_at — aide a reperer les documents qui attendent depuis
+ * longtemps. Definie au niveau module (pas dans le composant) : Date.now() est un appel
+ * impur, react-hooks/purity l'interdit dans le corps du rendu mais pas dans un helper importe.
+ */
+function attenteDepuis(dateIso) {
+  const minutes = Math.round((Date.now() - new Date(dateIso).getTime()) / 60000);
+  if (minutes < 60) return "en attente depuis moins d'1 h";
+  const heures = Math.round(minutes / 60);
+  if (heures < 24) return `en attente depuis ${heures} h`;
+  const jours = Math.round(heures / 24);
+  return `en attente depuis ${jours} j`;
+}
+
 export default function FileValidation() {
   const { utilisateur } = useAuth();
   const peutDecider = ['directeur_pedagogique', 'responsable_universite', 'super_admin'].includes(utilisateur?.role?.nom);
@@ -35,6 +49,7 @@ export default function FileValidation() {
   const [rejetOuvertId, setRejetOuvertId] = useState(null);
   const [motifRejet, setMotifRejet] = useState('');
   const [messageSucces, setMessageSucces] = useState(null);
+  const [rechercheInput, setRechercheInput] = useState('');
 
   useEffect(() => {
     listerTypesDocument({}).then(setTypesDocument).catch(() => {});
@@ -79,6 +94,17 @@ export default function FileValidation() {
     return e ? `${e.prenom} ${e.nom}` : '…';
   };
   const matriculeEtudiant = (id) => etudiantsCache[id]?.numero_etudiant ?? '';
+
+  const texteRecherche = rechercheInput.trim().toLowerCase();
+  const itemsFiltres = texteRecherche
+    ? items.filter((doc) => [
+        nomEtudiant(doc.etudiant_id),
+        matriculeEtudiant(doc.etudiant_id),
+        nomType(doc.type_document_id),
+        doc.numero_unique,
+        doc.saisi_par_nom,
+      ].some((champ) => champ?.toLowerCase().includes(texteRecherche)))
+    : items;
 
   const voirLePdf = async (doc) => {
     try {
@@ -143,11 +169,34 @@ export default function FileValidation() {
         </div>
       )}
 
+      {!loading && items.length > 0 && (
+        <div className={styles.searchWrap}>
+          <Search size={14} className={styles.searchIcon} />
+          <input
+            type="text"
+            className={styles.searchInput}
+            placeholder="Rechercher un étudiant, un matricule, un type de diplôme, un agent..."
+            value={rechercheInput}
+            onChange={(e) => setRechercheInput(e.target.value)}
+          />
+        </div>
+      )}
+
+      {!loading && items.length > 0 && itemsFiltres.length === 0 && (
+        <div className={styles.emptyState}>
+          <Search size={22} />
+          <p>Aucun résultat pour « {rechercheInput} ».</p>
+        </div>
+      )}
+
       <div className={styles.cardsList}>
-        {items.map((doc) => (
+        {itemsFiltres.map((doc) => (
           <div className={styles.card} key={doc.id}>
             <div className={styles.cardHeader}>
-              <span className={styles.numero}>{doc.numero_unique}</span>
+              <span className={styles.cardHeaderLeft}>
+                <span className={styles.numero}>{doc.numero_unique}</span>
+                <span className={styles.attente}>{attenteDepuis(doc.created_at)}</span>
+              </span>
               <span className={`${styles.badge} ${doc.statut === 'en_validation' ? styles.badgeEnValidation : styles.badgeBrouillon}`}>
                 {doc.statut === 'en_validation' ? 'En validation' : 'Brouillon'}
               </span>
@@ -173,6 +222,10 @@ export default function FileValidation() {
               <div className={styles.field}>
                 <span>Date d'émission</span>
                 <strong>{doc.date_emission ? new Date(doc.date_emission).toLocaleDateString('fr-FR') : '—'}</strong>
+              </div>
+              <div className={styles.field}>
+                <span>Saisi par</span>
+                <strong>{doc.saisi_par_nom ?? '—'}</strong>
               </div>
             </div>
 

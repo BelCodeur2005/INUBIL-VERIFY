@@ -259,6 +259,33 @@ describe('DocumentsService', () => {
         .where;
       expect(whereArg.universite_id).toBe(UNIV_ID);
     });
+
+    it("resout le nom de l'agent createur (saisi_par_nom) quand le document en a un", async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.count.mockResolvedValue(1);
+      prisma.documents.findMany.mockResolvedValue([
+        makeDocument({
+          utilisateurs_documents_saisi_parToutilisateurs: {
+            nom: 'KAMGA',
+            prenom: 'Bertrand',
+          },
+        }),
+      ]);
+
+      const result = await service.lister({}, ACTEUR_ID);
+
+      expect(result.items[0].saisi_par_nom).toBe('Bertrand KAMGA');
+    });
+
+    it('renvoie saisi_par_nom=null si le document n a pas de createur lie', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.count.mockResolvedValue(1);
+      prisma.documents.findMany.mockResolvedValue([makeDocument()]);
+
+      const result = await service.lister({}, ACTEUR_ID);
+
+      expect(result.items[0].saisi_par_nom).toBeNull();
+    });
   });
 
   // ── exporterCsv ────────────────────────────────────────────────────────
