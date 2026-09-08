@@ -16,6 +16,14 @@ class UniversiteBriefDto {
   nom: string;
 }
 
+class DepartementBriefDto {
+  @ApiProperty({ format: 'uuid' })
+  id: string;
+
+  @ApiProperty({ example: 'Génie Informatique' })
+  nom: string;
+}
+
 export class UtilisateurResponseDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
@@ -49,6 +57,12 @@ export class UtilisateurResponseDto {
 
   @ApiProperty({ type: UniversiteBriefDto, nullable: true })
   universite: UniversiteBriefDto | null;
+
+  @ApiProperty({
+    type: [DepartementBriefDto],
+    description: 'Départements associés (scope). Liste vide = aucune restriction (scolarité / autre rôle).',
+  })
+  departements: DepartementBriefDto[];
 
   @ApiProperty()
   created_at: Date;

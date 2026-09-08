@@ -16,6 +16,14 @@ class UniversiteBriefDto {
   nom: string;
 }
 
+class DepartementBriefDto {
+  @ApiProperty({ format: 'uuid' })
+  id: string;
+
+  @ApiProperty({ example: 'Génie Informatique' })
+  nom: string;
+}
+
 /** Profil complet de l'utilisateur connecte (`GET /auth/me`). */
 export class ProfileResponseDto {
   @ApiProperty({ format: 'uuid' })
@@ -44,6 +52,12 @@ export class ProfileResponseDto {
 
   @ApiProperty({ type: UniversiteBriefDto, nullable: true })
   universite: UniversiteBriefDto | null;
+
+  @ApiProperty({
+    type: [DepartementBriefDto],
+    description: "Departements d'affectation (chef de departement, scope). Liste vide = aucune restriction (scolarite / autre role).",
+  })
+  departements: DepartementBriefDto[];
 
   @ApiProperty({ description: 'Date de creation du compte.' })
   created_at: Date;

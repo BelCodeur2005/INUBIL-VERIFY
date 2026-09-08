@@ -59,6 +59,7 @@ const makeConfigurations = () => ({
 const makeActeur   = (univId: string | null = UNIV_ID) => ({
   universite_id: univId,
   roles_utilisateurs_role_idToroles: { nom: univId === null ? 'super_admin' : 'agent_saisie' },
+  departements: [],
 });
 
 const makeDocument = (overrides: any = {}) => ({

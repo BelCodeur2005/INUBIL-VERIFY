@@ -40,6 +40,12 @@ export class EtudiantAdminResponseDto {
   @ApiProperty({ example: 'ISTAMA INUBIL' })
   universite_nom: string;
 
+  @ApiPropertyOptional({ format: 'uuid', example: 'dept-0000-0000-0000-000000000001' })
+  departement_id: string | null;
+
+  @ApiPropertyOptional({ example: 'Génie Informatique' })
+  departement_nom: string | null;
+
   @ApiProperty({ example: 3, description: 'Nombre de documents émis pour cet étudiant' })
   nb_documents: number;
 

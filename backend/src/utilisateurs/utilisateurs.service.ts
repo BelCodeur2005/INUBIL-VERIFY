@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AssignerRoleDto } from './dto/assigner-role.dto';
+import { AssignerDepartementsDto } from './dto/assigner-departements.dto';
 import { ChangerStatutUtilisateurDto } from './dto/changer-statut-utilisateur.dto';
 import { UtilisateurQueryDto } from './dto/utilisateur-query.dto';
 import {
@@ -19,6 +20,7 @@ import {
 const INCLUDE_BRIEF = {
   roles_utilisateurs_role_idToroles: { select: { id: true, nom: true } },
   universites_utilisateurs_universite_idTouniversites: { select: { id: true, nom: true } },
+  departements: { select: { id: true, nom: true } },
 } as const;
 
 @Injectable()
@@ -28,17 +30,47 @@ export class UtilisateursService {
     private readonly audit: AuditService,
   ) {}
 
+  /**
+   * Universite de l'acteur, ou null UNIQUEMENT si son role est explicitement
+   * "super_admin" ou "admin_istama" (supervision inter-universites) — verifie
+   * par nom de role, jamais devine depuis l'absence d'universite. Tout autre
+   * utilisateur sans universite est refuse.
+   */
+  private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
+    const u = await this.prisma.utilisateurs.findFirst({
+      where: { id: acteurId },
+      select: {
+        universite_id: true,
+        roles_utilisateurs_role_idToroles: { select: { nom: true } },
+      },
+    });
+    const nomRole = u?.roles_utilisateurs_role_idToroles?.nom;
+    if (nomRole === 'super_admin' || nomRole === 'admin_istama') return null;
+    if (!u?.universite_id) {
+      throw new ForbiddenException("Vous n'êtes pas associé à une université");
+    }
+    return u.universite_id;
+  }
+
   // ─── LISTE ──────────────────────────────────────────────────────────
-  async lister(query: UtilisateurQueryDto): Promise<UtilisateurListResponseDto> {
+  async lister(query: UtilisateurQueryDto, acteurId: string): Promise<UtilisateurListResponseDto> {
+    const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
 
     const where: Prisma.utilisateursWhereInput = { deleted_at: null };
 
+    // Scoping multi-tenant : un responsable_universite ne voit que les comptes
+    // de sa propre universite, quoi que le query param demande.
+    if (acteurUnivId !== null) {
+      where.universite_id = acteurUnivId;
+    } else if (query.universite_id) {
+      where.universite_id = query.universite_id;
+    }
+
     if (query.statut) where.statut = query.statut;
     if (query.role_id) where.role_id = query.role_id;
-    if (query.universite_id) where.universite_id = query.universite_id;
     if (query.search) {
       const term = query.search.trim();
       where.OR = [
@@ -69,12 +101,16 @@ export class UtilisateursService {
   }
 
   // ─── DETAIL ─────────────────────────────────────────────────────────
-  async findOne(id: string): Promise<UtilisateurResponseDto> {
+  async findOne(id: string, acteurId: string): Promise<UtilisateurResponseDto> {
+    const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id, deleted_at: null },
       include: INCLUDE_BRIEF,
     });
     if (!u) throw new NotFoundException('Utilisateur introuvable');
+    if (acteurUnivId !== null && u.universite_id !== acteurUnivId) {
+      throw new ForbiddenException('Accès refusé : utilisateur d\'une autre université');
+    }
     return this.formater(u);
   }
 
@@ -91,10 +127,14 @@ export class UtilisateursService {
       );
     }
 
+    const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id, deleted_at: null },
     });
     if (!u) throw new NotFoundException('Utilisateur introuvable');
+    if (acteurUnivId !== null && u.universite_id !== acteurUnivId) {
+      throw new ForbiddenException('Accès refusé : utilisateur d\'une autre université');
+    }
 
     // Le statut en_attente_email est geré par le flux email - pas modifiable manuellement.
     if (u.statut === 'en_attente_email') {
@@ -128,10 +168,14 @@ export class UtilisateursService {
     acteurId: string,
     ip?: string,
   ): Promise<UtilisateurResponseDto> {
+    const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id, deleted_at: null },
     });
     if (!u) throw new NotFoundException('Utilisateur introuvable');
+    if (acteurUnivId !== null && u.universite_id !== acteurUnivId) {
+      throw new ForbiddenException('Accès refusé : utilisateur d\'une autre université');
+    }
 
     const role = await this.prisma.roles.findFirst({
       where: { id: dto.role_id },
@@ -156,6 +200,51 @@ export class UtilisateursService {
     return this.formater(updated);
   }
 
+  // ─── ASSIGNER DEPARTEMENTS (scope chef de departement / scolarite) ──
+  async assignerDepartements(
+    id: string,
+    dto: AssignerDepartementsDto,
+    acteurId: string,
+    ip?: string,
+  ): Promise<UtilisateurResponseDto> {
+    const acteurUnivId = await this.getActeurUniversiteId(acteurId);
+    const u = await this.prisma.utilisateurs.findFirst({
+      where: { id, deleted_at: null },
+    });
+    if (!u) throw new NotFoundException('Utilisateur introuvable');
+    if (acteurUnivId !== null && u.universite_id !== acteurUnivId) {
+      throw new ForbiddenException('Accès refusé : utilisateur d\'une autre université');
+    }
+
+    if (dto.departement_ids.length > 0) {
+      const count = await this.prisma.departements.count({
+        where: { id: { in: dto.departement_ids }, universite_id: u.universite_id ?? undefined },
+      });
+      if (count !== dto.departement_ids.length) {
+        throw new BadRequestException(
+          'Un ou plusieurs départements sont introuvables ou n\'appartiennent pas à l\'université de cet utilisateur',
+        );
+      }
+    }
+
+    const updated = await this.prisma.utilisateurs.update({
+      where: { id },
+      data: { departements: { set: dto.departement_ids.map((depId) => ({ id: depId })) } },
+      include: INCLUDE_BRIEF,
+    });
+
+    await this.audit.log({
+      utilisateurId: acteurId,
+      action: 'UTILISATEUR_DEPARTEMENTS_ASSIGNES',
+      module: 'utilisateurs',
+      enregistrementId: id,
+      tableConcernee: 'utilisateurs',
+      ip,
+    });
+
+    return this.formater(updated);
+  }
+
   // ─── Helpers ────────────────────────────────────────────────────────
   private formater(u: any): UtilisateurResponseDto {
     return {
@@ -170,6 +259,7 @@ export class UtilisateursService {
       derniere_connexion: u.derniere_connexion ?? null,
       role: u.roles_utilisateurs_role_idToroles ?? null,
       universite: u.universites_utilisateurs_universite_idTouniversites ?? null,
+      departements: u.departements ?? [],
       created_at: u.created_at,
     };
   }

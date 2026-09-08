@@ -25,6 +25,7 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { Permission } from '../auth/constants/permissions.constant';
 import { AssignerRoleDto } from './dto/assigner-role.dto';
+import { AssignerDepartementsDto } from './dto/assigner-departements.dto';
 import { ChangerStatutUtilisateurDto } from './dto/changer-statut-utilisateur.dto';
 import { UtilisateurQueryDto } from './dto/utilisateur-query.dto';
 import {
@@ -45,12 +46,16 @@ export class UtilisateursController {
   @RequirePermissions(Permission.USER_READ)
   @ApiOperation({
     summary: 'Liste paginée des utilisateurs (filtres : statut, role_id, universite_id, search)',
+    description: 'Un acteur lié à une université ne voit que les comptes de la sienne.',
   })
   @ApiOkResponse({ type: UtilisateurListResponseDto })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   @ApiResponse({ status: 403, description: 'Permission user:read requise.' })
-  lister(@Query() query: UtilisateurQueryDto): Promise<UtilisateurListResponseDto> {
-    return this.service.lister(query);
+  lister(
+    @Query() query: UtilisateurQueryDto,
+    @CurrentUser('id') acteurId: string,
+  ): Promise<UtilisateurListResponseDto> {
+    return this.service.lister(query, acteurId);
   }
 
   @Get(':id')
@@ -63,8 +68,9 @@ export class UtilisateursController {
   @ApiResponse({ status: 404, description: 'Utilisateur introuvable.' })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') acteurId: string,
   ): Promise<UtilisateurResponseDto> {
-    return this.service.findOne(id);
+    return this.service.findOne(id, acteurId);
   }
 
   @Patch(':id/statut')
@@ -102,5 +108,27 @@ export class UtilisateursController {
     @Req() req: Request,
   ): Promise<UtilisateurResponseDto> {
     return this.service.assignerRole(id, dto, acteurId, req.ip);
+  }
+
+  @Put(':id/departements')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(Permission.DEPT_EDIT)
+  @ApiOperation({
+    summary: 'Assigner un ou plusieurs départements à un utilisateur (scope chef de département / scolarité)',
+    description:
+      'Remplace la liste des départements associés. Liste vide = aucune restriction (compte "scolarité").',
+  })
+  @ApiOkResponse({ type: UtilisateurResponseDto })
+  @ApiResponse({ status: 400, description: 'Département(s) introuvable(s) pour l\'université de cet utilisateur.' })
+  @ApiResponse({ status: 401, description: 'Non authentifié.' })
+  @ApiResponse({ status: 403, description: 'Permission dept:edit requise.' })
+  @ApiResponse({ status: 404, description: 'Utilisateur introuvable.' })
+  assignerDepartements(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AssignerDepartementsDto,
+    @CurrentUser('id') acteurId: string,
+    @Req() req: Request,
+  ): Promise<UtilisateurResponseDto> {
+    return this.service.assignerDepartements(id, dto, acteurId, req.ip);
   }
 }

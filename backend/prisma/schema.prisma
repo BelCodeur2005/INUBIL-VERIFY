@@ -41,6 +41,30 @@ model configurations {
   utilisateurs   utilisateurs? @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
+/// Departements pedagogiques d'une universite (ex. "Genie Informatique", "Mecanique").
+/// Portee optionnelle pour les comptes agent_saisie/directeur_pedagogique, via la relation
+/// many-to-many `utilisateurs`: un compte SANS departement associe (liste vide) n'a aucune
+/// restriction (la scolarite, ou un directeur qui valide pour toute l'universite) ; un
+/// compte avec un ou plusieurs departements associes est restreint a ceux-ci (chef de
+/// departement, eventuellement de plusieurs departements a la fois). Voir etudiants.departement_id
+/// (un etudiant reste rattache a UN SEUL departement, sans changement).
+model departements {
+  id            String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code          String         @db.VarChar(50)
+  nom           String         @db.VarChar(150)
+  universite_id String         @db.Uuid
+  est_actif     Boolean        @default(true)
+  ordre         Int            @default(0)
+  created_at    DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime       @default(now()) @db.Timestamptz(6)
+  universites   universites    @relation(fields: [universite_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  etudiants     etudiants[]
+  utilisateurs  utilisateurs[] @relation("utilisateurs_departements")
+
+  @@unique([code, universite_id])
+  @@index([universite_id], map: "idx_departements_universite_id")
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model documents {
   id                                               String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
@@ -145,6 +169,7 @@ model etudiants {
   telephone                                           String?             @db.VarChar(50)
   photo_url                                           String?             @db.VarChar(500)
   universite_id                                       String              @db.Uuid
+  departement_id                                      String?             @db.Uuid
   annee_entree                                        Int?
   metadata                                            Json                @default("{}")
   deleted_at                                          DateTime?           @db.Timestamptz(6)
@@ -154,6 +179,7 @@ model etudiants {
   documents                                           documents[]
   utilisateurs_etudiants_created_byToutilisateurs     utilisateurs?       @relation("etudiants_created_byToutilisateurs", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   universites                                         universites         @relation(fields: [universite_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  departements                                        departements?       @relation(fields: [departement_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   utilisateurs_etudiants_utilisateur_idToutilisateurs utilisateurs?       @relation("etudiants_utilisateur_idToutilisateurs", fields: [utilisateur_id], references: [id], onUpdate: NoAction)
   invitations                                         invitations[]
   partages_document                                   partages_document[]
@@ -161,6 +187,7 @@ model etudiants {
   @@index([email], map: "idx_etudiants_email")
   @@index([numero_etudiant], map: "idx_etudiants_numero")
   @@index([universite_id], map: "idx_etudiants_universite_id")
+  @@index([departement_id], map: "idx_etudiants_departement_id")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -459,6 +486,7 @@ model universites {
   updated_at                                                                      DateTime                  @default(now()) @db.Timestamptz(6)
   created_by                                                                      String?                   @db.Uuid
   cles_api                                                                        cles_api[]
+  departements                                                                    departements[]
   documents                                                                       documents[]
   etudiants                                                                       etudiants[]
   invitations                                                                     invitations[]
@@ -525,6 +553,9 @@ model utilisateurs {
   other_utilisateurs                                  utilisateurs[]            @relation("utilisateursToutilisateurs")
   roles_utilisateurs_role_idToroles                   roles?                    @relation("utilisateurs_role_idToroles", fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   universites_utilisateurs_universite_idTouniversites universites?              @relation("utilisateurs_universite_idTouniversites", fields: [universite_id], references: [id], onUpdate: NoAction)
+  // Many-to-many : liste vide = aucune restriction (scolarite, ou directeur qui valide
+  // pour toute l'universite) ; un ou plusieurs departements = compte restreint a ceux-ci.
+  departements                                        departements[]            @relation("utilisateurs_departements")
   verifications                                       verifications[]
   webhooks                                            webhooks[]
 

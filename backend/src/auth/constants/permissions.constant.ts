@@ -47,6 +47,12 @@ export enum Permission {
   // ── Étudiants ─────────────────────────────────────────────────────────────
   STUDENT_READ = 'student:read',
 
+  // ── Départements ──────────────────────────────────────────────────────────
+  DEPT_READ   = 'dept:read',
+  DEPT_CREATE = 'dept:create',
+  DEPT_EDIT   = 'dept:edit',
+  DEPT_DELETE = 'dept:delete',
+
   // ── Statistiques & Audit ──────────────────────────────────────────────────
   STATS_READ = 'stats:read',
   AUDIT_READ = 'audit:read',

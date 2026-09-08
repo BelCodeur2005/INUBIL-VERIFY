@@ -33,7 +33,7 @@ const makeEtudiant = (overrides: Record<string, unknown> = {}) => ({
 
 const makePrisma = () => ({
   utilisateurs: {
-    findFirst: jest.fn().mockResolvedValue({ universite_id: UNIV_ID }),
+    findFirst: jest.fn().mockResolvedValue({ universite_id: UNIV_ID, departements: [] }),
   },
   universites: {
     findFirst: jest.fn().mockResolvedValue({ id: UNIV_ID, statut: 'active', deleted_at: null }),

@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search, Plus, Pencil, Trash2, X, Loader2, AlertTriangle, UserX,
-  FileText, Save, ChevronLeft, ChevronRight, Cake, MapPin, Flag, Mail, Phone, GraduationCap,
+  FileText, Save, Cake, MapPin, Flag, Mail, Phone, GraduationCap,
 } from 'lucide-react';
 import {
   rechercherEtudiants, creerEtudiant, modifierEtudiant, supprimerEtudiant,
 } from '../../../core/etudiants/etudiants.api';
+import { listerDepartements } from '../../../core/departements/departements.api';
 import { useAuth } from '../../../core/auth/useAuth';
 import { ApiError } from '../../../core/api/client';
+import Pagination from '../Pagination/Pagination';
 import styles from './FicheEtudiant.module.css';
 
 // Fiche Étudiant (docs/ROLES_ET_PAGES.md §D item 16, GET/POST/PATCH/DELETE /admin/etudiants).
@@ -19,7 +21,7 @@ import styles from './FicheEtudiant.module.css';
 
 const CHAMPS_VIDES = {
   numero_etudiant: '', nom: '', prenom: '', date_naissance: '',
-  lieu_naissance: '', nationalite: '', email: '', telephone: '', annee_entree: '',
+  lieu_naissance: '', nationalite: '', email: '', telephone: '', annee_entree: '', departement_id: '',
 };
 
 const PALETTE_AVATAR = ['#2b56cb', '#0f766e', '#9333ea', '#b45309', '#be123c', '#0369a1'];
@@ -47,6 +49,7 @@ function mapVersForm(e) {
     email: e.email ?? '',
     telephone: e.telephone ?? '',
     annee_entree: e.annee_entree ?? '',
+    departement_id: e.departement_id ?? '',
   };
 }
 
@@ -62,6 +65,7 @@ function construirePayload(form) {
   if (form.email.trim()) payload.email = form.email.trim();
   if (form.telephone.trim()) payload.telephone = form.telephone.trim();
   if (form.annee_entree) payload.annee_entree = Number(form.annee_entree);
+  if (form.departement_id) payload.departement_id = form.departement_id;
   return payload;
 }
 
@@ -86,13 +90,28 @@ export default function FicheEtudiant() {
   const { utilisateur } = useAuth();
   const navigate = useNavigate();
   const universiteId = utilisateur?.universite?.id;
+  // Chef de departement (compte scope a un ou plusieurs departements) : le choix est
+  // restreint a ceux-ci (impose, non modifiable, si un seul). Scolarite (compte non
+  // scope, liste vide) : peut choisir n'importe quel departement de l'universite.
+  const acteurDepartements = utilisateur?.departements ?? [];
 
-  const [rechercheInput, setRechercheInput] = useState('');
-  const [recherche, setRecherche] = useState('');
+  const [departements, setDepartements] = useState([]);
+  useEffect(() => {
+    listerDepartements({ universiteId }).then(setDepartements).catch(() => {});
+  }, [universiteId]);
+
+  // Recherche initiale possible via ?q= (venant de la recherche globale de l'en-tête) —
+  // dans ce cas, si la recherche ne remonte qu'un seul etudiant, on l'ouvre directement.
+  const [searchParams] = useSearchParams();
+  const requeteInitiale = searchParams.get('q') ?? '';
+  const autoSelectionRef = useRef(Boolean(requeteInitiale));
+
+  const [rechercheInput, setRechercheInput] = useState(requeteInitiale);
+  const [recherche, setRecherche] = useState(requeteInitiale);
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const limit = 20;
+  const limit = 50;
   const [loadingListe, setLoadingListe] = useState(true);
   const [erreurListe, setErreurListe] = useState(null);
 
@@ -112,6 +131,13 @@ export default function FicheEtudiant() {
     return () => clearTimeout(t);
   }, [rechercheInput]);
 
+  const selectionner = (e) => {
+    setSelectionne(e);
+    setForm(mapVersForm(e));
+    setMode('vue');
+    setErreurForm(null);
+  };
+
   useEffect(() => {
     let annule = false;
     (async () => {
@@ -122,6 +148,10 @@ export default function FicheEtudiant() {
         if (annule) return;
         setItems(res.data ?? []);
         setTotal(res.total ?? 0);
+        if (autoSelectionRef.current) {
+          autoSelectionRef.current = false;
+          if (res.data?.length === 1) selectionner(res.data[0]);
+        }
       } catch (err) {
         if (annule) return;
         setErreurListe(err instanceof ApiError ? err.message : 'Impossible de charger les étudiants.');
@@ -134,16 +164,9 @@ export default function FicheEtudiant() {
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
-  const selectionner = (e) => {
-    setSelectionne(e);
-    setForm(mapVersForm(e));
-    setMode('vue');
-    setErreurForm(null);
-  };
-
   const demarrerCreation = () => {
     setSelectionne(null);
-    setForm(CHAMPS_VIDES);
+    setForm({ ...CHAMPS_VIDES, departement_id: acteurDepartements.length === 1 ? acteurDepartements[0].id : '' });
     setErreurForm(null);
     setMode('creation');
   };
@@ -246,6 +269,18 @@ export default function FicheEtudiant() {
         <label>Année d'entrée
           <input type="number" value={form.annee_entree} onChange={majChamp('annee_entree')} min={1990} max={2100} />
         </label>
+        <label>Département
+          {acteurDepartements.length === 1 ? (
+            <input value={acteurDepartements[0].nom} disabled title="Imposé par votre compte (chef de département)" />
+          ) : (
+            <select value={form.departement_id} onChange={majChamp('departement_id')}>
+              <option value="">— Non renseigné —</option>
+              {(acteurDepartements.length > 0 ? acteurDepartements : departements).map((d) => (
+                <option key={d.id} value={d.id}>{d.nom}</option>
+              ))}
+            </select>
+          )}
+        </label>
       </div>
       <div className={styles.formActions}>
         <button type="button" className={styles.cancelBtn} onClick={annuler}>Annuler</button>
@@ -304,13 +339,7 @@ export default function FicheEtudiant() {
           ))}
         </div>
 
-        <div className={styles.pagination}>
-          <span>{total === 0 ? 'Aucun résultat' : `Page ${page} / ${totalPages} — ${total}`}</span>
-          <div className={styles.paginBtns}>
-            <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}><ChevronLeft size={14} /></button>
-            <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}><ChevronRight size={14} /></button>
-          </div>
-        </div>
+        <Pagination page={page} totalPages={totalPages} total={total} onChange={setPage} itemLabel="étudiant" />
       </div>
 
       <div className={styles.detailPanel}>
@@ -380,6 +409,7 @@ export default function FicheEtudiant() {
                   <h3>Scolarité</h3>
                   <div className={styles.champsGrid}>
                     <Champ icon={<GraduationCap size={15} />} label="Établissement" value={selectionne.universite_nom} />
+                    <Champ icon={<GraduationCap size={15} />} label="Département" value={selectionne.departement_nom} />
                     <Champ icon={<GraduationCap size={15} />} label="Année d'entrée" value={selectionne.annee_entree} />
                     <Champ icon={<FileText size={15} />} label="Documents émis" value={selectionne.nb_documents} />
                   </div>

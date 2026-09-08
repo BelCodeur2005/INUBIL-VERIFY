@@ -20,6 +20,7 @@ import { AdminModule } from './admin/admin.module';
 import { PartagesModule } from './partages/partages.module';
 import { TypesDocumentModule } from './types-document/types-document.module';
 import { MentionsModule } from './mentions/mentions.module';
+import { DepartementsModule } from './departements/departements.module';
 import { EtudiantsAdminModule } from './etudiants-admin/etudiants-admin.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -56,6 +57,7 @@ import { BackupModule } from './backup/backup.module';
     PartagesModule,
     TypesDocumentModule,
     MentionsModule,
+    DepartementsModule,
     EtudiantsAdminModule,
     BlockchainModule,
     NotificationsModule,

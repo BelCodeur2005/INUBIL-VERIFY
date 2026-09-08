@@ -68,6 +68,7 @@ stats:read
 ```
 doc:create, doc:validate, doc:revoke, doc:read
 student:read
+dept:read
 stats:read
 ```
 
@@ -75,7 +76,10 @@ stats:read
 ```
 doc:create, doc:read
 student:read
+dept:read
 ```
+
+**Portée département (2026-09-08, many-to-many)** : `utilisateurs` porte une relation many-to-many vers `departements` (table de liaison implicite Prisma, relation `utilisateurs_departements`) — un compte peut être associé à **zéro, un ou plusieurs** départements. Zéro département (la scolarité) = aucune restriction, voit tous les départements de l'université. Un ou plusieurs départements (chef de département, ex. Mécanique + Génie Info sur un même compte) = restreint aux étudiants/documents de ces départements uniquement. Le filtrage est appliqué côté backend (`getActeurDepartementIds()` dans `etudiants-admin.service.ts` / `documents.service.ts`, `{ in: [...] }` sur `departement_id`) — pas seulement côté frontend. Gestion des départements eux-mêmes : `dept:create/edit/delete` réservé à `responsable_universite` (onglet "Départements" de la page Référentiels, lecture seule pour les autres rôles). **Attribution des départements à un compte** : onglet "Attribution" de la page Référentiels (visible uniquement pour `responsable_universite`), qui liste les comptes `agent_saisie`/`directeur_pedagogique` et permet de cocher leurs départements via `PUT /utilisateurs/:id/departements` (permission `dept:edit`).
 
 ### `etudiant`, `autre_universite`, `employeur`
 Aucune permission RBAC. Accès via des endpoints protégés par JWT seul (`/etudiants/moi/*`, `/verifications/mes-verifications`, `/verify/*` public) — jamais par `@RequirePermissions`.
@@ -162,13 +166,17 @@ Aucune permission RBAC. Accès via des endpoints protégés par JWT seul (`/etud
 
 ## 4. Ce qu'il ne faut PAS construire
 
-Les pages actuelles de `inubil-verify-front/` (`AdminInubil.jsx`, `DashboardDirecteur.jsx`) introduisent des concepts qui **n'existent pas côté backend** et ne doivent pas être repris tels quels dans la refonte :
+`DashboardDirecteur.jsx` a été supprimé le 2026-09-07 : `directeur_pedagogique` est désormais fusionné dans `/universite` (layout partagé avec `agent_saisie`/`responsable_universite`), avec sa propre entrée de navigation "File de Validation" (`/universite/validation`, visible uniquement pour `directeur_pedagogique`/`responsable_universite`).
+
+`AdminInubil.jsx` introduit encore des concepts qui **n'existent pas côté backend** et ne doivent pas être repris tels quels dans une refonte :
 
 - "Manifeste" / validation par lot (le backend valide un document à la fois)
 - Signature "HSM"
 - "Crédits" / "quotas blockchain" par établissement
 - Établissements partenaires actifs avec quota individuel (contraire à la décision mono-université)
 
+À noter également : `DashboardEtablissement.jsx` (index de `/universite`) affiche encore des données **entièrement fictives** (liste de diplômes, KPIs, statut de nœud blockchain) — non branché sur `GET /admin/statistiques` ni `GET /documents`, contrairement à ce que son apparence suggère. À corriger séparément.
+
 ---
 
-*Dernière mise à jour : conception issue de l'analyse RBAC du backend, session du 2026-08-19.*
+*Dernière mise à jour : fusion directeur_pedagogique / suppression DashboardDirecteur.jsx, session du 2026-09-07.*

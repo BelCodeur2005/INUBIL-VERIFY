@@ -15,14 +15,29 @@
  *   5. Type document Licence en Informatique (categorie diplome)
  *   6. Mention       Assez Bien (12-14/20)
  *   7. Etudiant      KAMGA Bertrand (ISTAMA-2023-0001)
+ *   8. Compte agent de saisie (agent@inubil.com / Agent123!)
+ *   9. Compte directeur pedagogique (directeur@inubil.com / Directeur123!)
+ *  10. Document de test (INUB-2026-0001, statut brouillon, pour KAMGA Bertrand)
+ *  11. Compte espace etudiant, lie a KAMGA Bertrand (test.etudiant@inubil.com / Test1234!)
+ *  12. Departements Genie Informatique (GI) et Mecanique (MECA)
+ *  13. Compte chef de departement Mecanique, scope (chef.meca@inubil.com / ChefMeca123!)
  */
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
 const DEFAULT_ADMIN_EMAIL = 'admin@inubil.com';
 const DEFAULT_ADMIN_PASSWORD = 'Admin123!';
+const DEFAULT_AGENT_EMAIL = 'agent@inubil.com';
+const DEFAULT_AGENT_PASSWORD = 'Agent123!';
+const DEFAULT_DIRECTEUR_EMAIL = 'directeur@inubil.com';
+const DEFAULT_DIRECTEUR_PASSWORD = 'Directeur123!';
+const DEFAULT_ETUDIANT_EMAIL = 'test.etudiant@inubil.com';
+const DEFAULT_ETUDIANT_PASSWORD = 'Test1234!';
+const DEFAULT_CHEF_MECA_EMAIL = 'chef.meca@inubil.com';
+const DEFAULT_CHEF_MECA_PASSWORD = 'ChefMeca123!';
 
 const PERMISSIONS: Array<{ nom: string; module: string; description: string }> = [
   // ── Universités ──────────────────────────────────────────────────────────
@@ -57,6 +72,12 @@ const PERMISSIONS: Array<{ nom: string; module: string; description: string }> =
 
   // ── Étudiants ────────────────────────────────────────────────────────────
   { nom: 'student:read', module: 'etudiants', description: "Consulter le dossier academique d'un etudiant" },
+
+  // ── Départements ─────────────────────────────────────────────────────────
+  { nom: 'dept:read',   module: 'departements', description: 'Consulter les departements de l\'universite' },
+  { nom: 'dept:create', module: 'departements', description: 'Creer un departement' },
+  { nom: 'dept:edit',   module: 'departements', description: 'Modifier un departement' },
+  { nom: 'dept:delete', module: 'departements', description: 'Supprimer un departement' },
 
   // ── Statistiques & Audit ─────────────────────────────────────────────────
   { nom: 'stats:read', module: 'statistiques', description: 'Consulter les statistiques de la plateforme' },
@@ -115,6 +136,7 @@ const ROLES_METIER: Array<{ nom: string; description: string; permissions: strin
       'role:read', 'role:create',
       'stats:read', 'audit:read',
       'doc:read',
+      'dept:read',
     ],
   },
   {
@@ -124,6 +146,7 @@ const ROLES_METIER: Array<{ nom: string; description: string; permissions: strin
       'user:read', 'user:edit', 'user:assign_role',
       'doc:create', 'doc:validate', 'doc:revoke', 'doc:read',
       'student:read',
+      'dept:read', 'dept:create', 'dept:edit', 'dept:delete',
       'api:read', 'api:create', 'api:delete',
       'webhook:read', 'webhook:create', 'webhook:edit', 'webhook:delete',
       'partner:read', 'partner:create', 'partner:edit', 'partner:delete',
@@ -133,12 +156,14 @@ const ROLES_METIER: Array<{ nom: string; description: string; permissions: strin
   {
     nom: 'directeur_pedagogique',
     description: 'Validation academique — cumule les droits de saisie de agent_saisie (peut aussi saisir), plus valider/rejeter/revoquer',
-    permissions: ['doc:create', 'doc:validate', 'doc:revoke', 'doc:read', 'student:read', 'stats:read'],
+    permissions: ['doc:create', 'doc:validate', 'doc:revoke', 'doc:read', 'student:read', 'dept:read', 'stats:read'],
   },
   {
     nom: 'agent_saisie',
-    description: 'Saisie des diplomes et fiches etudiant — pas de droit de validation ni de revocation',
-    permissions: ['doc:create', 'doc:read', 'student:read'],
+    description: 'Saisie des diplomes et fiches etudiant — pas de droit de validation ni de revocation. ' +
+      'Un compte sans departement associe (scolarite) saisit pour tous les departements ; avec un ou plusieurs ' +
+      'departements (chef de departement), restreint a ceux-ci (cf. etudiants-admin.service.ts / documents.service.ts).',
+    permissions: ['doc:create', 'doc:read', 'student:read', 'dept:read'],
   },
   {
     nom: 'etudiant',
@@ -414,6 +439,22 @@ async function main(): Promise<void> {
   }
   console.log(`${configurationsSysteme.length} configurations systeme upserted.`);
 
+  // ── 8bis. Départements de test (Genie Informatique, Mecanique) ─────────────
+  const departementsSeed = [
+    { code: 'GI', nom: 'Génie Informatique', ordre: 1 },
+    { code: 'MECA', nom: 'Mécanique', ordre: 2 },
+  ];
+  const departementsParCode: Record<string, { id: string }> = {};
+  for (const d of departementsSeed) {
+    const dep = await prisma.departements.upsert({
+      where: { code_universite_id: { code: d.code, universite_id: universite.id } },
+      update: { nom: d.nom },
+      create: { code: d.code, nom: d.nom, universite_id: universite.id, ordre: d.ordre },
+    });
+    departementsParCode[d.code] = dep;
+  }
+  console.log(`${departementsSeed.length} departement(s) upserted pour ISTAMA INUBIL.`);
+
   // ── 9. Étudiant de test ─────────────────────────────────────────────────────
   const numeroEtudiant = 'ISTAMA-2023-0001';
   const etudiantExistant = await prisma.etudiants.findFirst({
@@ -430,6 +471,7 @@ async function main(): Promise<void> {
         lieu_naissance: 'Douala',
         nationalite: 'Camerounaise',
         universite_id: universite.id,
+        departement_id: departementsParCode['GI'].id,
         annee_entree: 2023,
         created_by: admin.id,
       },
@@ -439,10 +481,248 @@ async function main(): Promise<void> {
     console.log(`Etudiant deja present : ${etudiantExistant.nom} ${etudiantExistant.prenom} (${etudiantExistant.id})`);
   }
 
+  // ── 10. Compte agent de saisie de test ──────────────────────────────────────
+  const agentEmail = DEFAULT_AGENT_EMAIL;
+  const agentPassword = DEFAULT_AGENT_PASSWORD;
+  const roleAgentSaisie = await prisma.roles.findFirst({
+    where: { nom: 'agent_saisie', universite_id: null },
+  });
+  if (!roleAgentSaisie) {
+    throw new Error('Role "agent_saisie" introuvable — verifier ROLES_METIER.');
+  }
+
+  let agent = await prisma.utilisateurs.findUnique({ where: { email: agentEmail } });
+  if (agent) {
+    await prisma.utilisateurs.update({
+      where: { email: agentEmail },
+      data: { tentatives_connexion: 0, bloque_jusqu: null },
+    });
+    console.log(`Compte agent de saisie deja present : ${agentEmail} (deverrouille, mot de passe inchange).`);
+  } else {
+    const rounds = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12);
+    const motDePasseHacheAgent = await bcrypt.hash(agentPassword, rounds);
+    agent = await prisma.utilisateurs.create({
+      data: {
+        nom: 'Saisie',
+        prenom: 'Agent',
+        email: agentEmail,
+        mot_de_passe: motDePasseHacheAgent,
+        statut: 'actif',
+        email_verifie: true,
+        role_id: roleAgentSaisie.id,
+        universite_id: universite.id,
+      },
+    });
+    console.log(`Compte agent de saisie cree : ${agentEmail}`);
+    console.log(`  mot de passe (defaut dev) : ${agentPassword}`);
+  }
+
+  // ── 10bis. Compte chef de departement Mecanique de test (SCOPE, contrairement
+  // au compte agent ci-dessus qui reste une "scolarite" sans departement associe) ─
+  const chefMecaEmail = DEFAULT_CHEF_MECA_EMAIL;
+  const chefMecaPassword = DEFAULT_CHEF_MECA_PASSWORD;
+  let chefMeca = await prisma.utilisateurs.findUnique({ where: { email: chefMecaEmail } });
+  if (chefMeca) {
+    await prisma.utilisateurs.update({
+      where: { email: chefMecaEmail },
+      data: {
+        tentatives_connexion: 0,
+        bloque_jusqu: null,
+        departements: { set: [{ id: departementsParCode['MECA'].id }] },
+      },
+    });
+    console.log(`Compte chef de departement (Mecanique) deja present : ${chefMecaEmail} (deverrouille, mot de passe inchange).`);
+  } else {
+    const rounds = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12);
+    const motDePasseHacheChefMeca = await bcrypt.hash(chefMecaPassword, rounds);
+    chefMeca = await prisma.utilisateurs.create({
+      data: {
+        nom: 'Chef',
+        prenom: 'Mecanique',
+        email: chefMecaEmail,
+        mot_de_passe: motDePasseHacheChefMeca,
+        statut: 'actif',
+        email_verifie: true,
+        role_id: roleAgentSaisie.id,
+        universite_id: universite.id,
+        departements: { connect: [{ id: departementsParCode['MECA'].id }] },
+      },
+    });
+    console.log(`Compte chef de departement (Mecanique) cree : ${chefMecaEmail}`);
+    console.log(`  mot de passe (defaut dev) : ${chefMecaPassword}`);
+  }
+
+  // ── 11. Compte directeur pedagogique de test ────────────────────────────────
+  const directeurEmail = DEFAULT_DIRECTEUR_EMAIL;
+  const directeurPassword = DEFAULT_DIRECTEUR_PASSWORD;
+  const roleDirecteur = await prisma.roles.findFirst({
+    where: { nom: 'directeur_pedagogique', universite_id: null },
+  });
+  if (!roleDirecteur) {
+    throw new Error('Role "directeur_pedagogique" introuvable — verifier ROLES_METIER.');
+  }
+
+  let directeur = await prisma.utilisateurs.findUnique({ where: { email: directeurEmail } });
+  if (directeur) {
+    await prisma.utilisateurs.update({
+      where: { email: directeurEmail },
+      data: { tentatives_connexion: 0, bloque_jusqu: null },
+    });
+    console.log(`Compte directeur pedagogique deja present : ${directeurEmail} (deverrouille, mot de passe inchange).`);
+  } else {
+    const rounds = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12);
+    const motDePasseHacheDirecteur = await bcrypt.hash(directeurPassword, rounds);
+    directeur = await prisma.utilisateurs.create({
+      data: {
+        nom: 'Pedagogique',
+        prenom: 'Directeur',
+        email: directeurEmail,
+        mot_de_passe: motDePasseHacheDirecteur,
+        statut: 'actif',
+        email_verifie: true,
+        role_id: roleDirecteur.id,
+        universite_id: universite.id,
+      },
+    });
+    console.log(`Compte directeur pedagogique cree : ${directeurEmail}`);
+    console.log(`  mot de passe (defaut dev) : ${directeurPassword}`);
+  }
+
+  // ── 12. Compte espace etudiant, lie a KAMGA Bertrand ────────────────────────
+  // NB : mot de passe TOUJOURS reinitialise a la valeur par defaut (contrairement
+  // a l'admin/agent/directeur) — c'est un compte de test jetable, pas un compte
+  // "reel" a preserver ; on privilegie un identifiant qui marche a coup sur.
+  {
+    const roleEtudiant = await prisma.roles.findFirst({
+      where: { nom: 'etudiant', universite_id: null },
+    });
+    if (!roleEtudiant) {
+      throw new Error('Role "etudiant" introuvable — verifier ROLES_METIER.');
+    }
+    const etudiantKamgaAuth = await prisma.etudiants.findFirst({
+      where: { numero_etudiant: numeroEtudiant, deleted_at: null },
+    });
+
+    const rounds = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12);
+    const motDePasseHacheEtudiant = await bcrypt.hash(DEFAULT_ETUDIANT_PASSWORD, rounds);
+
+    const compteEtudiant = await prisma.utilisateurs.upsert({
+      where: { email: DEFAULT_ETUDIANT_EMAIL },
+      update: {
+        mot_de_passe: motDePasseHacheEtudiant,
+        statut: 'actif',
+        tentatives_connexion: 0,
+        bloque_jusqu: null,
+      },
+      create: {
+        nom: 'Etudiant',
+        prenom: 'Test',
+        email: DEFAULT_ETUDIANT_EMAIL,
+        mot_de_passe: motDePasseHacheEtudiant,
+        statut: 'actif',
+        email_verifie: true,
+        role_id: roleEtudiant.id,
+        universite_id: universite.id,
+      },
+    });
+    console.log(`Compte espace etudiant : ${DEFAULT_ETUDIANT_EMAIL} / ${DEFAULT_ETUDIANT_PASSWORD} (mot de passe reinitialise)`);
+
+    if (etudiantKamgaAuth && etudiantKamgaAuth.utilisateur_id !== compteEtudiant.id) {
+      await prisma.etudiants.update({
+        where: { id: etudiantKamgaAuth.id },
+        data: { utilisateur_id: compteEtudiant.id },
+      });
+      console.log(`  lie a l'etudiant KAMGA Bertrand (${etudiantKamgaAuth.id})`);
+    }
+  }
+
+  // ── 13. Document de test en attente de validation (releve pour KAMGA Bertrand) ──
+  // NB : verifie l'ABSENCE d'un document brouillon/en_validation pour cet etudiant,
+  // pas seulement un numero_unique fixe — un document saisi/valide manuellement
+  // via l'appli (ex. INUB-2026-0001 deja "actif") ne doit pas bloquer la creation
+  // d'un second document de demo destine a peupler la file de validation.
+  let numeroUniqueTest: string;
+  {
+    const typeDocDiplome = await prisma.types_document.findFirst({
+      where: { code: 'LIC-INFO', universite_id: universite.id },
+    });
+    const mentionAB = await prisma.mentions_document.findFirst({
+      where: { code: 'AB', universite_id: universite.id },
+    });
+    const etudiantKamga = await prisma.etudiants.findFirst({
+      where: { numero_etudiant: numeroEtudiant, deleted_at: null },
+    });
+
+    const enAttente = await prisma.documents.findFirst({
+      where: { etudiant_id: etudiantKamga?.id, statut: { in: ['brouillon', 'en_validation'] }, deleted_at: null },
+    });
+
+    if (enAttente) {
+      numeroUniqueTest = enAttente.numero_unique;
+      if (!enAttente.pdf_url || !enAttente.hash_sha256) {
+        const hashFictif = crypto.createHash('sha256').update(`seed-${numeroUniqueTest}`).digest('hex');
+        const pdfKeyFictif = `universites/${universite.id}/diplomes/2026/07/${numeroUniqueTest}.pdf`;
+        await prisma.documents.update({
+          where: { id: enAttente.id },
+          data: { hash_sha256: hashFictif, pdf_url: pdfKeyFictif, pdf_taille_ko: 128 },
+        });
+        console.log(`Document en attente de validation complete (PDF/hash factices) : ${numeroUniqueTest}`);
+      } else {
+        console.log(`Document en attente de validation deja present : ${numeroUniqueTest} (statut ${enAttente.statut})`);
+      }
+    } else if (!typeDocDiplome || !etudiantKamga) {
+      numeroUniqueTest = '';
+      console.warn('  ATTENTION : type de document ou etudiant introuvable — document de test non cree.');
+    } else {
+      const prefix = 'INUB-2026-';
+      const dernier = await prisma.documents.findFirst({
+        where: { numero_unique: { startsWith: prefix } },
+        orderBy: { numero_unique: 'desc' },
+        select: { numero_unique: true },
+      });
+      const seq = dernier ? parseInt(dernier.numero_unique.replace(prefix, ''), 10) + 1 : 1;
+      numeroUniqueTest = `${prefix}${String(seq).padStart(4, '0')}`;
+
+      // hash_sha256 + pdf_url factices : simulent l'etape POST /documents/:id/pdf (upload agent)
+      // sans fichier reellement stocke sur S3/R2 — necessaire pour que le document apparaisse
+      // dans la file de validation (FileValidation.jsx filtre sur pdf_url && hash_sha256, meme
+      // regle cote backend dans documents.service.ts#valider). "Voir le PDF" echouera donc
+      // (aucun objet reel dans le bucket), mais Valider/Rejeter fonctionnent normalement.
+      const hashFictif = crypto.createHash('sha256').update(`seed-${numeroUniqueTest}`).digest('hex');
+      const pdfKeyFictif = `universites/${universite.id}/diplomes/2026/07/${numeroUniqueTest}.pdf`;
+
+      const document = await prisma.documents.create({
+        data: {
+          numero_unique: numeroUniqueTest,
+          etudiant_id: etudiantKamga.id,
+          universite_id: universite.id,
+          type_document_id: typeDocDiplome.id,
+          date_emission: new Date('2026-07-15'),
+          annee_academique: '2025-2026',
+          lieu_delivrance: 'Douala',
+          filiere: 'Informatique',
+          mention_id: mentionAB?.id ?? null,
+          moyenne_generale: 13.5,
+          statut: 'brouillon',
+          saisi_par: agent.id,
+          hash_sha256: hashFictif,
+          pdf_url: pdfKeyFictif,
+          pdf_taille_ko: 128,
+        },
+      });
+      console.log(`Document de test cree : ${document.numero_unique} (statut ${document.statut}, PDF/hash factices — "Voir le PDF" ne fonctionnera pas)`);
+    }
+  }
+
   // ── Résumé ──────────────────────────────────────────────────────────────────
   console.log('\n=== SEED TERMINE ===');
   console.log(`Admin     : ${adminEmail} / ${motDePasseFourniParEnv ? '(env)' : adminPassword}`);
+  console.log(`Agent     : ${agentEmail} / ${agentPassword} (scolarite, tous departements)`);
+  console.log(`Chef Meca : ${chefMecaEmail} / ${chefMecaPassword} (scope departement Mecanique)`);
+  console.log(`Directeur : ${directeurEmail} / ${directeurPassword}`);
+  console.log(`Etudiant  : ${DEFAULT_ETUDIANT_EMAIL} / ${DEFAULT_ETUDIANT_PASSWORD}`);
   console.log(`Universite: ${universite.nom_court}  id=${universite.id}`);
+  console.log(`Document  : ${numeroUniqueTest}`);
 
   const typeDoc = await prisma.types_document.findFirst({
     where: { code: 'LIC-INFO', universite_id: universite.id },

@@ -86,6 +86,29 @@ export class DocumentsService {
     }
   }
 
+  /**
+   * Departements de l'acteur — liste vide si non renseignes (compte "scolarite" :
+   * voit tous les departements, ou super_admin). Un compte "chef de departement"
+   * (un ou plusieurs departements associes) est restreint aux documents des
+   * etudiants de ces departements — cf. lister/creer/trouver ci-dessous.
+   */
+  private async getActeurDepartementIds(acteurId: string): Promise<string[]> {
+    const u = await this.prisma.utilisateurs.findFirst({
+      where: { id: acteurId },
+      select: { departements: { select: { id: true } } },
+    });
+    return u?.departements.map((d) => d.id) ?? [];
+  }
+
+  private assertMemeDepartement(
+    etudiantDepartementId: string | null,
+    acteurDepartementIds: string[],
+  ): void {
+    if (acteurDepartementIds.length > 0 && !acteurDepartementIds.includes(etudiantDepartementId ?? '')) {
+      throw new ForbiddenException('Accès refusé : document d\'un étudiant d\'un autre département');
+    }
+  }
+
   private async trouverOuEchouer(id: string) {
     const doc = await this.prisma.documents.findFirst({
       where: { id, deleted_at: null },
@@ -113,15 +136,20 @@ export class DocumentsService {
 
   async creer(dto: CreerDocumentDto, acteurId: string, ip?: string) {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
+    const acteurDeptIds = await this.getActeurDepartementIds(acteurId);
 
     // Détermine l'université : super-admin doit fournir l'univ via l'étudiant
     const etudiant = await this.prisma.etudiants.findFirst({
       where: { id: dto.etudiant_id, deleted_at: null },
-      select: { universite_id: true },
+      select: { universite_id: true, departement_id: true },
     });
     if (!etudiant) throw new NotFoundException('Étudiant introuvable');
 
     this.assertMemeUniversite(etudiant.universite_id, acteurUnivId);
+    // Un chef de departement (un ou plusieurs) ne peut saisir un document que
+    // pour un etudiant de l'un de ses departements (la scolarite, sans
+    // departement associe, saisit pour n'importe quel departement de l'universite).
+    this.assertMemeDepartement(etudiant.departement_id, acteurDeptIds);
 
     const typeDoc = await this.prisma.types_document.findFirst({
       where: { id: dto.type_document_id, est_actif: true },
@@ -186,6 +214,7 @@ export class DocumentsService {
 
   async lister(query: DocumentQueryDto, acteurId: string) {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
+    const acteurDeptIds = await this.getActeurDepartementIds(acteurId);
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
@@ -196,6 +225,12 @@ export class DocumentsService {
       where.universite_id = acteurUnivId;
     } else if (query.universite_id) {
       where.universite_id = query.universite_id;
+    }
+
+    // Chef de departement : restreint aux documents des etudiants de l'un de
+    // ses departements (jointure via etudiants, la table documents n'a pas ce champ).
+    if (acteurDeptIds.length > 0) {
+      where.etudiants = { departement_id: { in: acteurDeptIds } };
     }
 
     if (query.statut) where.statut = query.statut;
@@ -223,8 +258,16 @@ export class DocumentsService {
 
   async trouver(id: string, acteurId: string) {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
+    const acteurDeptIds = await this.getActeurDepartementIds(acteurId);
     const doc = await this.trouverOuEchouer(id);
     this.assertMemeUniversite(doc.universite_id, acteurUnivId);
+    if (acteurDeptIds.length > 0) {
+      const etudiant = await this.prisma.etudiants.findFirst({
+        where: { id: doc.etudiant_id },
+        select: { departement_id: true },
+      });
+      this.assertMemeDepartement(etudiant?.departement_id ?? null, acteurDeptIds);
+    }
     return doc;
   }
 

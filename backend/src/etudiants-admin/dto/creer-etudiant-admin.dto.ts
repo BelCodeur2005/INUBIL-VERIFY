@@ -36,6 +36,15 @@ export class CreerEtudiantAdminDto {
   @IsUUID()
   universite_id: string;
 
+  @ApiPropertyOptional({
+    format: 'uuid',
+    example: 'dept-0000-0000-0000-000000000001',
+    description: 'Département (obligatoire si l\'acteur est un chef de département — imposé automatiquement au sien, ignoré si fourni)',
+  })
+  @IsOptional()
+  @IsUUID()
+  departement_id?: string;
+
   @ApiPropertyOptional({ example: '2001-03-15', description: 'Date de naissance (ISO 8601)' })
   @IsOptional()
   @IsDateString()

@@ -362,6 +362,7 @@ export class AuthService {
         universites_utilisateurs_universite_idTouniversites: {
           select: { id: true, nom: true },
         },
+        departements: { select: { id: true, nom: true } },
       },
     });
     if (!user) {
@@ -378,6 +379,7 @@ export class AuthService {
       langue: user.langue,
       role: user.roles_utilisateurs_role_idToroles ?? null,
       universite: user.universites_utilisateurs_universite_idTouniversites ?? null,
+      departements: user.departements,
       created_at: user.created_at,
     };
   }
