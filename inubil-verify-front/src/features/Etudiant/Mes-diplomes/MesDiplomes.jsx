@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Search,
   Share2,
@@ -16,11 +16,15 @@ import {
   Building2,
   FileCheck2,
   ShieldCheck,
+  ImageDown,
   Loader2
 } from 'lucide-react';
 import { listerMesDocuments, getUrlPdfMonDocument } from '../../../core/etudiants/etudiants.api';
 import { ApiError } from '../../../core/api/client';
+import { useAuth } from '../../../core/auth/useAuth';
 import DiplomaThumbnail from './DiplomaThumbnail';
+import DiplomaBadge from '../../../shared/components/DiplomaBadge/DiplomaBadge';
+import { genererQrDataUrl, telechargerBadgePng } from '../../../shared/components/DiplomaBadge/DiplomaBadge.download';
 import styles from './MesDiplomes.module.css';
 
 const LABELS_RESEAU = {
@@ -49,6 +53,7 @@ function fmtDate(iso) {
 }
 
 export default function MesDiplomes({ searchTerm: searchTermProp, onSearchTermChange } = {}) {
+  const { utilisateur } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(null);
@@ -62,6 +67,9 @@ export default function MesDiplomes({ searchTerm: searchTermProp, onSearchTermCh
   const [copiedShareId, setCopiedShareId] = useState(null);
   const [selectedDiploma, setSelectedDiploma] = useState(null);
   const [telechargementId, setTelechargementId] = useState(null);
+  const [badgeEnCoursId, setBadgeEnCoursId] = useState(null);
+  const [badgeData, setBadgeData] = useState(null); // { doc, qrDataUrl } | null, le temps de la capture
+  const badgeRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -95,6 +103,43 @@ export default function MesDiplomes({ searchTerm: searchTermProp, onSearchTermCh
     setCopiedShareId(id);
     setTimeout(() => setCopiedShareId(null), 2000);
   };
+
+  // Badge visuel partageable (LinkedIn, CV) — genere le QR puis monte DiplomaBadge
+  // hors-champ ; l'effet ci-dessous capture des que le badge + la police ont fini de peindre.
+  const handleTelechargerBadge = async (doc, e) => {
+    e.stopPropagation();
+    if (!doc.url_verification) return;
+    setBadgeEnCoursId(doc.id);
+    try {
+      const qrDataUrl = await genererQrDataUrl(doc.url_verification);
+      setBadgeData({ doc, qrDataUrl });
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : 'Génération du badge impossible.');
+      setBadgeEnCoursId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!badgeData) return;
+    let annule = false;
+    (async () => {
+      try {
+        await document.fonts.ready;
+        // laisse le badge hors-champ peindre avant la capture (police + QR)
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        if (annule) return;
+        await telechargerBadgePng(badgeRef.current, `badge-${badgeData.doc.numero_unique}.png`);
+      } catch (err) {
+        if (!annule) setErreur(err instanceof ApiError ? err.message : 'Génération du badge impossible.');
+      } finally {
+        if (!annule) {
+          setBadgeData(null);
+          setBadgeEnCoursId(null);
+        }
+      }
+    })();
+    return () => { annule = true; };
+  }, [badgeData]);
 
   const handleTelecharger = async (doc, e) => {
     e.stopPropagation();
@@ -277,6 +322,16 @@ export default function MesDiplomes({ searchTerm: searchTermProp, onSearchTermCh
                         {copiedShareId === doc.id ? <Check size={14} color="#10b981" /> : <Share2 size={14} />}
                       </button>
                     )}
+                    {doc.statut === 'actif' && (
+                      <button
+                        className={styles.secondaryActionBtn}
+                        title="Télécharger le badge de vérification (image pour LinkedIn, CV...)"
+                        onClick={(e) => handleTelechargerBadge(doc, e)}
+                        disabled={badgeEnCoursId === doc.id}
+                      >
+                        {badgeEnCoursId === doc.id ? <Loader2 size={14} className={styles.spin} /> : <ImageDown size={14} />}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -354,6 +409,23 @@ export default function MesDiplomes({ searchTerm: searchTermProp, onSearchTermCh
           </div>
         );
       })()}
+
+      {/* Badge rendu hors-champ, uniquement le temps de la capture PNG (cf. handleTelechargerBadge). */}
+      {badgeData && (
+        <div style={{ position: 'fixed', top: 0, left: '-9999px' }}>
+          <DiplomaBadge
+            ref={badgeRef}
+            prenom={utilisateur?.prenom ?? ''}
+            nom={utilisateur?.nom ?? ''}
+            typeDocument={badgeData.doc.type_document}
+            mention={badgeData.doc.mention}
+            universite={badgeData.doc.universite}
+            numeroUnique={badgeData.doc.numero_unique}
+            dateEmission={badgeData.doc.date_emission}
+            qrDataUrl={badgeData.qrDataUrl}
+          />
+        </div>
+      )}
     </div>
   );
 }

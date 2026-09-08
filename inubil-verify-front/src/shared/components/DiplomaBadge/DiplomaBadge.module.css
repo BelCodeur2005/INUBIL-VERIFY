@@ -1,0 +1,148 @@
+.badge {
+  width: 480px;
+  height: 640px;
+  background: #f6f8fc;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: #0b192c;
+}
+
+.frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 40px 44px 32px 44px;
+  border: 1.5px solid #2b56cb;
+  outline: 1px solid #cbae52;
+  outline-offset: -8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.wordmark {
+  margin: 0 0 34px 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #2b56cb;
+}
+
+.seal {
+  width: 88px;
+  height: 88px;
+  min-height: 88px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #fdfbf3 0%, #f1e4bd 100%);
+  border: 2.5px solid #b8922c;
+  box-shadow: 0 0 0 4px #f6f8fc, 0 0 0 5px #e3d4a1;
+  color: #2b56cb;
+  margin-bottom: 24px;
+  flex-shrink: 0;
+}
+
+.name {
+  margin: 0 0 7px 0;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-weight: 600;
+  font-size: 29px;
+  line-height: 1.15;
+  color: #0b192c;
+}
+
+.diploma {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #33456b;
+  max-width: 360px;
+}
+
+.universite {
+  margin: 9px 0 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #2b56cb;
+}
+
+.divider {
+  width: 44px;
+  height: 1px;
+  background: #cbae52;
+  margin: 24px 0;
+  flex-shrink: 0;
+}
+
+.metaRow {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.qrBlock {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 26px;
+}
+
+.qr {
+  width: 108px;
+  height: 108px;
+  padding: 7px;
+  background: #ffffff;
+  border: 1px solid #dbe2f0;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.qrCaption {
+  text-align: left;
+}
+
+.qrLabel {
+  margin: 0;
+  font-size: 10.5px;
+  color: #8a94a6;
+}
+
+.reference {
+  margin: 3px 0 0 0;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #0b192c;
+}
+
+.qrHint {
+  margin: 6px 0 0 0;
+  font-size: 10.5px;
+  color: #8a94a6;
+  max-width: 190px;
+  line-height: 1.4;
+}
+
+.footer {
+  margin-top: auto;
+}
+
+.tagline {
+  margin: 0 0 4px 0;
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.domain {
+  margin: 2px 0 0 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #9c7616;
+}
