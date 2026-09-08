@@ -40,6 +40,7 @@ const makePrisma = () => ({
     count: jest.fn(),
   },
   matieres_document: {},
+  transactions_blockchain: { create: jest.fn() },
 });
 
 const makeAudit = () => ({ log: jest.fn() });
@@ -53,6 +54,7 @@ const makeNotif = () => ({
   notifierEtudiant: jest.fn().mockResolvedValue(undefined),
   notifierRevocation: jest.fn().mockResolvedValue(undefined),
   notifierValidateurs: jest.fn().mockResolvedValue(undefined),
+  notifierCreateur: jest.fn().mockResolvedValue(undefined),
 });
 const makeNotificationsInApp = () => ({
   creer: jest.fn().mockResolvedValue(undefined),
@@ -66,7 +68,9 @@ const makeStorage = () => ({
 });
 const makeBlockchain = () => ({
   enregistrerDiplome: jest.fn().mockResolvedValue('0xabc123'),
-  revoquerDiplome: jest.fn().mockResolvedValue('0xdef456'),
+  revoquerDiplome: jest
+    .fn()
+    .mockResolvedValue({ txHash: '0xdef456', blocNumero: 999n }),
   verifierDiplome: jest.fn().mockResolvedValue(null),
 });
 const makeConfig = () => ({
@@ -252,6 +256,39 @@ describe('DocumentsService', () => {
       await service.lister({ universite_id: UNIV_ID }, ACTEUR_ID);
 
       const whereArg = (prisma.documents.count as jest.Mock).mock.calls[0][0]
+        .where;
+      expect(whereArg.universite_id).toBe(UNIV_ID);
+    });
+  });
+
+  // ── exporterCsv ────────────────────────────────────────────────────────
+
+  describe('exporterCsv', () => {
+    it('génère un CSV avec en-têtes et les mêmes scoping/filtres que lister()', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findMany.mockResolvedValue([
+        {
+          ...makeDocument({
+            hash_sha256: FAKE_HASH,
+            transaction_hash: '0xabc',
+          }),
+          etudiants: {
+            nom: 'KAMGA',
+            prenom: 'Bertrand',
+            numero_etudiant: 'ETU-001',
+          },
+          universites: { nom: 'ISTAMA INUBIL' },
+          types_document: { nom: 'Licence' },
+          mentions_document: { nom: 'Bien' },
+        },
+      ]);
+
+      const csv = await service.exporterCsv({}, ACTEUR_ID);
+
+      expect(csv).toContain('Numéro unique');
+      expect(csv).toContain('INUB-2026-0001');
+      expect(csv).toContain('Bertrand KAMGA');
+      const whereArg = (prisma.documents.findMany as jest.Mock).mock.calls[0][0]
         .where;
       expect(whereArg.universite_id).toBe(UNIV_ID);
     });
@@ -552,6 +589,85 @@ describe('DocumentsService', () => {
 
       expect(notif.notifierEtudiant).toHaveBeenCalledWith(DOC_ID);
     });
+
+    it('déclenche notifierCreateur en fire & forget', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({
+          statut: 'brouillon',
+          pdf_url: FAKE_PDF_KEY,
+          hash_sha256: FAKE_HASH,
+        }),
+      );
+      prisma.documents.update.mockResolvedValue(
+        makeDocument({ statut: 'actif' }),
+      );
+
+      await service.valider(DOC_ID, ACTEUR_ID);
+
+      expect(notif.notifierCreateur).toHaveBeenCalledWith(DOC_ID, 'valide');
+    });
+  });
+
+  // ── rejeter ────────────────────────────────────────────────────────────
+
+  describe('rejeter', () => {
+    const dto = { motif: "Le nom de l'étudiant ne correspond pas au registre" };
+
+    it("rejette un document et logue l'audit", async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({ statut: 'en_validation' }),
+      );
+      prisma.documents.update.mockResolvedValue(
+        makeDocument({ statut: 'rejete', motif_rejet: dto.motif }),
+      );
+
+      const result = await service.rejeter(DOC_ID, dto, ACTEUR_ID);
+
+      expect(prisma.documents.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            statut: 'rejete',
+            motif_rejet: dto.motif,
+          }),
+        }),
+      );
+      expect(audit.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'DOCUMENT_REJETER' }),
+      );
+      expect(result.statut).toBe('rejete');
+    });
+
+    it('déclenche notifierCreateur(id, "rejete", motif) en fire & forget', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({ statut: 'brouillon' }),
+      );
+      prisma.documents.update.mockResolvedValue(
+        makeDocument({ statut: 'rejete', motif_rejet: dto.motif }),
+      );
+
+      await service.rejeter(DOC_ID, dto, ACTEUR_ID);
+
+      expect(notif.notifierCreateur).toHaveBeenCalledWith(
+        DOC_ID,
+        'rejete',
+        dto.motif,
+      );
+    });
+
+    it("lève BadRequestException si le document n'est ni brouillon ni en_validation", async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({ statut: 'actif' }),
+      );
+
+      await expect(service.rejeter(DOC_ID, dto, ACTEUR_ID)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.documents.update).not.toHaveBeenCalled();
+    });
   });
 
   // ── revoquer ───────────────────────────────────────────────────────────
@@ -635,6 +751,39 @@ describe('DocumentsService', () => {
       );
 
       expect(notif.notifierRevocation).toHaveBeenCalledWith(DOC_ID);
+    });
+
+    it('persiste la transaction de révocation dans transactions_blockchain (sans écraser documents)', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDocument({ statut: 'actif' }),
+      );
+      prisma.documents.update.mockResolvedValue(
+        makeDocument({ statut: 'revoque' }),
+      );
+
+      await service.revoquer(
+        DOC_ID,
+        { raison: "Erreur sur le nom de l'étudiant" },
+        ACTEUR_ID,
+      );
+      // Laisse le fire & forget (revoquerSurBlockchain) se resoudre.
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(prisma.transactions_blockchain.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            document_id: DOC_ID,
+            type: 'revocation',
+            transaction_hash: '0xdef456',
+            bloc_numero: 999n,
+            statut: 'confirme',
+          }),
+        }),
+      );
+      // documents.update n'est appele qu'une fois (le changement de statut) — la
+      // revocation blockchain n'ecrase pas transaction_hash/bloc_numero d'emission.
+      expect(prisma.documents.update).toHaveBeenCalledTimes(1);
     });
   });
 

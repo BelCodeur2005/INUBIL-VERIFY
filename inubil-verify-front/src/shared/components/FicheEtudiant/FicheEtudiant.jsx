@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search, Plus, Pencil, Trash2, X, Loader2, AlertTriangle, UserX,
-  FileText, Save, Cake, MapPin, Flag, Mail, Phone, GraduationCap,
+  FileText, Save, Cake, MapPin, Flag, Mail, Phone, GraduationCap, FileDown,
 } from 'lucide-react';
 import {
-  rechercherEtudiants, creerEtudiant, modifierEtudiant, supprimerEtudiant,
+  rechercherEtudiants, creerEtudiant, modifierEtudiant, supprimerEtudiant, exporterEtudiantsCsv,
 } from '../../../core/etudiants/etudiants.api';
 import { listerDepartements } from '../../../core/departements/departements.api';
 import { useAuth } from '../../../core/auth/useAuth';
@@ -124,6 +124,18 @@ export default function FicheEtudiant() {
   const [confirmSuppression, setConfirmSuppression] = useState(false);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
   const [erreurSuppression, setErreurSuppression] = useState(null);
+
+  const [exportEnCours, setExportEnCours] = useState(false);
+  const exporterCsv = async () => {
+    setExportEnCours(true);
+    try {
+      await exporterEtudiantsCsv(recherche || undefined);
+    } catch (err) {
+      setErreurListe(err instanceof ApiError ? err.message : 'Export impossible.');
+    } finally {
+      setExportEnCours(false);
+    }
+  };
 
   // Débounce de la recherche libre avant de déclencher la requête.
   useEffect(() => {
@@ -296,9 +308,14 @@ export default function FicheEtudiant() {
       <div className={styles.masterPanel}>
         <div className={styles.masterHeader}>
           <h2 className={styles.title}>Étudiants</h2>
-          <button type="button" className={styles.newBtn} onClick={demarrerCreation}>
-            <Plus size={15} /> Nouveau
-          </button>
+          <div className={styles.headerActions}>
+            <button type="button" className={styles.exportBtn} onClick={exporterCsv} disabled={exportEnCours}>
+              <FileDown size={14} /> {exportEnCours ? 'Export…' : 'CSV'}
+            </button>
+            <button type="button" className={styles.newBtn} onClick={demarrerCreation}>
+              <Plus size={15} /> Nouveau
+            </button>
+          </div>
         </div>
 
         <div className={styles.searchWrap}>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, Eye, Download, X, Loader2, AlertTriangle, FileX, FileText } from 'lucide-react';
-import { listerDocuments, getUrlPdfPresignee } from '../../../core/documents/documents.api';
+import { Search, Eye, Download, X, Loader2, AlertTriangle, FileX, FileText, FileDown } from 'lucide-react';
+import { listerDocuments, getUrlPdfPresignee, exporterDocumentsCsv } from '../../../core/documents/documents.api';
 import { listerDocumentsAdmin } from '../../../core/admin/admin.api';
 import { listerTypesDocument } from '../../../core/types-document/types-document.api';
 import { listerMentions } from '../../../core/mentions/mentions.api';
@@ -210,12 +210,35 @@ export default function ListeDocuments({ admin = false }) {
     }
   };
 
+  const [exportEnCours, setExportEnCours] = useState(false);
+  const exporterCsv = async () => {
+    setExportEnCours(true);
+    try {
+      await exporterDocumentsCsv({
+        statut: statutFiltre || undefined,
+        typeDocumentId: typeFiltre || undefined,
+        etudiantId: etudiantFiltre?.id,
+        dateDebut: dateDebut || undefined,
+        dateFin: dateFin || undefined,
+      });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Export impossible.");
+    } finally {
+      setExportEnCours(false);
+    }
+  };
+
   return (
     <div className={styles.page}>
       <div className={styles.tableCard}>
         <div className={styles.tableHeader}>
           <div className={styles.tableTitle}>{admin ? 'Documents — toutes universités' : 'Registre des documents'}</div>
-          <span className={styles.totalCount}>{total} document{total !== 1 ? 's' : ''}</span>
+          <div className={styles.headerActions}>
+            <span className={styles.totalCount}>{total} document{total !== 1 ? 's' : ''}</span>
+            <button type="button" className={styles.exportBtn} onClick={exporterCsv} disabled={exportEnCours}>
+              <FileDown size={14} /> {exportEnCours ? 'Export…' : 'Exporter CSV'}
+            </button>
+          </div>
         </div>
 
         {/* Filtres */}

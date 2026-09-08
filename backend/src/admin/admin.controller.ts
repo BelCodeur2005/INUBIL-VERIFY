@@ -5,11 +5,12 @@ import {
   Param,
   Query,
   Req,
+  Res,
   UseGuards,
   UseInterceptors,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -50,8 +51,12 @@ export class AdminController {
 
   @Get('statistiques')
   @RequirePermissions(Permission.STATS_READ)
-  @ApiOperation({ summary: 'Statistiques globales de la plateforme (permission stats:read)' })
-  @ApiOkResponse({ description: 'KPIs globaux : universités, documents, vérifications, etc.' })
+  @ApiOperation({
+    summary: 'Statistiques globales de la plateforme (permission stats:read)',
+  })
+  @ApiOkResponse({
+    description: 'KPIs globaux : universités, documents, vérifications, etc.',
+  })
   @ApiResponse({ status: 403, description: 'Permission stats:read requise.' })
   statistiques() {
     return this.stats.statistiquesGlobales();
@@ -60,11 +65,17 @@ export class AdminController {
   @Get('statistiques/graphe')
   @RequirePermissions(Permission.STATS_READ)
   @ApiOperation({
-    summary: 'Séries temporelles vérifications + documents émis (permission stats:read)',
+    summary:
+      'Séries temporelles vérifications + documents émis (permission stats:read)',
     description: 'Paramètres : granularite=jour|mois, debut, fin (ISO 8601).',
   })
-  @ApiOkResponse({ description: 'Tableau de points { date, verifications, documents_emis }.' })
-  @ApiResponse({ status: 400, description: 'Paramètres de date ou granularité invalides.' })
+  @ApiOkResponse({
+    description: 'Tableau de points { date, verifications, documents_emis }.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Paramètres de date ou granularité invalides.',
+  })
   @ApiResponse({ status: 403, description: 'Permission stats:read requise.' })
   graphe(@Query() query: StatsGrapheQueryDto) {
     return this.stats.graphe(query);
@@ -75,13 +86,38 @@ export class AdminController {
   @Get('audit')
   @RequirePermissions(Permission.AUDIT_READ)
   @ApiOperation({
-    summary: 'Journal d\'audit paginé avec filtres (permission audit:read)',
-    description: 'Un acteur lié à une université ne voit que les entrées liées à celle-ci.',
+    summary: "Journal d'audit paginé avec filtres (permission audit:read)",
+    description:
+      'Un acteur lié à une université ne voit que les entrées liées à celle-ci.',
   })
-  @ApiOkResponse({ description: 'Entrées d\'audit paginées.' })
+  @ApiOkResponse({ description: "Entrées d'audit paginées." })
   @ApiResponse({ status: 403, description: 'Permission audit:read requise.' })
   journal(@Query() query: AuditQueryDto, @CurrentUser('id') acteurId: string) {
     return this.auditSvc.lireJournal(query, acteurId);
+  }
+
+  @Get('audit/export')
+  @RequirePermissions(Permission.AUDIT_READ)
+  @ApiOperation({
+    summary:
+      "Exporter le journal d'audit visible en CSV (permission audit:read)",
+  })
+  @ApiOkResponse({
+    description:
+      'Fichier CSV (mêmes filtres que GET /admin/audit), plafonné à 10 000 lignes.',
+  })
+  @ApiResponse({ status: 403, description: 'Permission audit:read requise.' })
+  async exporterAudit(
+    @Query() query: AuditQueryDto,
+    @CurrentUser('id') acteurId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const csv = await this.auditSvc.exporterCsv(query, acteurId);
+    res.set({
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="journal_audit_${new Date().toISOString().slice(0, 10)}.csv"`,
+    });
+    res.send(csv);
   }
 
   // ── Documents admin ───────────────────────────────────────────────────────
@@ -107,8 +143,10 @@ export class AdminController {
 
   @Get('utilisateurs')
   @RequirePermissions(Permission.USER_READ)
-  @ApiOperation({ summary: 'Lister les utilisateurs avec filtres (permission user:read)' })
-  @ApiOkResponse({ description: 'Liste paginée d\'utilisateurs.' })
+  @ApiOperation({
+    summary: 'Lister les utilisateurs avec filtres (permission user:read)',
+  })
+  @ApiOkResponse({ description: "Liste paginée d'utilisateurs." })
   @ApiResponse({ status: 403, description: 'Permission user:read requise.' })
   listerUtilisateurs(
     @Query() query: UtilisateurQueryDto,
@@ -119,9 +157,14 @@ export class AdminController {
 
   @Patch('utilisateurs/:id/activer')
   @RequirePermissions(Permission.USER_EDIT)
-  @ApiOperation({ summary: 'Activer un compte utilisateur (permission user:edit)' })
+  @ApiOperation({
+    summary: 'Activer un compte utilisateur (permission user:edit)',
+  })
   @ApiOkResponse({ description: 'Utilisateur activé.' })
-  @ApiResponse({ status: 403, description: 'Permission user:edit requise ou auto-modification interdite.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Permission user:edit requise ou auto-modification interdite.',
+  })
   @ApiResponse({ status: 404, description: 'Utilisateur introuvable.' })
   activerUtilisateur(
     @Param('id', ParseUUIDPipe) id: string,
@@ -133,9 +176,14 @@ export class AdminController {
 
   @Patch('utilisateurs/:id/desactiver')
   @RequirePermissions(Permission.USER_EDIT)
-  @ApiOperation({ summary: 'Désactiver un compte utilisateur (permission user:edit)' })
+  @ApiOperation({
+    summary: 'Désactiver un compte utilisateur (permission user:edit)',
+  })
   @ApiOkResponse({ description: 'Utilisateur désactivé.' })
-  @ApiResponse({ status: 403, description: 'Permission user:edit requise ou auto-modification interdite.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Permission user:edit requise ou auto-modification interdite.',
+  })
   @ApiResponse({ status: 404, description: 'Utilisateur introuvable.' })
   desactiverUtilisateur(
     @Param('id', ParseUUIDPipe) id: string,

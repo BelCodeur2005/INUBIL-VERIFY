@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { EtudiantsAdminService } from './etudiants-admin.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -33,10 +37,14 @@ const makeEtudiant = (overrides: Record<string, unknown> = {}) => ({
 
 const makePrisma = () => ({
   utilisateurs: {
-    findFirst: jest.fn().mockResolvedValue({ universite_id: UNIV_ID, departements: [] }),
+    findFirst: jest
+      .fn()
+      .mockResolvedValue({ universite_id: UNIV_ID, departements: [] }),
   },
   universites: {
-    findFirst: jest.fn().mockResolvedValue({ id: UNIV_ID, statut: 'active', deleted_at: null }),
+    findFirst: jest
+      .fn()
+      .mockResolvedValue({ id: UNIV_ID, statut: 'active', deleted_at: null }),
   },
   etudiants: {
     count: jest.fn().mockResolvedValue(1),
@@ -85,29 +93,55 @@ describe('EtudiantsAdminService', () => {
         roles_utilisateurs_role_idToroles: { nom: 'agent_saisie' },
       });
 
-      await expect(service.lister({}, ADMIN_ID)).rejects.toThrow(ForbiddenException);
+      await expect(service.lister({}, ADMIN_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(prisma.etudiants.findMany).not.toHaveBeenCalled();
     });
 
     it('super-admin voit tous sans filtre par defaut', async () => {
-      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null, roles_utilisateurs_role_idToroles: { nom: 'super_admin' } });
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({
+        universite_id: null,
+        roles_utilisateurs_role_idToroles: { nom: 'super_admin' },
+      });
       await service.lister({}, ADMIN_ID);
       const where = prisma.etudiants.findMany.mock.calls[0][0].where;
       expect(where.universite_id).toBeUndefined();
     });
 
     it('super-admin peut filtrer par universite_id explicite', async () => {
-      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null, roles_utilisateurs_role_idToroles: { nom: 'super_admin' } });
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({
+        universite_id: null,
+        roles_utilisateurs_role_idToroles: { nom: 'super_admin' },
+      });
       await service.lister({ universite_id: AUTRE_UNIV_ID }, ADMIN_ID);
       const where = prisma.etudiants.findMany.mock.calls[0][0].where;
       expect(where.universite_id).toBe(AUTRE_UNIV_ID);
     });
 
     it('applique la pagination correctement', async () => {
-      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null, roles_utilisateurs_role_idToroles: { nom: 'super_admin' } });
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({
+        universite_id: null,
+        roles_utilisateurs_role_idToroles: { nom: 'super_admin' },
+      });
       await service.lister({ page: 3, limit: 10 }, ADMIN_ID);
       expect(prisma.etudiants.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ skip: 20, take: 10 }),
+      );
+    });
+  });
+
+  // ─── exporterCsv ─────────────────────────────────────────────────────────────
+
+  describe('exporterCsv', () => {
+    it('génère un CSV avec en-têtes et les données étudiant (mêmes filtres que lister())', async () => {
+      const csv = await service.exporterCsv({}, ADMIN_ID);
+
+      expect(csv).toContain('N° étudiant');
+      expect(csv).toContain(MATRICULE);
+      expect(csv).toContain('KAMGA');
+      expect(prisma.etudiants.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 10_000 }),
       );
     });
   });
@@ -123,19 +157,30 @@ describe('EtudiantsAdminService', () => {
 
     it('leve NotFoundException si etudiant inexistant', async () => {
       prisma.etudiants.findFirst.mockResolvedValueOnce(null);
-      await expect(service.findOne(ETU_ID, ADMIN_ID)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(ETU_ID, ADMIN_ID)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('leve ForbiddenException si etudiant appartient a une autre universite', async () => {
-      prisma.etudiants.findFirst.mockResolvedValueOnce(makeEtudiant({ universite_id: AUTRE_UNIV_ID }));
-      await expect(service.findOne(ETU_ID, ADMIN_ID)).rejects.toThrow(ForbiddenException);
+      prisma.etudiants.findFirst.mockResolvedValueOnce(
+        makeEtudiant({ universite_id: AUTRE_UNIV_ID }),
+      );
+      await expect(service.findOne(ETU_ID, ADMIN_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
   // ─── creer ─────────────────────────────────────────────────────────────────
 
   describe('creer', () => {
-    const dto = { numero_etudiant: MATRICULE, nom: 'KAMGA', prenom: 'Bertrand', universite_id: UNIV_ID };
+    const dto = {
+      numero_etudiant: MATRICULE,
+      nom: 'KAMGA',
+      prenom: 'Bertrand',
+      universite_id: UNIV_ID,
+    };
 
     it('cree un etudiant et retourne le DTO', async () => {
       const result = await service.creer(dto as any, ADMIN_ID);
@@ -145,17 +190,23 @@ describe('EtudiantsAdminService', () => {
 
     it('leve ConflictException si matricule deja utilise', async () => {
       prisma.etudiants.findFirst.mockResolvedValueOnce(makeEtudiant());
-      await expect(service.creer(dto as any, ADMIN_ID)).rejects.toThrow(ConflictException);
+      await expect(service.creer(dto as any, ADMIN_ID)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('leve ForbiddenException si acteur tente de creer pour une autre universite', async () => {
       const dtoAutreUniv = { ...dto, universite_id: AUTRE_UNIV_ID };
-      await expect(service.creer(dtoAutreUniv as any, ADMIN_ID)).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.creer(dtoAutreUniv as any, ADMIN_ID),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('leve NotFoundException si universite inexistante ou inactive', async () => {
       prisma.universites.findFirst.mockResolvedValueOnce(null);
-      await expect(service.creer(dto as any, ADMIN_ID)).rejects.toThrow(NotFoundException);
+      await expect(service.creer(dto as any, ADMIN_ID)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -164,22 +215,34 @@ describe('EtudiantsAdminService', () => {
   describe('modifier', () => {
     it('met a jour les champs et retourne le DTO', async () => {
       prisma.etudiants.findFirst.mockResolvedValueOnce(makeEtudiant());
-      const result = await service.modifier(ETU_ID, { nom: 'KAMGA II' } as any, ADMIN_ID);
+      const result = await service.modifier(
+        ETU_ID,
+        { nom: 'KAMGA II' } as any,
+        ADMIN_ID,
+      );
       expect(prisma.etudiants.update).toHaveBeenCalled();
       expect(result.id).toBe(ETU_ID);
     });
 
     it('leve NotFoundException si etudiant inexistant', async () => {
       prisma.etudiants.findFirst.mockResolvedValueOnce(null);
-      await expect(service.modifier(ETU_ID, {} as any, ADMIN_ID)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.modifier(ETU_ID, {} as any, ADMIN_ID),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('leve ConflictException si nouveau matricule deja pris', async () => {
       prisma.etudiants.findFirst
         .mockResolvedValueOnce(makeEtudiant())
-        .mockResolvedValueOnce(makeEtudiant({ id: 'autre-id', numero_etudiant: 'NOUVEAU' }));
+        .mockResolvedValueOnce(
+          makeEtudiant({ id: 'autre-id', numero_etudiant: 'NOUVEAU' }),
+        );
       await expect(
-        service.modifier(ETU_ID, { numero_etudiant: 'NOUVEAU' } as any, ADMIN_ID),
+        service.modifier(
+          ETU_ID,
+          { numero_etudiant: 'NOUVEAU' } as any,
+          ADMIN_ID,
+        ),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -188,21 +251,31 @@ describe('EtudiantsAdminService', () => {
 
   describe('supprimer', () => {
     it('soft-delete quand aucun document', async () => {
-      prisma.etudiants.findFirst.mockResolvedValueOnce(makeEtudiant({ _count: { documents: 0 } }));
+      prisma.etudiants.findFirst.mockResolvedValueOnce(
+        makeEtudiant({ _count: { documents: 0 } }),
+      );
       await service.supprimer(ETU_ID, ADMIN_ID);
       expect(prisma.etudiants.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ deleted_at: expect.any(Date) }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ deleted_at: expect.any(Date) }),
+        }),
       );
     });
 
     it('leve ConflictException si etudiant possede des documents', async () => {
-      prisma.etudiants.findFirst.mockResolvedValueOnce(makeEtudiant({ _count: { documents: 3 } }));
-      await expect(service.supprimer(ETU_ID, ADMIN_ID)).rejects.toThrow(ConflictException);
+      prisma.etudiants.findFirst.mockResolvedValueOnce(
+        makeEtudiant({ _count: { documents: 3 } }),
+      );
+      await expect(service.supprimer(ETU_ID, ADMIN_ID)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('leve NotFoundException si etudiant inexistant', async () => {
       prisma.etudiants.findFirst.mockResolvedValueOnce(null);
-      await expect(service.supprimer(ETU_ID, ADMIN_ID)).rejects.toThrow(NotFoundException);
+      await expect(service.supprimer(ETU_ID, ADMIN_ID)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

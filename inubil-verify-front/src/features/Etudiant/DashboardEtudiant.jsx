@@ -13,7 +13,19 @@ import AccueilEtudiant from './AccueilEtudiant.jsx';
 
 export default function DashboardEtudiant() {
   const [activeMenu, setActiveMenu] = useState('dashboard');
+  const [searchTerm, setSearchTerm] = useState('');
   const { utilisateur, logout } = useAuth();
+
+  // La recherche du header filtre l'onglet actif s'il affiche une liste
+  // (Mes Diplômes / Vérifications) ; depuis un autre onglet, taper bascule sur
+  // Mes Diplômes pour afficher les résultats.
+  const handleSearchChange = (e) => {
+    const valeur = e.target.value;
+    setSearchTerm(valeur);
+    if (activeMenu !== 'diplomas' && activeMenu !== 'views') {
+      setActiveMenu('diplomas');
+    }
+  };
 
   const prenom = utilisateur?.prenom ?? '';
   const nom = utilisateur?.nom ?? '';
@@ -100,7 +112,13 @@ export default function DashboardEtudiant() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <input type="search" placeholder="Rechercher un diplôme, une vérification..." className={styles.searchInput} />
+            <input
+              type="search"
+              placeholder="Rechercher un diplôme, une vérification..."
+              className={styles.searchInput}
+              value={searchTerm}
+              onChange={handleSearchChange}
+            />
           </div>
           <div className={styles.headerActions}>
             <NotificationsBell onClick={() => setActiveMenu('notifications')} />
@@ -122,11 +140,11 @@ export default function DashboardEtudiant() {
             <AccueilEtudiant prenom={prenom} setActiveMenu={setActiveMenu} />
           )}
 
-          {activeMenu === 'diplomas' && <MesDiplomes />}
+          {activeMenu === 'diplomas' && <MesDiplomes searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />}
 
           {activeMenu === 'partages' && <MesPartages />}
 
-          {activeMenu === 'views' && <VerificationsActivite />}
+          {activeMenu === 'views' && <VerificationsActivite searchTerm={searchTerm} />}
 
           {activeMenu === 'settings' && <ParametresEtudiants />}
 

@@ -12,6 +12,7 @@ const NUM_UNIQUE = 'INUB-2026-0001';
 const UNIV_ID = 'univ-0000-0000-0000-000000000004';
 const DEPT_ID = 'dept-0000-0000-0000-000000000005';
 const VALIDATEUR_ID = 'val-0000-0000-0000-000000000006';
+const CREATEUR_ID = 'crt-0000-0000-0000-000000000007';
 
 const makeDoc = (overrides: any = {}) => ({
   id: DOC_ID,
@@ -29,6 +30,11 @@ const makeDoc = (overrides: any = {}) => ({
   },
   universites: { nom: 'ISTAMA INUBIL' },
   types_document: { nom: 'Licence' },
+  utilisateurs_documents_saisi_parToutilisateurs: {
+    id: CREATEUR_ID,
+    email: 'agent@istama-inubil.cm',
+    preferences: {},
+  },
   ...overrides,
 });
 
@@ -50,6 +56,7 @@ const makeMail = () => ({
   sendDocumentEmis: jest.fn(),
   sendDocumentRévoqué: jest.fn(),
   sendDocumentAValider: jest.fn(),
+  sendDocumentTraiteParStaff: jest.fn(),
 });
 
 const makeNotificationsInApp = () => ({
@@ -379,6 +386,82 @@ describe('NotificationEmissionService', () => {
           data: expect.objectContaining({ statut: 'envoye' }),
         }),
       );
+    });
+  });
+
+  // ── notifierCreateur ──────────────────────────────────────────────────────
+
+  describe('notifierCreateur', () => {
+    it('notifie (email + in-app) le créateur quand validé', async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+      prisma.emails_log.create.mockResolvedValue({ id: LOG_ID });
+      mail.sendDocumentTraiteParStaff.mockResolvedValue(undefined);
+      prisma.emails_log.update.mockResolvedValue({});
+
+      await service.notifierCreateur(DOC_ID, 'valide');
+
+      expect(notificationsInApp.creer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          utilisateurId: CREATEUR_ID,
+          type: 'document_valide',
+        }),
+      );
+      expect(mail.sendDocumentTraiteParStaff).toHaveBeenCalledWith(
+        'agent@istama-inubil.cm',
+        expect.objectContaining({
+          decision: 'valide',
+          numeroUnique: NUM_UNIQUE,
+        }),
+      );
+    });
+
+    it('notifie avec le motif quand rejeté', async () => {
+      prisma.documents.findFirst.mockResolvedValue(makeDoc());
+      prisma.emails_log.create.mockResolvedValue({ id: LOG_ID });
+      mail.sendDocumentTraiteParStaff.mockResolvedValue(undefined);
+      prisma.emails_log.update.mockResolvedValue({});
+
+      await service.notifierCreateur(DOC_ID, 'rejete', 'Nom incorrect');
+
+      expect(notificationsInApp.creer).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'document_rejete' }),
+      );
+      expect(mail.sendDocumentTraiteParStaff).toHaveBeenCalledWith(
+        'agent@istama-inubil.cm',
+        expect.objectContaining({
+          decision: 'rejete',
+          motifRejet: 'Nom incorrect',
+        }),
+      );
+    });
+
+    it("n'envoie pas d'email si la préférence est désactivée, mais crée quand même l'in-app", async () => {
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDoc({
+          utilisateurs_documents_saisi_parToutilisateurs: {
+            id: CREATEUR_ID,
+            email: 'agent@istama-inubil.cm',
+            preferences: { documents_valides: false },
+          },
+        }),
+      );
+
+      await service.notifierCreateur(DOC_ID, 'valide');
+
+      expect(notificationsInApp.creer).toHaveBeenCalled();
+      expect(mail.sendDocumentTraiteParStaff).not.toHaveBeenCalled();
+      expect(prisma.emails_log.create).not.toHaveBeenCalled();
+    });
+
+    it("ne lève pas d'erreur si le document ou son créateur est introuvable", async () => {
+      prisma.documents.findFirst.mockResolvedValue(
+        makeDoc({ utilisateurs_documents_saisi_parToutilisateurs: null }),
+      );
+
+      await expect(
+        service.notifierCreateur(DOC_ID, 'valide'),
+      ).resolves.toBeUndefined();
+      expect(mail.sendDocumentTraiteParStaff).not.toHaveBeenCalled();
     });
   });
 });

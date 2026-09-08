@@ -15,9 +15,10 @@ import {
   HttpStatus,
   BadRequestException,
   Req,
+  Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { memoryStorage } from 'multer';
 import {
   ApiBearerAuth,
@@ -52,7 +53,9 @@ export class DocumentsController {
 
   @Post()
   @RequirePermissions(Permission.DOC_CREATE)
-  @ApiOperation({ summary: 'Créer un brouillon de document (permission doc:create)' })
+  @ApiOperation({
+    summary: 'Créer un brouillon de document (permission doc:create)',
+  })
   @ApiCreatedResponse({ description: 'Brouillon créé.' })
   @ApiResponse({ status: 403, description: 'Permission doc:create requise.' })
   creer(
@@ -65,7 +68,9 @@ export class DocumentsController {
 
   @Get()
   @RequirePermissions(Permission.DOC_READ)
-  @ApiOperation({ summary: 'Lister les documents avec filtres (permission doc:read)' })
+  @ApiOperation({
+    summary: 'Lister les documents avec filtres (permission doc:read)',
+  })
   @ApiOkResponse({ description: 'Liste paginée de documents.' })
   @ApiResponse({ status: 403, description: 'Permission doc:read requise.' })
   lister(
@@ -75,22 +80,53 @@ export class DocumentsController {
     return this.service.lister(query, acteurId);
   }
 
+  @Get('export')
+  @RequirePermissions(Permission.DOC_READ)
+  @ApiOperation({
+    summary: 'Exporter les documents visibles en CSV (permission doc:read)',
+  })
+  @ApiOkResponse({
+    description:
+      'Fichier CSV (mêmes filtres que GET /documents), plafonné à 10 000 lignes.',
+  })
+  @ApiResponse({ status: 403, description: 'Permission doc:read requise.' })
+  async exporter(
+    @Query() query: DocumentQueryDto,
+    @CurrentUser('id') acteurId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const csv = await this.service.exporterCsv(query, acteurId);
+    res.set({
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="documents_${new Date().toISOString().slice(0, 10)}.csv"`,
+    });
+    res.send(csv);
+  }
+
   @Get(':id/pdf')
   @RequirePermissions(Permission.DOC_READ)
   @ApiOperation({
-    summary: 'Obtenir un lien temporaire de téléchargement du PDF (permission doc:read)',
-    description: 'Génère un lien pré-signé AWS S3 valable 15 minutes. Le PDF est privé - jamais accessible directement.',
+    summary:
+      'Obtenir un lien temporaire de téléchargement du PDF (permission doc:read)',
+    description:
+      'Génère un lien pré-signé AWS S3 valable 15 minutes. Le PDF est privé - jamais accessible directement.',
   })
   @ApiOkResponse({
     schema: {
       type: 'object',
       properties: {
-        url: { type: 'string', example: 'https://s3.eu-west-1.amazonaws.com/...?X-Amz-Signature=...' },
+        url: {
+          type: 'string',
+          example: 'https://s3.eu-west-1.amazonaws.com/...?X-Amz-Signature=...',
+        },
         expires_in_seconds: { type: 'number', example: 900 },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Aucun PDF associé ou S3 non configuré.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Aucun PDF associé ou S3 non configuré.',
+  })
   @ApiResponse({ status: 403, description: 'Accès refusé.' })
   @ApiResponse({ status: 404, description: 'Document introuvable.' })
   getPdfUrl(
@@ -102,7 +138,7 @@ export class DocumentsController {
 
   @Get(':id')
   @RequirePermissions(Permission.DOC_READ)
-  @ApiOperation({ summary: 'Détail d\'un document (permission doc:read)' })
+  @ApiOperation({ summary: "Détail d'un document (permission doc:read)" })
   @ApiOkResponse({ description: 'Document trouvé.' })
   @ApiResponse({ status: 403, description: 'Permission doc:read requise.' })
   @ApiResponse({ status: 404, description: 'Document introuvable.' })
@@ -118,7 +154,10 @@ export class DocumentsController {
   @ApiOperation({ summary: 'Modifier un brouillon (permission doc:create)' })
   @ApiOkResponse({ description: 'Document mis à jour.' })
   @ApiResponse({ status: 403, description: 'Permission doc:create requise.' })
-  @ApiResponse({ status: 404, description: 'Document introuvable ou non en brouillon.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Document introuvable ou non en brouillon.',
+  })
   modifier(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateDocumentDto,
@@ -136,15 +175,20 @@ export class DocumentsController {
       limits: { fileSize: PDF_HARD_LIMIT_BYTES },
       fileFilter: (_req, file, cb) => {
         if (file.mimetype !== 'application/pdf') {
-          return cb(new BadRequestException('Seuls les fichiers PDF sont acceptés'), false);
+          return cb(
+            new BadRequestException('Seuls les fichiers PDF sont acceptés'),
+            false,
+          );
         }
         cb(null, true);
       },
     }),
   )
   @ApiOperation({
-    summary: 'Uploader le PDF officiel du document - agent de saisie (permission doc:create)',
-    description: 'Calcule le hash SHA-256 et stocke le PDF sur Cloudflare R2. À faire avant la validation par le directeur.',
+    summary:
+      'Uploader le PDF officiel du document - agent de saisie (permission doc:create)',
+    description:
+      'Calcule le hash SHA-256 et stocke le PDF sur Cloudflare R2. À faire avant la validation par le directeur.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -155,13 +199,18 @@ export class DocumentsController {
         fichier: {
           type: 'string',
           format: 'binary',
-          description: 'PDF officiel — jusqu\'a 20 Mo (plafond serveur) ; limite effective pilotable via le parametre systeme "pdf_max_taille_mo"',
+          description:
+            'PDF officiel — jusqu\'a 20 Mo (plafond serveur) ; limite effective pilotable via le parametre systeme "pdf_max_taille_mo"',
         },
       },
     },
   })
   @ApiOkResponse({ description: 'PDF enregistré, hash SHA-256 calculé.' })
-  @ApiResponse({ status: 400, description: 'Fichier manquant, format non-PDF, document déjà actif, ou taille supérieure à la limite configurée.' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Fichier manquant, format non-PDF, document déjà actif, ou taille supérieure à la limite configurée.',
+  })
   @ApiResponse({ status: 403, description: 'Permission doc:create requise.' })
   @ApiResponse({ status: 404, description: 'Document introuvable.' })
   uploadPdf(
@@ -170,39 +219,63 @@ export class DocumentsController {
     @CurrentUser('id') acteurId: string,
     @Req() req: Request,
   ) {
-    if (!fichier) throw new BadRequestException('Le fichier PDF est obligatoire');
-    return this.service.uploadPdf(id, fichier.buffer, fichier.size, acteurId, req.ip);
+    if (!fichier)
+      throw new BadRequestException('Le fichier PDF est obligatoire');
+    return this.service.uploadPdf(
+      id,
+      fichier.buffer,
+      fichier.size,
+      acteurId,
+      req.ip,
+    );
   }
 
   @Post(':id/valider')
   @RequirePermissions(Permission.DOC_VALIDATE)
   @ApiOperation({
-    summary: 'Valider un document - directeur pédagogique (permission doc:validate)',
-    description: 'Approuve le document : génère le QR code, passe le statut à actif, enregistre sur la blockchain. Le PDF doit être uploadé au préalable via POST /documents/{id}/pdf.',
+    summary:
+      'Valider un document - directeur pédagogique (permission doc:validate)',
+    description:
+      'Approuve le document : génère le QR code, passe le statut à actif, enregistre sur la blockchain. Le PDF doit être uploadé au préalable via POST /documents/{id}/pdf.',
   })
   @ApiOkResponse({ description: 'Document validé et activé.' })
-  @ApiResponse({ status: 400, description: 'PDF manquant - utiliser POST /documents/{id}/pdf d\'abord.' })
+  @ApiResponse({
+    status: 400,
+    description: "PDF manquant - utiliser POST /documents/{id}/pdf d'abord.",
+  })
   @ApiResponse({ status: 403, description: 'Permission doc:validate requise.' })
-  @ApiResponse({ status: 404, description: 'Document introuvable ou non en brouillon.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Document introuvable ou non en brouillon.',
+  })
   valider(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') acteurId: string,
     @Req() req: Request,
   ) {
-    return this.service.valider(id, acteurId, req.ip, req.headers['user-agent']);
+    return this.service.valider(
+      id,
+      acteurId,
+      req.ip,
+      req.headers['user-agent'],
+    );
   }
 
   @Post(':id/rejeter')
   @RequirePermissions(Permission.DOC_VALIDATE)
   @ApiOperation({
-    summary: 'Rejeter un document - directeur pédagogique (permission doc:validate)',
+    summary:
+      'Rejeter un document - directeur pédagogique (permission doc:validate)',
     description:
       'Refuse le document avec un motif obligatoire. Statut → rejete. ' +
-      'Le PDF reste sur R2 — l\'agent peut corriger les métadonnées ou re-uploader un nouveau PDF ' +
+      "Le PDF reste sur R2 — l'agent peut corriger les métadonnées ou re-uploader un nouveau PDF " +
       '(ce qui remet automatiquement le document en brouillon) avant une nouvelle validation.',
   })
   @ApiOkResponse({ description: 'Document rejeté.' })
-  @ApiResponse({ status: 400, description: 'Le document ne peut pas être rejeté dans son statut actuel.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Le document ne peut pas être rejeté dans son statut actuel.',
+  })
   @ApiResponse({ status: 403, description: 'Permission doc:validate requise.' })
   @ApiResponse({ status: 404, description: 'Document introuvable.' })
   rejeter(
@@ -216,7 +289,10 @@ export class DocumentsController {
 
   @Post(':id/revoquer')
   @RequirePermissions(Permission.DOC_REVOKE)
-  @ApiOperation({ summary: 'Révoquer un document avec motif obligatoire (permission doc:revoke)' })
+  @ApiOperation({
+    summary:
+      'Révoquer un document avec motif obligatoire (permission doc:revoke)',
+  })
   @ApiOkResponse({ description: 'Document révoqué.' })
   @ApiResponse({ status: 400, description: 'Motif de révocation manquant.' })
   @ApiResponse({ status: 403, description: 'Permission doc:revoke requise.' })
@@ -236,7 +312,10 @@ export class DocumentsController {
   @ApiOperation({ summary: 'Supprimer un brouillon (permission doc:delete)' })
   @ApiNoContentResponse({ description: 'Brouillon supprimé.' })
   @ApiResponse({ status: 403, description: 'Permission doc:delete requise.' })
-  @ApiResponse({ status: 404, description: 'Document introuvable ou non en brouillon.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Document introuvable ou non en brouillon.',
+  })
   supprimer(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') acteurId: string,

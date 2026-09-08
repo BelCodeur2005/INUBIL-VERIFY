@@ -1,4 +1,5 @@
 import { api } from '../api/client';
+import { telechargerFichier } from '../api/download';
 
 /** GET /admin/statistiques — KPIs globaux de la plateforme (permission stats:read). */
 export function getStatistiquesGlobales() {
@@ -55,6 +56,18 @@ export function listerJournalAudit({ page = 1, limit = 50, utilisateur_id, actio
   if (date_debut) params.set('date_debut', date_debut);
   if (date_fin) params.set('date_fin', date_fin);
   return api.get(`/admin/audit?${params.toString()}`);
+}
+
+/** GET /admin/audit/export — telecharge le journal d'audit visible en CSV (memes filtres que listerJournalAudit). */
+export function exporterJournalAuditCsv({ utilisateur_id, action, module, date_debut, date_fin } = {}) {
+  const params = new URLSearchParams();
+  if (utilisateur_id) params.set('utilisateur_id', utilisateur_id);
+  if (action) params.set('action', action);
+  if (module) params.set('module', module);
+  if (date_debut) params.set('date_debut', date_debut);
+  if (date_fin) params.set('date_fin', date_fin);
+  const qs = params.toString();
+  return telechargerFichier(`/admin/audit/export${qs ? `?${qs}` : ''}`, 'journal_audit.csv');
 }
 
 /** POST /admin/backup — declenche un backup manuel (pg_dump -> upload), permission config:edit. */

@@ -13,6 +13,7 @@ import {
   EtudiantAdminListeDto,
   EtudiantAdminResponseDto,
 } from './dto/etudiant-admin-response.dto';
+import { toCsv } from '../common/csv.util';
 
 @Injectable()
 export class EtudiantsAdminService {
@@ -27,7 +28,9 @@ export class EtudiantsAdminService {
    * d'universite). Tout autre utilisateur sans universite est refuse — ne pas
    * inferer un statut privilegie a partir d'un champ nullable.
    */
-  private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
+  private async getActeurUniversiteId(
+    acteurId: string,
+  ): Promise<string | null> {
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id: acteurId },
       select: {
@@ -35,7 +38,8 @@ export class EtudiantsAdminService {
         roles_utilisateurs_role_idToroles: { select: { nom: true } },
       },
     });
-    if (u?.roles_utilisateurs_role_idToroles?.nom === 'super_admin') return null;
+    if (u?.roles_utilisateurs_role_idToroles?.nom === 'super_admin')
+      return null;
     if (!u?.universite_id) {
       throw new ForbiddenException("Vous n'êtes pas associé à une université");
     }
@@ -79,7 +83,10 @@ export class EtudiantsAdminService {
     };
   }
 
-  async lister(query: EtudiantAdminQueryDto, acteurId: string): Promise<EtudiantAdminListeDto> {
+  async lister(
+    query: EtudiantAdminQueryDto,
+    acteurId: string,
+  ): Promise<EtudiantAdminListeDto> {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const acteurDeptIds = await this.getActeurDepartementIds(acteurId);
     const page = query.page ?? 1;
@@ -127,7 +134,35 @@ export class EtudiantsAdminService {
     return { data: items.map((e) => this.toDto(e)), total, page, limit };
   }
 
-  async findOne(id: string, acteurId: string): Promise<EtudiantAdminResponseDto> {
+  /** Export CSV des étudiants visibles par l'acteur — mêmes filtres que lister(), plafonné à 10 000 lignes. */
+  async exporterCsv(
+    query: EtudiantAdminQueryDto,
+    acteurId: string,
+  ): Promise<string> {
+    const { data } = await this.lister(
+      { ...query, page: 1, limit: 10_000 },
+      acteurId,
+    );
+
+    return toCsv(data, [
+      { header: 'N° étudiant', value: (e) => e.numero_etudiant },
+      { header: 'Nom', value: (e) => e.nom },
+      { header: 'Prénom', value: (e) => e.prenom },
+      { header: 'Email', value: (e) => e.email },
+      { header: 'Université', value: (e) => e.universite_nom },
+      { header: 'Département', value: (e) => e.departement_nom },
+      { header: 'Nb. documents', value: (e) => e.nb_documents },
+      {
+        header: 'Date de naissance',
+        value: (e) => e.date_naissance?.toISOString().slice(0, 10),
+      },
+    ]);
+  }
+
+  async findOne(
+    id: string,
+    acteurId: string,
+  ): Promise<EtudiantAdminResponseDto> {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const acteurDeptIds = await this.getActeurDepartementIds(acteurId);
 
@@ -142,46 +177,75 @@ export class EtudiantsAdminService {
     if (!etudiant) throw new NotFoundException(`Étudiant ${id} introuvable`);
 
     if (acteurUnivId !== null && etudiant.universite_id !== acteurUnivId) {
-      throw new ForbiddenException('Accès refusé : étudiant d\'une autre université');
+      throw new ForbiddenException(
+        "Accès refusé : étudiant d'une autre université",
+      );
     }
-    if (acteurDeptIds.length > 0 && !acteurDeptIds.includes(etudiant.departement_id ?? '')) {
-      throw new ForbiddenException('Accès refusé : étudiant d\'un autre département');
+    if (
+      acteurDeptIds.length > 0 &&
+      !acteurDeptIds.includes(etudiant.departement_id ?? '')
+    ) {
+      throw new ForbiddenException(
+        "Accès refusé : étudiant d'un autre département",
+      );
     }
 
     return this.toDto(etudiant);
   }
 
-  async creer(dto: CreerEtudiantAdminDto, acteurId: string, ip?: string): Promise<EtudiantAdminResponseDto> {
+  async creer(
+    dto: CreerEtudiantAdminDto,
+    acteurId: string,
+    ip?: string,
+  ): Promise<EtudiantAdminResponseDto> {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const acteurDeptIds = await this.getActeurDepartementIds(acteurId);
 
     if (acteurUnivId !== null && dto.universite_id !== acteurUnivId) {
-      throw new ForbiddenException('Vous ne pouvez créer des étudiants que pour votre propre université');
+      throw new ForbiddenException(
+        'Vous ne pouvez créer des étudiants que pour votre propre université',
+      );
     }
 
     // Un chef de departement (un ou plusieurs) doit choisir l'un de SES departements —
     // la scolarite (aucun departement associe) peut choisir n'importe lequel de l'universite.
-    if (acteurDeptIds.length > 0 && (!dto.departement_id || !acteurDeptIds.includes(dto.departement_id))) {
-      throw new ForbiddenException('Vous devez choisir l\'un de vos départements autorisés');
+    if (
+      acteurDeptIds.length > 0 &&
+      (!dto.departement_id || !acteurDeptIds.includes(dto.departement_id))
+    ) {
+      throw new ForbiddenException(
+        "Vous devez choisir l'un de vos départements autorisés",
+      );
     }
     const departementId = dto.departement_id ?? null;
 
     const universite = await this.prisma.universites.findFirst({
       where: { id: dto.universite_id, statut: 'active', deleted_at: null },
     });
-    if (!universite) throw new NotFoundException('Université introuvable ou non active');
+    if (!universite)
+      throw new NotFoundException('Université introuvable ou non active');
 
     if (departementId) {
       const departement = await this.prisma.departements.findFirst({
-        where: { id: departementId, universite_id: dto.universite_id, est_actif: true },
+        where: {
+          id: departementId,
+          universite_id: dto.universite_id,
+          est_actif: true,
+        },
       });
-      if (!departement) throw new NotFoundException('Département introuvable ou inactif pour cette université');
+      if (!departement)
+        throw new NotFoundException(
+          'Département introuvable ou inactif pour cette université',
+        );
     }
 
     const existant = await this.prisma.etudiants.findFirst({
       where: { numero_etudiant: dto.numero_etudiant, deleted_at: null },
     });
-    if (existant) throw new ConflictException(`Le matricule "${dto.numero_etudiant}" est déjà utilisé`);
+    if (existant)
+      throw new ConflictException(
+        `Le matricule "${dto.numero_etudiant}" est déjà utilisé`,
+      );
 
     const etudiant = await this.prisma.etudiants.create({
       data: {
@@ -190,7 +254,9 @@ export class EtudiantsAdminService {
         prenom: dto.prenom,
         universite_id: dto.universite_id,
         departement_id: departementId,
-        date_naissance: dto.date_naissance ? new Date(dto.date_naissance) : null,
+        date_naissance: dto.date_naissance
+          ? new Date(dto.date_naissance)
+          : null,
         lieu_naissance: dto.lieu_naissance ?? null,
         nationalite: dto.nationalite ?? null,
         email: dto.email ?? null,
@@ -218,7 +284,12 @@ export class EtudiantsAdminService {
     return this.toDto(etudiant);
   }
 
-  async modifier(id: string, dto: UpdateEtudiantAdminDto, acteurId: string, ip?: string): Promise<EtudiantAdminResponseDto> {
+  async modifier(
+    id: string,
+    dto: UpdateEtudiantAdminDto,
+    acteurId: string,
+    ip?: string,
+  ): Promise<EtudiantAdminResponseDto> {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const acteurDeptIds = await this.getActeurDepartementIds(acteurId);
 
@@ -228,48 +299,91 @@ export class EtudiantsAdminService {
     if (!etudiant) throw new NotFoundException(`Étudiant ${id} introuvable`);
 
     if (acteurUnivId !== null && etudiant.universite_id !== acteurUnivId) {
-      throw new ForbiddenException('Accès refusé : étudiant d\'une autre université');
+      throw new ForbiddenException(
+        "Accès refusé : étudiant d'une autre université",
+      );
     }
-    if (acteurDeptIds.length > 0 && !acteurDeptIds.includes(etudiant.departement_id ?? '')) {
-      throw new ForbiddenException('Accès refusé : étudiant d\'un autre département');
+    if (
+      acteurDeptIds.length > 0 &&
+      !acteurDeptIds.includes(etudiant.departement_id ?? '')
+    ) {
+      throw new ForbiddenException(
+        "Accès refusé : étudiant d'un autre département",
+      );
     }
 
-    if (dto.numero_etudiant && dto.numero_etudiant !== etudiant.numero_etudiant) {
+    if (
+      dto.numero_etudiant &&
+      dto.numero_etudiant !== etudiant.numero_etudiant
+    ) {
       const doublon = await this.prisma.etudiants.findFirst({
-        where: { numero_etudiant: dto.numero_etudiant, deleted_at: null, id: { not: id } },
+        where: {
+          numero_etudiant: dto.numero_etudiant,
+          deleted_at: null,
+          id: { not: id },
+        },
       });
-      if (doublon) throw new ConflictException(`Le matricule "${dto.numero_etudiant}" est déjà utilisé`);
+      if (doublon)
+        throw new ConflictException(
+          `Le matricule "${dto.numero_etudiant}" est déjà utilisé`,
+        );
     }
 
     if (dto.departement_id) {
       const departement = await this.prisma.departements.findFirst({
-        where: { id: dto.departement_id, universite_id: etudiant.universite_id, est_actif: true },
+        where: {
+          id: dto.departement_id,
+          universite_id: etudiant.universite_id,
+          est_actif: true,
+        },
       });
-      if (!departement) throw new NotFoundException('Département introuvable ou inactif pour cette université');
-      if (acteurDeptIds.length > 0 && !acteurDeptIds.includes(dto.departement_id)) {
-        throw new ForbiddenException('Vous devez choisir l\'un de vos départements autorisés');
+      if (!departement)
+        throw new NotFoundException(
+          'Département introuvable ou inactif pour cette université',
+        );
+      if (
+        acteurDeptIds.length > 0 &&
+        !acteurDeptIds.includes(dto.departement_id)
+      ) {
+        throw new ForbiddenException(
+          "Vous devez choisir l'un de vos départements autorisés",
+        );
       }
     }
 
     // Un chef de departement (scope limite) ne peut deplacer un etudiant que vers
     // l'un de SES departements (deja verifie ci-dessus) — la scolarite (aucun
     // departement associe) peut reassigner vers n'importe quel departement.
-    const departementModifiable = acteurDeptIds.length === 0 || Boolean(dto.departement_id);
+    const departementModifiable =
+      acteurDeptIds.length === 0 || Boolean(dto.departement_id);
 
     const updated = await this.prisma.etudiants.update({
       where: { id },
       data: {
-        ...(dto.numero_etudiant !== undefined && { numero_etudiant: dto.numero_etudiant }),
+        ...(dto.numero_etudiant !== undefined && {
+          numero_etudiant: dto.numero_etudiant,
+        }),
         ...(dto.nom !== undefined && { nom: dto.nom }),
         ...(dto.prenom !== undefined && { prenom: dto.prenom }),
-        ...(departementModifiable && dto.departement_id !== undefined && { departement_id: dto.departement_id }),
-        ...(dto.date_naissance !== undefined && { date_naissance: dto.date_naissance ? new Date(dto.date_naissance) : null }),
-        ...(dto.lieu_naissance !== undefined && { lieu_naissance: dto.lieu_naissance }),
+        ...(departementModifiable &&
+          dto.departement_id !== undefined && {
+            departement_id: dto.departement_id,
+          }),
+        ...(dto.date_naissance !== undefined && {
+          date_naissance: dto.date_naissance
+            ? new Date(dto.date_naissance)
+            : null,
+        }),
+        ...(dto.lieu_naissance !== undefined && {
+          lieu_naissance: dto.lieu_naissance,
+        }),
         ...(dto.nationalite !== undefined && { nationalite: dto.nationalite }),
         ...(dto.email !== undefined && { email: dto.email }),
         ...(dto.telephone !== undefined && { telephone: dto.telephone }),
         ...(dto.photo_url !== undefined && { photo_url: dto.photo_url }),
-        ...(dto.annee_entree !== undefined && { annee_entree: dto.annee_entree }),
+        ...(dto.annee_entree !== undefined && {
+          annee_entree: dto.annee_entree,
+        }),
       },
       include: {
         universites: { select: { nom: true, nom_court: true } },
@@ -301,10 +415,17 @@ export class EtudiantsAdminService {
     if (!etudiant) throw new NotFoundException(`Étudiant ${id} introuvable`);
 
     if (acteurUnivId !== null && etudiant.universite_id !== acteurUnivId) {
-      throw new ForbiddenException('Accès refusé : étudiant d\'une autre université');
+      throw new ForbiddenException(
+        "Accès refusé : étudiant d'une autre université",
+      );
     }
-    if (acteurDeptIds.length > 0 && !acteurDeptIds.includes(etudiant.departement_id ?? '')) {
-      throw new ForbiddenException('Accès refusé : étudiant d\'un autre département');
+    if (
+      acteurDeptIds.length > 0 &&
+      !acteurDeptIds.includes(etudiant.departement_id ?? '')
+    ) {
+      throw new ForbiddenException(
+        "Accès refusé : étudiant d'un autre département",
+      );
     }
 
     if (etudiant._count.documents > 0) {

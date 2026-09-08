@@ -24,6 +24,7 @@ import { AuthTokensDto } from './dto/auth-response.dto';
 import { SessionResponseDto } from './dto/session-response.dto';
 import { ProfileResponseDto } from './dto/profile-response.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { PASSWORD_MIN_LENGTH_FLOOR } from '../common/constants/password.constants';
@@ -32,8 +33,8 @@ import { PASSWORD_MIN_LENGTH_FLOOR } from '../common/constants/password.constant
 // sont absents ou invalides — voir gererEchec().
 const MAX_TENTATIVES_DEFAUT = 5;
 const DUREE_BLOCAGE_MIN_DEFAUT = 15;
-const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;       // 1h
-const EMAIL_VERIF_TTL_MS = 24 * 60 * 60 * 1000;  // 24h
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
+const EMAIL_VERIF_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 @Injectable()
 export class AuthService {
@@ -58,7 +59,10 @@ export class AuthService {
     });
     if (existant) {
       // Reponse volontairement vague pour ne pas confirmer l'existence du compte.
-      return { message: 'Si cette adresse est valide, un email de verification vient d\'etre envoye.' };
+      return {
+        message:
+          "Si cette adresse est valide, un email de verification vient d'etre envoye.",
+      };
     }
 
     await this.assertMotDePasseAssezLong(dto.mot_de_passe);
@@ -83,7 +87,9 @@ export class AuthService {
     const verifyUrl = `${this.config.get<string>('FRONTEND_URL')}/verifier-email?token=${tokenBrut}`;
     await this.mail.sendEmailVerification(email, verifyUrl);
 
-    return { message: 'Compte cree. Verifiez votre email pour activer votre compte.' };
+    return {
+      message: 'Compte cree. Verifiez votre email pour activer votre compte.',
+    };
   }
 
   // ─── VERIFY EMAIL ───────────────────────────────────────────────────
@@ -172,19 +178,31 @@ export class AuthService {
   }
 
   // ─── LOGIN ──────────────────────────────────────────────────────────
-  async login(dto: LoginDto, ip?: string, userAgent?: string): Promise<AuthTokensDto> {
+  async login(
+    dto: LoginDto,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<AuthTokensDto> {
     const user = await this.prisma.utilisateurs.findFirst({
       where: { email: dto.email.toLowerCase(), deleted_at: null },
     });
 
     if (!user) {
       await bcrypt.compare(dto.mot_de_passe, await this.getDummyHash());
-      await this.tracerTentative(dto.email, ip, userAgent, false, 'utilisateur_inconnu');
+      await this.tracerTentative(
+        dto.email,
+        ip,
+        userAgent,
+        false,
+        'utilisateur_inconnu',
+      );
       throw new UnauthorizedException('Identifiants invalides');
     }
 
     if (user.statut === 'en_attente_email') {
-      throw new ForbiddenException('Veuillez verifier votre email avant de vous connecter');
+      throw new ForbiddenException(
+        'Veuillez verifier votre email avant de vous connecter',
+      );
     }
 
     if (user.statut === 'suspendu' || user.statut === 'inactif') {
@@ -198,16 +216,29 @@ export class AuthService {
       );
     }
 
-    const motDePasseOk = await bcrypt.compare(dto.mot_de_passe, user.mot_de_passe);
+    const motDePasseOk = await bcrypt.compare(
+      dto.mot_de_passe,
+      user.mot_de_passe,
+    );
     if (!motDePasseOk) {
       await this.gererEchec(user);
-      await this.tracerTentative(dto.email, ip, userAgent, false, 'mot_de_passe_invalide');
+      await this.tracerTentative(
+        dto.email,
+        ip,
+        userAgent,
+        false,
+        'mot_de_passe_invalide',
+      );
       throw new UnauthorizedException('Identifiants invalides');
     }
 
     await this.prisma.utilisateurs.update({
       where: { id: user.id },
-      data: { tentatives_connexion: 0, bloque_jusqu: null, derniere_connexion: new Date() },
+      data: {
+        tentatives_connexion: 0,
+        bloque_jusqu: null,
+        derniere_connexion: new Date(),
+      },
     });
     await this.tracerTentative(dto.email, ip, userAgent, true, null);
 
@@ -225,7 +256,11 @@ export class AuthService {
   }
 
   // ─── REFRESH ────────────────────────────────────────────────────────
-  async refresh(refreshToken: string, ip?: string, userAgent?: string): Promise<AuthTokensDto> {
+  async refresh(
+    refreshToken: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<AuthTokensDto> {
     let payload: { sub: string };
     try {
       payload = await this.jwt.verifyAsync<{ sub: string }>(refreshToken, {
@@ -316,7 +351,9 @@ export class AuthService {
       },
     });
     if (!user) {
-      throw new BadRequestException('Token de reinitialisation invalide ou expire');
+      throw new BadRequestException(
+        'Token de reinitialisation invalide ou expire',
+      );
     }
 
     await this.assertMotDePasseAssezLong(nouveauMotDePasse);
@@ -378,10 +415,39 @@ export class AuthService {
       avatar_url: user.avatar_url,
       langue: user.langue,
       role: user.roles_utilisateurs_role_idToroles ?? null,
-      universite: user.universites_utilisateurs_universite_idTouniversites ?? null,
+      universite:
+        user.universites_utilisateurs_universite_idTouniversites ?? null,
       departements: user.departements,
       created_at: user.created_at,
+      preferences: (user.preferences ?? {}) as Record<string, boolean>,
     };
+  }
+
+  /** Fusionne les préférences de notification email fournies dans le JSON existant (jamais un remplacement complet). */
+  async updatePreferences(
+    userId: string,
+    dto: UpdatePreferencesDto,
+  ): Promise<ProfileResponseDto> {
+    const user = await this.prisma.utilisateurs.findFirst({
+      where: { id: userId, deleted_at: null },
+      select: { preferences: true },
+    });
+    if (!user) {
+      throw new NotFoundException('Utilisateur introuvable');
+    }
+
+    const preferencesActuelles = (user.preferences ?? {}) as Record<
+      string,
+      unknown
+    >;
+    const preferencesFusionnees = { ...preferencesActuelles, ...dto };
+
+    await this.prisma.utilisateurs.update({
+      where: { id: userId },
+      data: { preferences: preferencesFusionnees },
+    });
+
+    return this.getProfile(userId);
   }
 
   /**
@@ -390,7 +456,10 @@ export class AuthService {
    * prend effet qu'apres verification du token envoye a la nouvelle adresse.
    * L'ancienne adresse est notifiee pour securite.
    */
-  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<ProfileResponseDto> {
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<ProfileResponseDto> {
     const user = await this.prisma.utilisateurs.findFirst({
       where: { id: userId, deleted_at: null },
     });
@@ -438,7 +507,9 @@ export class AuthService {
       // jusqu'a la confirmation via le lien de verification.
       data.email_en_attente = nouvelEmail;
       data.token_verification_email = this.hash(verifToken);
-      data.token_verification_expiry = new Date(Date.now() + EMAIL_VERIF_TTL_MS);
+      data.token_verification_expiry = new Date(
+        Date.now() + EMAIL_VERIF_TTL_MS,
+      );
     }
 
     await this.prisma.utilisateurs.update({ where: { id: userId }, data });
@@ -485,7 +556,10 @@ export class AuthService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    const ancienOk = await bcrypt.compare(dto.ancien_mot_de_passe, user.mot_de_passe);
+    const ancienOk = await bcrypt.compare(
+      dto.ancien_mot_de_passe,
+      user.mot_de_passe,
+    );
     if (!ancienOk) {
       throw new BadRequestException('Ancien mot de passe incorrect');
     }
@@ -570,7 +644,10 @@ export class AuthService {
   }
 
   /** Lit un parametre systeme numerique (configurations), avec repli sur une valeur par defaut. */
-  private async parametreNumerique(cle: string, defaut: number): Promise<number> {
+  private async parametreNumerique(
+    cle: string,
+    defaut: number,
+  ): Promise<number> {
     const brut = await this.configurations.get(cle, String(defaut));
     const valeur = Number(brut);
     return Number.isFinite(valeur) && valeur > 0 ? valeur : defaut;
@@ -582,20 +659,28 @@ export class AuthService {
    * mais peut etre relevee sans redeploiement.
    */
   private async motDePasseLongueurMin(): Promise<number> {
-    const valeur = await this.parametreNumerique('mot_de_passe_longueur_min', PASSWORD_MIN_LENGTH_FLOOR);
+    const valeur = await this.parametreNumerique(
+      'mot_de_passe_longueur_min',
+      PASSWORD_MIN_LENGTH_FLOOR,
+    );
     return Math.max(valeur, PASSWORD_MIN_LENGTH_FLOOR);
   }
 
   private async assertMotDePasseAssezLong(motDePasse: string): Promise<void> {
     const min = await this.motDePasseLongueurMin();
     if (motDePasse.length < min) {
-      throw new BadRequestException(`Le mot de passe doit contenir au moins ${min} caracteres`);
+      throw new BadRequestException(
+        `Le mot de passe doit contenir au moins ${min} caracteres`,
+      );
     }
   }
 
   private async gererEchec(user: utilisateurs): Promise<void> {
     const [maxTentatives, dureeBlocageMin] = await Promise.all([
-      this.parametreNumerique('max_tentatives_connexion', MAX_TENTATIVES_DEFAUT),
+      this.parametreNumerique(
+        'max_tentatives_connexion',
+        MAX_TENTATIVES_DEFAUT,
+      ),
       this.parametreNumerique('duree_blocage_min', DUREE_BLOCAGE_MIN_DEFAUT),
     ]);
 

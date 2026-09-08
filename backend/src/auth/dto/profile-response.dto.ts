@@ -1,4 +1,25 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+class PreferencesNotificationsDto {
+  @ApiPropertyOptional({
+    default: true,
+    description: "Alerte email quand un document que j'ai saisi est validé.",
+  })
+  documents_valides?: boolean;
+
+  @ApiPropertyOptional({
+    default: true,
+    description: "Alerte email quand un document que j'ai saisi est rejeté.",
+  })
+  documents_rejetes?: boolean;
+
+  @ApiPropertyOptional({
+    default: true,
+    description:
+      'Alerte email en cas de connexion inhabituelle (non appliqué — aucune détection en place).',
+  })
+  connexion_inhabituelle?: boolean;
+}
 
 class RoleBriefDto {
   @ApiProperty({ format: 'uuid' })
@@ -55,10 +76,18 @@ export class ProfileResponseDto {
 
   @ApiProperty({
     type: [DepartementBriefDto],
-    description: "Departements d'affectation (chef de departement, scope). Liste vide = aucune restriction (scolarite / autre role).",
+    description:
+      "Departements d'affectation (chef de departement, scope). Liste vide = aucune restriction (scolarite / autre role).",
   })
   departements: DepartementBriefDto[];
 
   @ApiProperty({ description: 'Date de creation du compte.' })
   created_at: Date;
+
+  @ApiProperty({
+    type: PreferencesNotificationsDto,
+    description:
+      'Préférences de notification email — clés absentes = activé par défaut.',
+  })
+  preferences: PreferencesNotificationsDto;
 }

@@ -39,7 +39,7 @@ function fmtDateHeure(iso) {
   });
 }
 
-export default function VerificationsActivite() {
+export default function VerificationsActivite({ searchTerm = '' } = {}) {
   const [verifications, setVerifications] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(null);
@@ -63,6 +63,14 @@ export default function VerificationsActivite() {
   const nbAuthentiques = verifications.filter((v) => v.resultat === 'authentique').length;
   const nbDiplomesDistincts = new Set(verifications.map((v) => v.document_id).filter(Boolean)).size;
   const tauxReussite = total > 0 ? Math.round((nbAuthentiques / total) * 100) : 0;
+
+  const terme = searchTerm.trim().toLowerCase();
+  const verificationsFiltrees = terme
+    ? verifications.filter((v) =>
+        (v.type_document ?? '').toLowerCase().includes(terme) ||
+        (v.numero_unique ?? '').toLowerCase().includes(terme),
+      )
+    : verifications;
 
   return (
     <div className={styles.container}>
@@ -130,16 +138,20 @@ export default function VerificationsActivite() {
           </div>
         )}
 
-        {!chargement && !erreur && verifications.length === 0 && (
+        {!chargement && !erreur && verificationsFiltrees.length === 0 && (
           <div className={styles.etatVide}>
             <Activity size={22} />
-            <p>Aucune vérification n'a encore été effectuée sur vos documents.</p>
+            <p>
+              {verifications.length === 0
+                ? "Aucune vérification n'a encore été effectuée sur vos documents."
+                : 'Aucune vérification ne correspond à votre recherche.'}
+            </p>
           </div>
         )}
 
-        {!chargement && !erreur && verifications.length > 0 && (
+        {!chargement && !erreur && verificationsFiltrees.length > 0 && (
           <div className={styles.verifList}>
-            {verifications.map((v) => {
+            {verificationsFiltrees.map((v) => {
               const canal = CANAL[v.type_verification] ?? { label: v.type_verification, icone: Hash };
               const resultat = RESULTAT[v.resultat] ?? RESULTAT.non_trouve;
               const IconeCanal = canal.icone;

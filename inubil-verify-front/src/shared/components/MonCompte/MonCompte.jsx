@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   User,
   Lock,
@@ -16,18 +16,54 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '../../../core/auth/useAuth';
+import { listerSessions, revoquerSession, mettreAJourPreferences } from '../../../core/auth/auth.api';
+import { listerMesVerifications } from '../../../core/verifications/verifications.api';
+import { ApiError } from '../../../core/api/client';
 import styles from './MonCompte.module.css';
 
 // Page "Mon Compte" partagée par les 3 dashboards staff/admin (/universite,
 // AdminInubil, DashboardDirecteur) — couvre les pages communes à tout utilisateur
-// connecté (docs/ROLES_ET_PAGES.md §C : profil, mot de passe, sessions,
-// notifications, historique de vérifications). Contenu mock, comme le reste des
-// pages derrière les liens de sidebar — accord de scope déjà établi.
+// connecté (docs/ROLES_ET_PAGES.md §C : profil, mot de passe, sessions, notifications).
+// Sessions actives, Notifications (préférences email) et Historique de vérifications
+// sont tous branchés sur des données réelles. "Connexion inhabituelle" est sauvegardée
+// mais non appliquée : aucune détection d'anomalie de connexion n'existe encore côté backend.
+const LABELS_RESULTAT = {
+  authentique: { label: 'Authentique', classe: 'statusOk' },
+  revoque:     { label: 'Révoqué',     classe: 'statusRevoked' },
+  non_trouve:  { label: 'Non trouvé',  classe: 'statusWarn' },
+  falsifie:    { label: 'Falsifié',    classe: 'statusRevoked' },
+};
+
+/** Devine appareil + navigateur depuis le user-agent stocké — approximatif mais lisible. */
+function parseUserAgent(ua) {
+  if (!ua) return { label: 'Appareil inconnu', Icon: Monitor };
+  const mobile = /Mobile|Android|iPhone|iPad/i.test(ua);
+  let navigateur = 'Navigateur';
+  if (/Edg\//i.test(ua)) navigateur = 'Edge';
+  else if (/Chrome\//i.test(ua)) navigateur = 'Chrome';
+  else if (/Firefox\//i.test(ua)) navigateur = 'Firefox';
+  else if (/Safari\//i.test(ua)) navigateur = 'Safari';
+  let os = '';
+  if (/Windows/i.test(ua)) os = 'Windows';
+  else if (/Mac OS/i.test(ua)) os = 'macOS';
+  else if (/Android/i.test(ua)) os = 'Android';
+  else if (/iPhone|iPad/i.test(ua)) os = 'iOS';
+  else if (/Linux/i.test(ua)) os = 'Linux';
+  return {
+    label: os ? `${navigateur} — ${os}` : navigateur,
+    Icon: mobile ? Smartphone : Laptop,
+  };
+}
+
 export default function MonCompte({ roleLabel }) {
   const { utilisateur } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  const [historique, setHistorique] = useState([]);
+  const [historiqueLoading, setHistoriqueLoading] = useState(true);
+  const [historiqueError, setHistoriqueError] = useState(null);
 
   const prenom = utilisateur?.prenom ?? '';
   const nom = utilisateur?.nom ?? '';
@@ -36,22 +72,85 @@ export default function MonCompte({ roleLabel }) {
 
   const [profile, setProfile] = useState({ prenom, nom });
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirmPass: '' });
+  // Absence de clé = activé par défaut (même convention que le backend).
+  const preferencesUtilisateur = utilisateur?.preferences ?? {};
   const [notifications, setNotifications] = useState({
-    documentsValides: true,
-    documentsRejetes: true,
-    connexionInhabituelle: true,
+    documentsValides: preferencesUtilisateur.documents_valides !== false,
+    documentsRejetes: preferencesUtilisateur.documents_rejetes !== false,
+    connexionInhabituelle: preferencesUtilisateur.connexion_inhabituelle !== false,
   });
+  const [preferencesEnCours, setPreferencesEnCours] = useState(null);
+  const [preferencesError, setPreferencesError] = useState(null);
 
-  const sessions = [
-    { id: 1, appareil: 'Chrome — Windows', icon: Laptop, lieu: 'Douala, Cameroun', actuelle: true, derniereActivite: "Maintenant" },
-    { id: 2, appareil: 'Application mobile — Android', icon: Smartphone, lieu: 'Douala, Cameroun', actuelle: false, derniereActivite: 'Il y a 2 jours' },
-  ];
+  const basculerPreference = async (cleFront, cleBackend) => {
+    const nouvelleValeur = !notifications[cleFront];
+    setPreferencesEnCours(cleFront);
+    setPreferencesError(null);
+    try {
+      await mettreAJourPreferences({ [cleBackend]: nouvelleValeur });
+      setNotifications((n) => ({ ...n, [cleFront]: nouvelleValeur }));
+    } catch (err) {
+      setPreferencesError(err instanceof ApiError ? err.message : 'Impossible d\'enregistrer cette préférence.');
+    } finally {
+      setPreferencesEnCours(null);
+    }
+  };
 
-  const historique = [
-    { id: 1, cible: 'INUB-2026-0143', resultat: 'Authentique', date: '18/08/2026 09:12' },
-    { id: 2, cible: 'INUB-2026-0098', resultat: 'Authentique', date: '15/08/2026 16:40' },
-    { id: 3, cible: 'INUB-2025-0871', resultat: 'Révoqué', date: '02/08/2026 11:05' },
-  ];
+  const [sessions, setSessions] = useState([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [sessionsError, setSessionsError] = useState(null);
+  const [revocationEnCours, setRevocationEnCours] = useState(null);
+
+  useEffect(() => {
+    let annule = false;
+    listerSessions()
+      .then((data) => {
+        if (annule) return;
+        setSessions(data ?? []);
+      })
+      .catch((err) => {
+        if (annule) return;
+        setSessionsError(err instanceof ApiError ? err.message : 'Impossible de charger vos sessions.');
+      })
+      .finally(() => {
+        if (!annule) setSessionsLoading(false);
+      });
+    return () => { annule = true; };
+  }, []);
+
+  const handleRevoquerSession = async (id) => {
+    // L'API ne dit pas quelle session correspond a l'onglet courant — avertir avant
+    // de risquer une deconnexion surprise si c'est justement celle-ci.
+    if (!window.confirm("Révoquer cette session ? Si c'est celle que vous utilisez actuellement, vous serez déconnecté.")) {
+      return;
+    }
+    setRevocationEnCours(id);
+    try {
+      await revoquerSession(id);
+      setSessions((liste) => liste.filter((s) => s.id !== id));
+    } catch (err) {
+      setSessionsError(err instanceof ApiError ? err.message : 'Impossible de révoquer cette session.');
+    } finally {
+      setRevocationEnCours(null);
+    }
+  };
+
+  useEffect(() => {
+    let annule = false;
+    listerMesVerifications({ limit: 50 })
+      .then((res) => {
+        if (annule) return;
+        setHistorique(res.data ?? []);
+      })
+      .catch((err) => {
+        if (annule) return;
+        setHistoriqueError(err instanceof ApiError ? err.message : "Impossible de charger l'historique.");
+      })
+      .finally(() => {
+        if (!annule) setHistoriqueLoading(false);
+      });
+    return () => { annule = true; };
+  }, []);
 
   const handleSaveProfile = (e) => {
     e.preventDefault();
@@ -162,58 +261,93 @@ export default function MonCompte({ roleLabel }) {
       {activeTab === 'sessions' && (
         <div className={styles.sectionCard}>
           <h2 className={styles.sectionTitle}>Sessions actives</h2>
-          <div className={styles.sessionsList}>
-            {sessions.map((s) => (
-              <div key={s.id} className={styles.sessionRow}>
-                <div className={styles.sessionInfo}>
-                  <s.icon size={20} className={styles.sessionIcon} />
-                  <div>
-                    <strong>{s.appareil}</strong>
-                    <p>{s.lieu} — {s.derniereActivite}</p>
+          {sessionsError && <p className={styles.errorText}>{sessionsError}</p>}
+          {sessionsLoading && <p>Chargement…</p>}
+          {!sessionsLoading && sessions.length === 0 && !sessionsError && (
+            <p>Aucune session active pour l'instant.</p>
+          )}
+          {!sessionsLoading && sessions.length > 0 && (
+            <div className={styles.sessionsList}>
+              {sessions.map((s) => {
+                const { label, Icon } = parseUserAgent(s.user_agent);
+                return (
+                  <div key={s.id} className={styles.sessionRow}>
+                    <div className={styles.sessionInfo}>
+                      <Icon size={20} className={styles.sessionIcon} />
+                      <div>
+                        <strong>{label}</strong>
+                        <p>
+                          {s.ip_address ?? 'IP inconnue'} — connecté le{' '}
+                          {new Date(s.created_at).toLocaleString('fr-FR')}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.revokeBtn}
+                      onClick={() => handleRevoquerSession(s.id)}
+                      disabled={revocationEnCours === s.id}
+                    >
+                      {revocationEnCours === s.id ? 'Révocation…' : 'Révoquer'}
+                    </button>
                   </div>
-                </div>
-                {s.actuelle ? (
-                  <span className={styles.currentBadge}>Session actuelle</span>
-                ) : (
-                  <button type="button" className={styles.revokeBtn}>Révoquer</button>
-                )}
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
       {activeTab === 'notifications' && (
         <div className={styles.sectionCard}>
           <h2 className={styles.sectionTitle}>Notifications par email</h2>
+          {preferencesError && <p className={styles.errorText}>{preferencesError}</p>}
           <div className={styles.toggleList}>
             <div className={styles.toggleRow}>
               <div>
-                <strong>Document validé ou rejeté</strong>
-                <p>Recevoir une alerte lorsqu'un document que vous avez saisi est validé ou rejeté.</p>
+                <strong>Document validé</strong>
+                <p>Recevoir une alerte lorsqu'un document que vous avez saisi est validé.</p>
               </div>
               <label className={styles.switch}>
-                <input type="checkbox" checked={notifications.documentsValides} onChange={() => setNotifications({ ...notifications, documentsValides: !notifications.documentsValides })} />
+                <input
+                  type="checkbox"
+                  checked={notifications.documentsValides}
+                  disabled={preferencesEnCours === 'documentsValides'}
+                  onChange={() => basculerPreference('documentsValides', 'documents_valides')}
+                />
                 <span className={styles.slider}></span>
               </label>
             </div>
             <div className={styles.toggleRow}>
               <div>
-                <strong>Document révoqué</strong>
-                <p>Recevoir une alerte lorsqu'un document est révoqué.</p>
+                <strong>Document rejeté</strong>
+                <p>Recevoir une alerte lorsqu'un document que vous avez saisi est rejeté.</p>
               </div>
               <label className={styles.switch}>
-                <input type="checkbox" checked={notifications.documentsRejetes} onChange={() => setNotifications({ ...notifications, documentsRejetes: !notifications.documentsRejetes })} />
+                <input
+                  type="checkbox"
+                  checked={notifications.documentsRejetes}
+                  disabled={preferencesEnCours === 'documentsRejetes'}
+                  onChange={() => basculerPreference('documentsRejetes', 'documents_rejetes')}
+                />
                 <span className={styles.slider}></span>
               </label>
             </div>
             <div className={styles.toggleRow}>
               <div>
                 <strong>Connexion inhabituelle</strong>
-                <p>Être alerté en cas de connexion depuis un nouvel appareil.</p>
+                <p>
+                  Être alerté en cas de connexion depuis un nouvel appareil.{' '}
+                  <em>Préférence enregistrée, mais non appliquée pour l'instant — aucune détection de connexion inhabituelle n'existe encore sur la plateforme.</em>
+                </p>
               </div>
               <label className={styles.switch}>
-                <input type="checkbox" checked={notifications.connexionInhabituelle} onChange={() => setNotifications({ ...notifications, connexionInhabituelle: !notifications.connexionInhabituelle })} />
+                <input
+                  type="checkbox"
+                  checked={notifications.connexionInhabituelle}
+                  disabled={preferencesEnCours === 'connexionInhabituelle'}
+                  onChange={() => basculerPreference('connexionInhabituelle', 'connexion_inhabituelle')}
+                />
                 <span className={styles.slider}></span>
               </label>
             </div>
@@ -224,26 +358,36 @@ export default function MonCompte({ roleLabel }) {
       {activeTab === 'historique' && (
         <div className={styles.sectionCard}>
           <h2 className={styles.sectionTitle}>Mon historique de vérifications</h2>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Document</th>
-                <th>Résultat</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {historique.map((h) => (
-                <tr key={h.id}>
-                  <td className={styles.mono}>{h.cible}</td>
-                  <td>
-                    <span className={h.resultat === 'Authentique' ? styles.statusOk : styles.statusRevoked}>{h.resultat}</span>
-                  </td>
-                  <td className={styles.mono}>{h.date}</td>
+          {historiqueError && <p className={styles.errorText}>{historiqueError}</p>}
+          {historiqueLoading && <p>Chargement…</p>}
+          {!historiqueLoading && !historiqueError && historique.length === 0 && (
+            <p>Aucune vérification effectuée pour l'instant.</p>
+          )}
+          {!historiqueLoading && historique.length > 0 && (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Document</th>
+                  <th>Résultat</th>
+                  <th>Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {historique.map((h) => {
+                  const meta = LABELS_RESULTAT[h.resultat] ?? { label: h.resultat, classe: 'statusWarn' };
+                  return (
+                    <tr key={h.id}>
+                      <td className={styles.mono}>{h.document_numero_unique ?? '—'}</td>
+                      <td>
+                        <span className={styles[meta.classe]}>{meta.label}</span>
+                      </td>
+                      <td className={styles.mono}>{new Date(h.created_at).toLocaleString('fr-FR')}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
     </div>

@@ -29,7 +29,9 @@ export class VerificationsService {
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
 
-    const where: Prisma.verificationsWhereInput = { utilisateur_id: utilisateurId };
+    const where: Prisma.verificationsWhereInput = {
+      utilisateur_id: utilisateurId,
+    };
     this.appliquerFiltresCommuns(where, query);
 
     const [verifications, total] = await this.prisma.$transaction([
@@ -38,6 +40,7 @@ export class VerificationsService {
         orderBy: { created_at: 'desc' },
         skip,
         take: limit,
+        include: { documents: { select: { numero_unique: true } } },
       }),
       this.prisma.verifications.count({ where }),
     ]);
@@ -69,7 +72,9 @@ export class VerificationsService {
         where: { id: query.document_id, etudiant_id: etudiant.id },
       });
       if (!doc) {
-        throw new ForbiddenException("Ce document ne fait pas partie de vos diplômes");
+        throw new ForbiddenException(
+          'Ce document ne fait pas partie de vos diplômes',
+        );
       }
     }
 
@@ -88,6 +93,7 @@ export class VerificationsService {
         orderBy: { created_at: 'desc' },
         skip,
         take: limit,
+        include: { documents: { select: { numero_unique: true } } },
       }),
       this.prisma.verifications.count({ where }),
     ]);
@@ -106,7 +112,8 @@ export class VerificationsService {
     const where: Prisma.verificationsWhereInput = {};
     this.appliquerFiltresCommuns(where, query);
     if (query.utilisateur_id) where.utilisateur_id = query.utilisateur_id;
-    if (query.type_verification) where.type_verification = query.type_verification as any;
+    if (query.type_verification)
+      where.type_verification = query.type_verification as any;
     if (query.document_id) where.document_id = query.document_id;
 
     const [verifications, total] = await this.prisma.$transaction([
@@ -115,6 +122,7 @@ export class VerificationsService {
         orderBy: { created_at: 'desc' },
         skip,
         take: limit,
+        include: { documents: { select: { numero_unique: true } } },
       }),
       this.prisma.verifications.count({ where }),
     ]);
@@ -164,6 +172,7 @@ export class VerificationsService {
       type_verification: v.type_verification,
       resultat: v.resultat,
       document_id: v.document_id ?? null,
+      document_numero_unique: v.documents?.numero_unique ?? null,
       rapport_genere: v.rapport_genere,
       rapport_pdf_url: v.rapport_pdf_url ?? null,
       pays: v.pays ?? null,

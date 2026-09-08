@@ -12,7 +12,7 @@ const INUBIL_VERIFY_ABI = [
 export interface VerifBlockchain {
   existe: boolean;
   revoque: boolean;
-  hashPdf: string;       // bytes32 hex
+  hashPdf: string; // bytes32 hex
   universiteId: string;
   dateEmission: Date | null;
 }
@@ -21,29 +21,37 @@ export interface VerifBlockchain {
 export class BlockchainService {
   private readonly logger = new Logger(BlockchainService.name);
 
-  private readonly provider:    ethers.JsonRpcProvider | null = null;
-  private readonly wallet:      ethers.Wallet | null           = null;
-  private readonly contrat:     ethers.Contract | null         = null;
-  private readonly contratLire: ethers.Contract | null         = null; // lecture seule
+  private readonly provider: ethers.JsonRpcProvider | null = null;
+  private readonly wallet: ethers.Wallet | null = null;
+  private readonly contrat: ethers.Contract | null = null;
+  private readonly contratLire: ethers.Contract | null = null; // lecture seule
 
   constructor(private readonly config: ConfigService) {
-    const rpcUrl          = config.get<string>('POLYGON_RPC_URL');
-    const privateKey      = config.get<string>('DEPLOYER_PRIVATE_KEY');
+    const rpcUrl = config.get<string>('POLYGON_RPC_URL');
+    const privateKey = config.get<string>('DEPLOYER_PRIVATE_KEY');
     const contractAddress = config.get<string>('CONTRACT_ADDRESS');
 
     if (!rpcUrl || !privateKey || !contractAddress) {
       this.logger.warn(
         'Blockchain non configurée (POLYGON_RPC_URL / DEPLOYER_PRIVATE_KEY / CONTRACT_ADDRESS manquants). ' +
-        'Les appels blockchain seront ignorés.',
+          'Les appels blockchain seront ignorés.',
       );
       return;
     }
 
     try {
-      this.provider    = new ethers.JsonRpcProvider(rpcUrl);
-      this.wallet      = new ethers.Wallet(privateKey, this.provider);
-      this.contrat     = new ethers.Contract(contractAddress, INUBIL_VERIFY_ABI, this.wallet);
-      this.contratLire = new ethers.Contract(contractAddress, INUBIL_VERIFY_ABI, this.provider);
+      this.provider = new ethers.JsonRpcProvider(rpcUrl);
+      this.wallet = new ethers.Wallet(privateKey, this.provider);
+      this.contrat = new ethers.Contract(
+        contractAddress,
+        INUBIL_VERIFY_ABI,
+        this.wallet,
+      );
+      this.contratLire = new ethers.Contract(
+        contractAddress,
+        INUBIL_VERIFY_ABI,
+        this.provider,
+      );
       this.logger.log(`Blockchain connectée - contrat : ${contractAddress}`);
     } catch (err) {
       this.logger.error('Erreur initialisation blockchain :', err);
@@ -65,28 +73,32 @@ export class BlockchainService {
    */
   async enregistrerDiplome(
     numeroUnique: string,
-    hashPdfHex:   string,
+    hashPdfHex: string,
     universiteId: string,
   ): Promise<{ txHash: string; blocNumero: bigint } | null> {
     if (!this.contrat) return null;
 
     try {
       const hashBytes32 = this.hexVersBytes32(hashPdfHex);
-      const tx: ethers.TransactionResponse = await this.contrat['enregistrerDiplome'](
-        numeroUnique,
-        hashBytes32,
-        universiteId,
-      );
+      const tx: ethers.TransactionResponse = await this.contrat[
+        'enregistrerDiplome'
+      ](numeroUnique, hashBytes32, universiteId);
       const receipt = await tx.wait(); // attend la confirmation (1 bloc)
       const blocNumero = BigInt(receipt?.blockNumber ?? 0);
-      this.logger.log(`Diplôme enregistré on-chain : ${numeroUnique} (tx: ${tx.hash}, bloc: ${blocNumero})`);
+      this.logger.log(
+        `Diplôme enregistré on-chain : ${numeroUnique} (tx: ${tx.hash}, bloc: ${blocNumero})`,
+      );
       return { txHash: tx.hash, blocNumero };
     } catch (err) {
       const raison = err instanceof Error ? err.message : String(err);
       if (raison.includes('deja enregistre')) {
-        this.logger.warn(`Diplôme ${numeroUnique} déjà enregistré on-chain — ignoré.`);
+        this.logger.warn(
+          `Diplôme ${numeroUnique} déjà enregistré on-chain — ignoré.`,
+        );
       } else {
-        this.logger.error(`Erreur enregistrerDiplome (${numeroUnique}) : ${raison}`);
+        this.logger.error(
+          `Erreur enregistrerDiplome (${numeroUnique}) : ${raison}`,
+        );
       }
       return null;
     }
@@ -94,16 +106,22 @@ export class BlockchainService {
 
   /**
    * Révoque un diplôme sur la blockchain.
-   * @returns Hash de la transaction, ou null si blockchain non configurée
+   * @returns Hash de transaction + numéro de bloc, ou null si blockchain non configurée
    */
-  async revoquerDiplome(numeroUnique: string): Promise<string | null> {
+  async revoquerDiplome(
+    numeroUnique: string,
+  ): Promise<{ txHash: string; blocNumero: bigint } | null> {
     if (!this.contrat) return null;
 
     try {
-      const tx: ethers.TransactionResponse = await this.contrat['revoquerDiplome'](numeroUnique);
-      await tx.wait();
-      this.logger.log(`Diplôme révoqué on-chain : ${numeroUnique} (tx: ${tx.hash})`);
-      return tx.hash;
+      const tx: ethers.TransactionResponse =
+        await this.contrat['revoquerDiplome'](numeroUnique);
+      const receipt = await tx.wait();
+      const blocNumero = BigInt(receipt?.blockNumber ?? 0);
+      this.logger.log(
+        `Diplôme révoqué on-chain : ${numeroUnique} (tx: ${tx.hash}, bloc: ${blocNumero})`,
+      );
+      return { txHash: tx.hash, blocNumero };
     } catch (err) {
       this.logger.error(`Erreur revoquerDiplome (${numeroUnique}) :`, err);
       return null;
@@ -121,7 +139,11 @@ export class BlockchainService {
 
     try {
       const [existe, revoque, hashPdf, universiteId, dateEmissionBn]: [
-        boolean, boolean, string, string, bigint
+        boolean,
+        boolean,
+        string,
+        string,
+        bigint,
       ] = await this.contratLire['verifierDiplome'](numeroUnique);
 
       return {
@@ -129,9 +151,8 @@ export class BlockchainService {
         revoque,
         hashPdf,
         universiteId,
-        dateEmission: dateEmissionBn > 0n
-          ? new Date(Number(dateEmissionBn) * 1000)
-          : null,
+        dateEmission:
+          dateEmissionBn > 0n ? new Date(Number(dateEmissionBn) * 1000) : null,
       };
     } catch (err) {
       this.logger.error(`Erreur verifierDiplome (${numeroUnique}) :`, err);

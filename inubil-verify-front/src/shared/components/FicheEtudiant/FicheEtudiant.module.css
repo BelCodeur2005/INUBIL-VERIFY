@@ -48,6 +48,29 @@
 
 .newBtn:hover { background: #1e429f; }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exportBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  color: #2b56cb;
+  border: 1px solid #e2e8f0;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.exportBtn:hover { background: #f8fafc; }
+.exportBtn:disabled { opacity: 0.6; cursor: default; }
+
 .searchWrap {
   position: relative;
   display: flex;

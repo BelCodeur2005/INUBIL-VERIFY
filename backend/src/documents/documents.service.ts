@@ -22,6 +22,7 @@ import { UpdateDocumentDto } from './dto/update-document.dto';
 import { RevoquerDocumentDto } from './dto/revoquer-document.dto';
 import { RejeterDocumentDto } from './dto/rejeter-document.dto';
 import { DocumentQueryDto } from './dto/document-query.dto';
+import { toCsv } from '../common/csv.util';
 
 @Injectable()
 export class DocumentsService {
@@ -223,13 +224,15 @@ export class DocumentsService {
     return doc;
   }
 
-  async lister(query: DocumentQueryDto, acteurId: string) {
+  /** Where partage entre lister() et exporterCsv() — meme scoping multi-tenant/departement. */
+  private async construireWhereListe(
+    query: DocumentQueryDto,
+    acteurId: string,
+  ): Promise<Prisma.documentsWhereInput> {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const acteurDeptIds = await this.getActeurDepartementIds(acteurId);
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
 
-    const where: any = { deleted_at: null };
+    const where: Prisma.documentsWhereInput = { deleted_at: null };
 
     // Scoping multi-tenant
     if (acteurUnivId !== null) {
@@ -244,7 +247,8 @@ export class DocumentsService {
       where.etudiants = { departement_id: { in: acteurDeptIds } };
     }
 
-    if (query.statut) where.statut = query.statut;
+    if (query.statut)
+      where.statut = query.statut as Prisma.documentsWhereInput['statut'];
     if (query.etudiant_id) where.etudiant_id = query.etudiant_id;
     if (query.type_document_id) where.type_document_id = query.type_document_id;
     if (query.date_debut || query.date_fin) {
@@ -253,6 +257,14 @@ export class DocumentsService {
         where.date_emission.gte = new Date(query.date_debut);
       if (query.date_fin) where.date_emission.lte = new Date(query.date_fin);
     }
+
+    return where;
+  }
+
+  async lister(query: DocumentQueryDto, acteurId: string) {
+    const where = await this.construireWhereListe(query, acteurId);
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
 
     const [total, items] = await Promise.all([
       this.prisma.documents.count({ where }),
@@ -266,6 +278,48 @@ export class DocumentsService {
     ]);
 
     return { total, page, limit, items };
+  }
+
+  /** Export CSV des documents visibles par l'acteur — memes filtres que lister(), sans pagination (plafond 10 000 lignes). */
+  async exporterCsv(
+    query: DocumentQueryDto,
+    acteurId: string,
+  ): Promise<string> {
+    const where = await this.construireWhereListe(query, acteurId);
+
+    const items = await this.prisma.documents.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      take: 10_000,
+      include: {
+        etudiants: {
+          select: { nom: true, prenom: true, numero_etudiant: true },
+        },
+        universites: { select: { nom: true } },
+        types_document: { select: { nom: true } },
+        mentions_document: { select: { nom: true } },
+      },
+    });
+
+    return toCsv(items, [
+      { header: 'Numéro unique', value: (d) => d.numero_unique },
+      {
+        header: 'Étudiant',
+        value: (d) => `${d.etudiants.prenom} ${d.etudiants.nom}`,
+      },
+      { header: 'N° étudiant', value: (d) => d.etudiants.numero_etudiant },
+      { header: 'Université', value: (d) => d.universites.nom },
+      { header: 'Type de document', value: (d) => d.types_document.nom },
+      { header: 'Filière', value: (d) => d.filiere },
+      { header: 'Mention', value: (d) => d.mentions_document?.nom },
+      { header: 'Statut', value: (d) => d.statut },
+      {
+        header: "Date d'émission",
+        value: (d) => d.date_emission?.toISOString().slice(0, 10),
+      },
+      { header: 'Hash SHA-256', value: (d) => d.hash_sha256 },
+      { header: 'Transaction blockchain', value: (d) => d.transaction_hash },
+    ]);
   }
 
   async trouver(id: string, acteurId: string) {
@@ -541,6 +595,14 @@ export class DocumentsService {
         ),
       );
 
+    this.notif
+      .notifierCreateur(id, 'valide')
+      .catch((err) =>
+        this.logger.error(
+          `Notification créateur (validation) échouée pour doc ${id} : ${err.message}`,
+        ),
+      );
+
     if (updated.etudiants?.utilisateur_id) {
       this.notificationsInApp
         .creer({
@@ -592,8 +654,6 @@ export class DocumentsService {
         revoque_par: acteurId,
         revoque_le: new Date(),
         raison_revocation: dto.raison,
-        // #22 - Blockchain : revokeDiploma(bytes32 hash) sera appelé ici une fois
-        // le service Ethers.js + Polygon implémenté (transaction_hash mis à jour en retour).
       },
       include: {
         matieres_document: { orderBy: { ordre: 'asc' } },
@@ -682,6 +742,14 @@ export class DocumentsService {
       ip,
     });
 
+    this.notif
+      .notifierCreateur(id, 'rejete', dto.motif)
+      .catch((err) =>
+        this.logger.error(
+          `Notification créateur (rejet) échouée pour doc ${id} : ${err.message}`,
+        ),
+      );
+
     return updated;
   }
 
@@ -747,10 +815,30 @@ export class DocumentsService {
     docId: string,
     numeroUnique: string,
   ): Promise<void> {
-    const txHash = await this.blockchain.revoquerDiplome(numeroUnique);
-    if (!txHash) return; // blockchain non configurée ou erreur déjà loggée
+    const result = await this.blockchain.revoquerDiplome(numeroUnique);
+    if (!result) return; // blockchain non configurée ou erreur déjà loggée
 
-    this.logger.log(`Blockchain ✔ révocation doc ${docId} - tx: ${txHash}`);
+    const { txHash, blocNumero } = result;
+    const reseau = (this.config.get<string>('POLYGON_NETWORK') ??
+      'polygon_amoy') as 'polygon_amoy' | 'polygon_mainnet';
+
+    // Ecrit dans transactions_blockchain (pas sur documents) pour ne pas ecraser le
+    // transaction_hash/bloc_numero d'emission deja stockes sur le document.
+    await this.prisma.transactions_blockchain.create({
+      data: {
+        document_id: docId,
+        type: 'revocation',
+        transaction_hash: txHash,
+        bloc_numero: blocNumero,
+        reseau,
+        statut: 'confirme',
+        confirme_le: new Date(),
+      },
+    });
+
+    this.logger.log(
+      `Blockchain ✔ révocation doc ${docId} - tx: ${txHash}, bloc: ${blocNumero}`,
+    );
   }
 
   async supprimer(id: string, acteurId: string, ip?: string) {

@@ -48,13 +48,18 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export default function MesDiplomes() {
+export default function MesDiplomes({ searchTerm: searchTermProp, onSearchTermChange } = {}) {
   const [documents, setDocuments] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  // Recherche pilotée par le parent (barre du header) quand fournie, sinon état local —
+  // permet à ce composant de rester utilisable seul (ex: futurs tests).
+  const [searchTermLocal, setSearchTermLocal] = useState('');
+  const searchTerm = searchTermProp ?? searchTermLocal;
+  const setSearchTerm = onSearchTermChange ?? setSearchTermLocal;
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'actif' | 'en_cours'
   const [copiedHashId, setCopiedHashId] = useState(null);
+  const [copiedShareId, setCopiedShareId] = useState(null);
   const [selectedDiploma, setSelectedDiploma] = useState(null);
   const [telechargementId, setTelechargementId] = useState(null);
 
@@ -79,6 +84,16 @@ export default function MesDiplomes() {
     navigator.clipboard.writeText(hash);
     setCopiedHashId(id);
     setTimeout(() => setCopiedHashId(null), 2000);
+  };
+
+  // Lien public permanent (verify.inubil.com/d/...) — a coller sur un CV, LinkedIn,
+  // dans une candidature. Pas de compte requis pour l'ouvrir, statut toujours a jour.
+  const handlePartager = (id, urlVerification, e) => {
+    e.stopPropagation();
+    if (!urlVerification) return;
+    navigator.clipboard.writeText(urlVerification);
+    setCopiedShareId(id);
+    setTimeout(() => setCopiedShareId(null), 2000);
   };
 
   const handleTelecharger = async (doc, e) => {
@@ -199,7 +214,7 @@ export default function MesDiplomes() {
                   <div className={styles.cardHeader}>
                     <div className={styles.titleGroup}>
                       <span className={styles.levelBadge}>{doc.categorie}</span>
-                      <h3 className={styles.degreeTitle}>{doc.type_document}{doc.filiere ? ` — ${doc.filiere}` : ''}</h3>
+                      <h3 className={styles.degreeTitle}>{doc.type_document}</h3>
                       <p className={styles.institutionName}>{doc.universite}</p>
                     </div>
                     <span className={`${styles.statusBadge} ${styles[visuel.classe]}`}>
@@ -253,9 +268,15 @@ export default function MesDiplomes() {
                         {telechargementId === doc.id ? <Loader2 size={14} className={styles.spin} /> : <Download size={14} />}
                       </button>
                     )}
-                    <button className={styles.secondaryActionBtn} title="Partager l'accès">
-                      <Share2 size={14} />
-                    </button>
+                    {doc.statut === 'actif' && (
+                      <button
+                        className={styles.secondaryActionBtn}
+                        title="Copier le lien de vérification (à coller sur un CV, LinkedIn...)"
+                        onClick={(e) => handlePartager(doc.id, doc.url_verification, e)}
+                      >
+                        {copiedShareId === doc.id ? <Check size={14} color="#10b981" /> : <Share2 size={14} />}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -287,7 +308,7 @@ export default function MesDiplomes() {
                 </div>
 
                 <div className={styles.detailSection}>
-                  <h3>{selectedDiploma.type_document}{selectedDiploma.filiere ? ` — ${selectedDiploma.filiere}` : ''}</h3>
+                  <h3>{selectedDiploma.type_document}</h3>
                   <p className={styles.institutionDetail}>
                     <Building2 size={14} /> {selectedDiploma.universite}
                   </p>

@@ -12,8 +12,9 @@ import {
   HttpCode,
   HttpStatus,
   Req,
+  Res,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -47,8 +48,10 @@ export class EtudiantsAdminController {
   @Get()
   @RequirePermissions(Permission.STUDENT_READ)
   @ApiOperation({
-    summary: 'Lister les étudiants avec filtres et pagination (permission student:read)',
-    description: 'Un acteur lié à une université ne voit que ses étudiants. Le super-admin peut filtrer par universite_id.',
+    summary:
+      'Lister les étudiants avec filtres et pagination (permission student:read)',
+    description:
+      'Un acteur lié à une université ne voit que ses étudiants. Le super-admin peut filtrer par universite_id.',
   })
   @ApiOkResponse({ type: EtudiantAdminListeDto })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
@@ -60,12 +63,38 @@ export class EtudiantsAdminController {
     return this.service.lister(query, acteurId);
   }
 
+  @Get('export')
+  @RequirePermissions(Permission.STUDENT_READ)
+  @ApiOperation({
+    summary: 'Exporter les étudiants visibles en CSV (permission student:read)',
+  })
+  @ApiOkResponse({
+    description:
+      'Fichier CSV (mêmes filtres que GET /admin/etudiants), plafonné à 10 000 lignes.',
+  })
+  @ApiResponse({ status: 403, description: 'Permission student:read requise.' })
+  async exporter(
+    @Query() query: EtudiantAdminQueryDto,
+    @CurrentUser('id') acteurId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const csv = await this.service.exporterCsv(query, acteurId);
+    res.set({
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="etudiants_${new Date().toISOString().slice(0, 10)}.csv"`,
+    });
+    res.send(csv);
+  }
+
   @Get(':id')
   @RequirePermissions(Permission.STUDENT_READ)
-  @ApiOperation({ summary: 'Détail d\'un étudiant (permission student:read)' })
+  @ApiOperation({ summary: "Détail d'un étudiant (permission student:read)" })
   @ApiOkResponse({ type: EtudiantAdminResponseDto })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission student:read requise ou accès refusé.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Permission student:read requise ou accès refusé.',
+  })
   @ApiResponse({ status: 404, description: 'Étudiant introuvable.' })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
@@ -78,12 +107,16 @@ export class EtudiantsAdminController {
   @RequirePermissions(Permission.DOC_CREATE)
   @ApiOperation({
     summary: 'Créer un dossier étudiant (permission doc:create)',
-    description: 'Enregistre un étudiant dans la base. Prérequis avant de saisir un diplôme pour cet étudiant.',
+    description:
+      'Enregistre un étudiant dans la base. Prérequis avant de saisir un diplôme pour cet étudiant.',
   })
   @ApiCreatedResponse({ type: EtudiantAdminResponseDto })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   @ApiResponse({ status: 403, description: 'Permission doc:create requise.' })
-  @ApiResponse({ status: 404, description: 'Université introuvable ou non active.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Université introuvable ou non active.',
+  })
   @ApiResponse({ status: 409, description: 'Matricule déjà utilisé.' })
   creer(
     @Body() dto: CreerEtudiantAdminDto,
@@ -95,10 +128,15 @@ export class EtudiantsAdminController {
 
   @Patch(':id')
   @RequirePermissions(Permission.DOC_CREATE)
-  @ApiOperation({ summary: 'Modifier un dossier étudiant (permission doc:create)' })
+  @ApiOperation({
+    summary: 'Modifier un dossier étudiant (permission doc:create)',
+  })
   @ApiOkResponse({ type: EtudiantAdminResponseDto })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission doc:create requise ou accès refusé.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Permission doc:create requise ou accès refusé.',
+  })
   @ApiResponse({ status: 404, description: 'Étudiant introuvable.' })
   @ApiResponse({ status: 409, description: 'Matricule déjà utilisé.' })
   modifier(
@@ -114,14 +152,21 @@ export class EtudiantsAdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions(Permission.DOC_CREATE)
   @ApiOperation({
-    summary: 'Supprimer (soft delete) un dossier étudiant (permission doc:create)',
-    description: 'Bloqué si l\'étudiant possède des documents émis.',
+    summary:
+      'Supprimer (soft delete) un dossier étudiant (permission doc:create)',
+    description: "Bloqué si l'étudiant possède des documents émis.",
   })
   @ApiNoContentResponse()
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission doc:create requise ou accès refusé.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Permission doc:create requise ou accès refusé.',
+  })
   @ApiResponse({ status: 404, description: 'Étudiant introuvable.' })
-  @ApiResponse({ status: 409, description: 'Étudiant possède des documents - suppression impossible.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Étudiant possède des documents - suppression impossible.',
+  })
   supprimer(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') acteurId: string,

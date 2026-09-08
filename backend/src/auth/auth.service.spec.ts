@@ -54,7 +54,10 @@ describe('AuthService', () => {
     tentatives_connexion: jest.Mocked<any>;
     role_permissions: jest.Mocked<any>;
   };
-  let mail: { sendEmailVerification: jest.Mock; sendEmailChangeNotification: jest.Mock };
+  let mail: {
+    sendEmailVerification: jest.Mock;
+    sendEmailChangeNotification: jest.Mock;
+  };
   let audit: { log: jest.Mock };
   let config: { get: jest.Mock };
   let configurations: { get: jest.Mock };
@@ -99,12 +102,18 @@ describe('AuthService', () => {
       }),
     };
     configurations = {
-      get: jest.fn().mockImplementation((_cle: string, defaut?: string) => Promise.resolve(defaut)),
+      get: jest
+        .fn()
+        .mockImplementation((_cle: string, defaut?: string) =>
+          Promise.resolve(defaut),
+        ),
     };
     jwt = {
       signAsync: jest.fn().mockResolvedValue('fake-token'),
       verifyAsync: jest.fn(),
-      decode: jest.fn().mockReturnValue({ exp: Math.floor(Date.now() / 1000) + 900 }),
+      decode: jest
+        .fn()
+        .mockReturnValue({ exp: Math.floor(Date.now() / 1000) + 900 }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -127,7 +136,9 @@ describe('AuthService', () => {
   describe('register', () => {
     it('cree un compte avec statut en_attente_email et envoie un email', async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(null);
-      prisma.utilisateurs.create.mockResolvedValue(makeUser({ statut: 'en_attente_email', email_verifie: false }));
+      prisma.utilisateurs.create.mockResolvedValue(
+        makeUser({ statut: 'en_attente_email', email_verifie: false }),
+      );
 
       const result = await service.register({
         nom: 'Doe',
@@ -151,7 +162,7 @@ describe('AuthService', () => {
       expect(result.message).toBeDefined();
     });
 
-    it('retourne un message generique si l\'email est deja utilise (anti-enumeration)', async () => {
+    it("retourne un message generique si l'email est deja utilise (anti-enumeration)", async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(makeUser());
 
       const result = await service.register({
@@ -214,7 +225,7 @@ describe('AuthService', () => {
       expect(result.message).toBeDefined();
     });
 
-    it('applique le changement d\'email (flux email_en_attente)', async () => {
+    it("applique le changement d'email (flux email_en_attente)", async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(
         makeUser({
           email_en_attente: 'new@inubil.com',
@@ -249,7 +260,7 @@ describe('AuthService', () => {
   // ─── renvoyerVerification ─────────────────────────────────────────────────
 
   describe('renvoyerVerification', () => {
-    it('regenere un token et renvoie l\'email', async () => {
+    it("regenere un token et renvoie l'email", async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(
         makeUser({ email_verifie: false, email_en_attente: null }),
       );
@@ -269,14 +280,16 @@ describe('AuthService', () => {
     });
 
     it('ne fait rien si le compte est deja verifie (silencieux)', async () => {
-      prisma.utilisateurs.findFirst.mockResolvedValue(makeUser({ email_verifie: true }));
+      prisma.utilisateurs.findFirst.mockResolvedValue(
+        makeUser({ email_verifie: true }),
+      );
 
       await service.renvoyerVerification('john@inubil.com');
 
       expect(prisma.utilisateurs.update).not.toHaveBeenCalled();
     });
 
-    it('ne fait rien si l\'email est inconnu (anti-enumeration)', async () => {
+    it("ne fait rien si l'email est inconnu (anti-enumeration)", async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(null);
 
       await service.renvoyerVerification('inconnu@inubil.com');
@@ -312,7 +325,9 @@ describe('AuthService', () => {
         if (cle === 'max_tentatives_connexion') return Promise.resolve('2');
         return Promise.resolve('15');
       });
-      prisma.utilisateurs.findFirst.mockResolvedValue(makeUser({ tentatives_connexion: 1 }));
+      prisma.utilisateurs.findFirst.mockResolvedValue(
+        makeUser({ tentatives_connexion: 1 }),
+      );
       prisma.tentatives_connexion.create.mockResolvedValue({});
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
@@ -320,7 +335,10 @@ describe('AuthService', () => {
         service.login({ email: 'john@inubil.com', mot_de_passe: 'mauvais' }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
 
-      expect(configurations.get).toHaveBeenCalledWith('max_tentatives_connexion', '5');
+      expect(configurations.get).toHaveBeenCalledWith(
+        'max_tentatives_connexion',
+        '5',
+      );
       expect(prisma.utilisateurs.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: USER_ID },
@@ -332,12 +350,14 @@ describe('AuthService', () => {
       );
     });
 
-    it('n\'utilise pas le blocage si le compteur reste sous le seuil configure', async () => {
+    it("n'utilise pas le blocage si le compteur reste sous le seuil configure", async () => {
       configurations.get.mockImplementation((cle: string) => {
         if (cle === 'max_tentatives_connexion') return Promise.resolve('10');
         return Promise.resolve('15');
       });
-      prisma.utilisateurs.findFirst.mockResolvedValue(makeUser({ tentatives_connexion: 1 }));
+      prisma.utilisateurs.findFirst.mockResolvedValue(
+        makeUser({ tentatives_connexion: 1 }),
+      );
       prisma.tentatives_connexion.create.mockResolvedValue({});
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
@@ -355,13 +375,13 @@ describe('AuthService', () => {
 
   // ─── updateProfile (changement d'email) ──────────────────────────────────
 
-  describe('updateProfile - changement d\'email', () => {
+  describe("updateProfile - changement d'email", () => {
     it('stocke le nouvel email dans email_en_attente et notifie les deux adresses', async () => {
       const user = makeUser({ email: 'old@inubil.com' });
       prisma.utilisateurs.findFirst
-        .mockResolvedValueOnce(user)           // findFirst dans updateProfile
-        .mockResolvedValueOnce(null)           // check unicite nouvel email
-        .mockResolvedValueOnce(user);          // getProfile a la fin
+        .mockResolvedValueOnce(user) // findFirst dans updateProfile
+        .mockResolvedValueOnce(null) // check unicite nouvel email
+        .mockResolvedValueOnce(user); // getProfile a la fin
       prisma.utilisateurs.update.mockResolvedValue({});
       prisma.sessions.updateMany.mockResolvedValue({});
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
@@ -391,14 +411,18 @@ describe('AuthService', () => {
       );
       // Sessions revoquees
       expect(prisma.sessions.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ revoquee: true }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ revoquee: true }),
+        }),
       );
     });
 
     it('leve ConflictException si le nouvel email est deja pris', async () => {
       prisma.utilisateurs.findFirst
         .mockResolvedValueOnce(makeUser())
-        .mockResolvedValueOnce(makeUser({ id: 'autre-id', email: 'new@inubil.com' }));
+        .mockResolvedValueOnce(
+          makeUser({ id: 'autre-id', email: 'new@inubil.com' }),
+        );
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       await expect(
@@ -409,7 +433,7 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it('leve BadRequestException si mot_de_passe_actuel absent lors d\'un changement d\'email', async () => {
+    it("leve BadRequestException si mot_de_passe_actuel absent lors d'un changement d'email", async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(makeUser());
 
       await expect(
@@ -417,11 +441,45 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('leve NotFoundException si l\'utilisateur n\'existe pas', async () => {
+    it("leve NotFoundException si l'utilisateur n'existe pas", async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(null);
 
       await expect(
         service.updateProfile(USER_ID, { nom: 'Nouveau' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  // ─── updatePreferences ────────────────────────────────────────────────────
+
+  describe('updatePreferences', () => {
+    it('fusionne les nouvelles preferences dans le JSON existant (sans ecraser les autres cles)', async () => {
+      prisma.utilisateurs.findFirst
+        .mockResolvedValueOnce({
+          preferences: { documents_valides: true, autre_cle: 'conservee' },
+        }) // lecture
+        .mockResolvedValueOnce(
+          makeUser({
+            preferences: { documents_valides: false, autre_cle: 'conservee' },
+          }),
+        ); // getProfile
+      prisma.utilisateurs.update.mockResolvedValue({});
+
+      await service.updatePreferences(USER_ID, { documents_valides: false });
+
+      expect(prisma.utilisateurs.update).toHaveBeenCalledWith({
+        where: { id: USER_ID },
+        data: {
+          preferences: { documents_valides: false, autre_cle: 'conservee' },
+        },
+      });
+    });
+
+    it("leve NotFoundException si l'utilisateur n'existe pas", async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.updatePreferences(USER_ID, { documents_valides: false }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });

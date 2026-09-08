@@ -305,4 +305,104 @@ export class NotificationEmissionService {
       }),
     );
   }
+
+  /**
+   * Notifie l'agent qui a saisi un document (documents.saisi_par) que celui-ci vient
+   * d'être validé ou rejeté. Doit être appelé en fire & forget depuis
+   * DocumentsService.valider()/rejeter() :
+   *   this.notif.notifierCreateur(docId, 'valide').catch(err => this.logger.error(...))
+   * Un échec d'envoi ne doit jamais faire échouer la validation/le rejet.
+   *
+   * L'in-app est toujours créé ; l'email respecte la préférence de l'agent
+   * (utilisateurs.preferences.documents_valides / documents_rejetes, activé par défaut).
+   */
+  async notifierCreateur(
+    documentId: string,
+    decision: 'valide' | 'rejete',
+    motifRejet?: string,
+  ): Promise<void> {
+    const doc = await this.prisma.documents.findFirst({
+      where: { id: documentId },
+      include: {
+        etudiants: { select: { nom: true, prenom: true } },
+        types_document: { select: { nom: true } },
+        utilisateurs_documents_saisi_parToutilisateurs: {
+          select: { id: true, email: true, preferences: true },
+        },
+      },
+    });
+
+    const createur = doc?.utilisateurs_documents_saisi_parToutilisateurs;
+    if (!doc || !createur) {
+      this.logger.warn(
+        `notifierCreateur : document ${documentId} ou son créateur introuvable`,
+      );
+      return;
+    }
+
+    const prenomNomEtudiant = `${doc.etudiants.prenom} ${doc.etudiants.nom}`;
+    const estValide = decision === 'valide';
+
+    await this.notificationsInApp
+      .creer({
+        utilisateurId: createur.id,
+        type: estValide ? 'document_valide' : 'document_rejete',
+        titre: estValide ? 'Document validé' : 'Document rejeté',
+        message: estValide
+          ? `${prenomNomEtudiant} — ${doc.types_document.nom} (${doc.numero_unique}) a été validé.`
+          : `${prenomNomEtudiant} — ${doc.types_document.nom} (${doc.numero_unique}) a été rejeté${motifRejet ? ` : ${motifRejet}` : ''}.`,
+        lien: `/universite/documents/${doc.id}`,
+      })
+      .catch((err) =>
+        this.logger.error(
+          `Notification in-app créateur échouée pour doc ${documentId} : ${err.message}`,
+        ),
+      );
+
+    const preferences = (createur.preferences ?? {}) as Record<string, unknown>;
+    const cleActivee = estValide ? 'documents_valides' : 'documents_rejetes';
+    if (preferences[cleActivee] === false) return; // desactive explicitement, activee par defaut
+
+    const parametres = {
+      prenomNomEtudiant,
+      typeDocument: doc.types_document.nom,
+      numeroUnique: doc.numero_unique,
+      decision,
+      motifRejet,
+    };
+
+    const logEntry = await this.prisma.emails_log.create({
+      data: {
+        utilisateur_id: createur.id,
+        destinataire: createur.email,
+        sujet: estValide
+          ? `Document validé — ${doc.numero_unique}`
+          : `Document rejeté — ${doc.numero_unique}`,
+        template: 'document_traite_par_staff',
+        parametres,
+        statut: 'en_attente',
+        max_tentatives: 3,
+      },
+    });
+
+    try {
+      await this.mail.sendDocumentTraiteParStaff(createur.email, parametres);
+      await this.prisma.emails_log.update({
+        where: { id: logEntry.id },
+        data: { statut: 'envoye', tentatives: 1, envoye_le: new Date() },
+      });
+    } catch (err: any) {
+      this.logger.error(
+        `Échec envoi email décision doc ${documentId} vers ${createur.email} : ${err.message}`,
+      );
+      await this.prisma.emails_log.update({
+        where: { id: logEntry.id },
+        data: {
+          statut: 'echoue',
+          tentatives: 1,
+          erreur: err.message ?? 'Erreur inconnue',
+        },
+      });
+    }
+  }
 }

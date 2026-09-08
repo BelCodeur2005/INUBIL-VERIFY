@@ -4,14 +4,23 @@ export class VerificationResponseDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
 
-  @ApiProperty({ example: 'qr_code', enum: ['lien_unique', 'qr_code', 'hash', 'upload_pdf'] })
+  @ApiProperty({
+    example: 'qr_code',
+    enum: ['lien_unique', 'qr_code', 'hash', 'upload_pdf'],
+  })
   type_verification: string;
 
-  @ApiProperty({ example: 'authentique', enum: ['authentique', 'revoque', 'non_trouve', 'falsifie'] })
+  @ApiProperty({
+    example: 'authentique',
+    enum: ['authentique', 'revoque', 'non_trouve', 'falsifie'],
+  })
   resultat: string;
 
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   document_id: string | null;
+
+  @ApiPropertyOptional({ example: 'INUB-2026-0001', nullable: true })
+  document_numero_unique: string | null;
 
   @ApiProperty()
   rapport_genere: boolean;

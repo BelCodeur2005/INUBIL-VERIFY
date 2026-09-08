@@ -34,6 +34,11 @@ export function changerMotDePasse(donnees) {
   return api.patch('/auth/password', donnees);
 }
 
+/** PATCH /auth/me/preferences — preferences de notification email (fusion, pas un remplacement). */
+export function mettreAJourPreferences(donnees) {
+  return api.patch('/auth/me/preferences', donnees);
+}
+
 /** GET /auth/sessions — sessions actives de l'utilisateur connecte. */
 export function listerSessions() {
   return api.get('/auth/sessions');

@@ -1,4 +1,5 @@
 import { api, apiRequest } from '../api/client';
+import { telechargerFichier } from '../api/download';
 
 /** GET /documents — liste paginee, filtrable par statut/type/etudiant/plage de dates. */
 export function listerDocuments({ statut, typeDocumentId, etudiantId, dateDebut, dateFin, page = 1, limit = 20 } = {}) {
@@ -9,6 +10,18 @@ export function listerDocuments({ statut, typeDocumentId, etudiantId, dateDebut,
   if (dateDebut) params.set('date_debut', dateDebut);
   if (dateFin) params.set('date_fin', dateFin);
   return api.get(`/documents?${params.toString()}`);
+}
+
+/** GET /documents/export — telecharge les documents visibles en CSV (memes filtres que listerDocuments). */
+export function exporterDocumentsCsv({ statut, typeDocumentId, etudiantId, dateDebut, dateFin } = {}) {
+  const params = new URLSearchParams();
+  if (statut) params.set('statut', statut);
+  if (typeDocumentId) params.set('type_document_id', typeDocumentId);
+  if (etudiantId) params.set('etudiant_id', etudiantId);
+  if (dateDebut) params.set('date_debut', dateDebut);
+  if (dateFin) params.set('date_fin', dateFin);
+  const qs = params.toString();
+  return telechargerFichier(`/documents/export${qs ? `?${qs}` : ''}`, 'documents.csv');
 }
 
 /** GET /documents/:id/pdf — URL S3/R2 presignee (valide ~15 min), pas le fichier lui-meme. */

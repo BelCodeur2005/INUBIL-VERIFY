@@ -6,6 +6,7 @@ import {
   Body,
   Req,
   Res,
+  UseGuards,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
@@ -23,12 +24,19 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PublicVerifyService } from './public-verify.service';
 import { VerifierHashDto } from './dto/verifier-hash.dto';
 import { VerifyResponseDto } from './dto/verify-response.dto';
 import { PDF_HARD_LIMIT_BYTES } from '../common/constants/upload.constants';
 
+// Endpoints publics (aucune authentification requise) — OptionalJwtAuthGuard
+// authentifie si un token Bearer valide est present (pour rattacher la
+// verification a l'historique personnel du compte connecte via
+// GET /verifications/mes-verifications), sans jamais bloquer un visiteur anonyme.
 @ApiTags('Vérification publique')
+@UseGuards(OptionalJwtAuthGuard)
 @Controller('verify')
 export class PublicVerifyController {
   constructor(private readonly service: PublicVerifyService) {}
@@ -36,28 +44,36 @@ export class PublicVerifyController {
   @Get(':identifiant/rapport')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({
-    summary: 'Télécharger un rapport PDF horodaté de vérification (10 req/min par IP)',
+    summary:
+      'Télécharger un rapport PDF horodaté de vérification (10 req/min par IP)',
     description: 'Format identifiant attendu : INUB-YYYY-XXXX',
   })
   @ApiParam({ name: 'identifiant', example: 'INUB-2026-0001' })
-  @ApiResponse({ status: 200, description: 'Rapport PDF généré (application/pdf).' })
-  @ApiResponse({ status: 400, description: 'Format d\'identifiant invalide.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Rapport PDF généré (application/pdf).',
+  })
+  @ApiResponse({ status: 400, description: "Format d'identifiant invalide." })
   @ApiResponse({ status: 404, description: 'Document introuvable.' })
   async telechargerRapport(
     @Param('identifiant') identifiant: string,
     @Req() req: Request,
     @Res() res: Response,
+    @CurrentUser('id') utilisateurId?: string,
   ): Promise<void> {
     // Validation stricte : seul le format INUB-YYYY-XXXX est accepté.
     // Protège contre l'injection de header via Content-Disposition.
     if (!/^INUB-\d{4}-\d{4,}$/.test(identifiant)) {
-      throw new BadRequestException('Identifiant invalide - format attendu : INUB-YYYY-XXXX');
+      throw new BadRequestException(
+        'Identifiant invalide - format attendu : INUB-YYYY-XXXX',
+      );
     }
 
     const { buffer, filename } = await this.service.genererRapport(
       identifiant,
       req.ip,
       req.headers['user-agent'],
+      utilisateurId,
     );
 
     // Sanitize the filename : ne conserver que les caractères alphanumériques, tirets et points.
@@ -74,7 +90,8 @@ export class PublicVerifyController {
   @Get(':identifiant')
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiOperation({
-    summary: 'Vérifier un document par numéro unique - endpoint QR code (30 req/min par IP)',
+    summary:
+      'Vérifier un document par numéro unique - endpoint QR code (30 req/min par IP)',
     description: 'Scanné par le QR code imprimé sur le diplôme physique.',
   })
   @ApiParam({ name: 'identifiant', example: 'INUB-2026-0001' })
@@ -83,35 +100,45 @@ export class PublicVerifyController {
   verifierParIdentifiant(
     @Param('identifiant') identifiant: string,
     @Req() req: Request,
+    @CurrentUser('id') utilisateurId?: string,
   ): Promise<VerifyResponseDto> {
     return this.service.verifierParIdentifiant(
       identifiant,
       req.ip,
       req.headers['user-agent'],
+      utilisateurId,
     );
   }
 
   @Post('hash')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Vérifier par hash SHA-256 (64 hex chars) - 10 req/min par IP' })
+  @ApiOperation({
+    summary: 'Vérifier par hash SHA-256 (64 hex chars) - 10 req/min par IP',
+  })
   @ApiOkResponse({ type: VerifyResponseDto })
-  @ApiResponse({ status: 400, description: 'Hash invalide (format attendu : 64 hex chars).' })
+  @ApiResponse({
+    status: 400,
+    description: 'Hash invalide (format attendu : 64 hex chars).',
+  })
   @ApiResponse({ status: 404, description: 'Aucun document avec ce hash.' })
   verifierParHash(
     @Body() dto: VerifierHashDto,
     @Req() req: Request,
+    @CurrentUser('id') utilisateurId?: string,
   ): Promise<VerifyResponseDto> {
     return this.service.verifierParHash(
       dto.hash,
       req.ip,
       req.headers['user-agent'],
+      utilisateurId,
     );
   }
 
   @Post('upload')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({
-    summary: 'Vérifier en uploadant le PDF - hash calculé côté serveur (5 req/min par IP)',
+    summary:
+      'Vérifier en uploadant le PDF - hash calculé côté serveur (5 req/min par IP)',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -122,13 +149,18 @@ export class PublicVerifyController {
         fichier: {
           type: 'string',
           format: 'binary',
-          description: 'PDF a verifier — jusqu\'a 20 Mo (plafond serveur) ; limite effective pilotable via le parametre systeme "pdf_max_taille_mo"',
+          description:
+            'PDF a verifier — jusqu\'a 20 Mo (plafond serveur) ; limite effective pilotable via le parametre systeme "pdf_max_taille_mo"',
         },
       },
     },
   })
   @ApiOkResponse({ type: VerifyResponseDto })
-  @ApiResponse({ status: 400, description: 'Fichier manquant, format non-PDF, ou taille superieure a la limite configuree.' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Fichier manquant, format non-PDF, ou taille superieure a la limite configuree.',
+  })
   @ApiResponse({ status: 404, description: 'Aucun document avec ce hash.' })
   @UseInterceptors(
     FileInterceptor('fichier', {
@@ -136,7 +168,10 @@ export class PublicVerifyController {
       limits: { fileSize: PDF_HARD_LIMIT_BYTES },
       fileFilter: (_req, file, cb) => {
         if (file.mimetype !== 'application/pdf') {
-          return cb(new BadRequestException('Seuls les fichiers PDF sont acceptés'), false);
+          return cb(
+            new BadRequestException('Seuls les fichiers PDF sont acceptés'),
+            false,
+          );
         }
         cb(null, true);
       },
@@ -145,12 +180,15 @@ export class PublicVerifyController {
   verifierParUpload(
     @UploadedFile() fichier: Express.Multer.File,
     @Req() req: Request,
+    @CurrentUser('id') utilisateurId?: string,
   ): Promise<VerifyResponseDto> {
-    if (!fichier) throw new BadRequestException('Le fichier PDF est obligatoire');
+    if (!fichier)
+      throw new BadRequestException('Le fichier PDF est obligatoire');
     return this.service.verifierParUpload(
       fichier.buffer,
       req.ip,
       req.headers['user-agent'],
+      utilisateurId,
     );
   }
 }

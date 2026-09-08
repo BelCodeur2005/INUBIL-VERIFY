@@ -6,57 +6,7 @@ import { ApiError } from '../../core/api/client';
 import { metaConfig } from './configurations-metadata';
 import drawerStyles from './AdminModals.module.css';
 
-// Style commun pour le fond des modales
-const overlayStyle = {
-  position: 'fixed',
-  inset: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.65)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 1000,
-  backdropFilter: 'blur(3px)',
-};
-
-const modalCardStyle = {
-  backgroundColor: '#ffffff',
-  borderRadius: '12px',
-  width: '550px',
-  maxWidth: '90%',
-  padding: '1.5rem',
-  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-};
-
-// 1. Modale Ajouter un Établissement
-export function EtablissementModal({ onClose }) {
-  return (
-    <div style={overlayStyle}>
-      <div style={modalCardStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h3 style={{ margin: 0, color: 'var(--primary)' }}>Nouveau Partenaire Établissement</h3>
-          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
-        </div>
-        <form onSubmit={(e) => { e.preventDefault(); alert("Établissement enregistré !"); onClose(); }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <input type="text" placeholder="Nom de l'Établissement (ex: Université de Douala)" required style={inputStyle} />
-            <input type="text" placeholder="Code Identifiant (ex: UD-IUT)" required style={inputStyle} />
-            <select style={inputStyle}>
-              <option value="Public">Établissement Public</option>
-              <option value="Privé">Établissement Privé</option>
-            </select>
-            <input type="number" placeholder="Quota Initial d'Ancrages (ex: 5000)" required style={inputStyle} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.25rem' }}>
-            <button type="button" onClick={onClose} style={btnCancelStyle}>Annuler</button>
-            <button type="submit" style={btnSubmitStyle}>Créer Établissement</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// 2. Modale Inviter un Collaborateur — POST /invitations (email + role, TTL 72h).
+// Modale Inviter un Collaborateur — POST /invitations (email + role, TTL 72h).
 export function InviterUtilisateurModal({ onClose, onInvited, roles }) {
   const [universites, setUniversites] = useState([]);
   const [chargementUniv, setChargementUniv] = useState(true);
@@ -140,27 +90,7 @@ export function InviterUtilisateurModal({ onClose, onInvited, roles }) {
   );
 }
 
-// 4. Drawer Détails du Nœud
-export function NodeDetailsModal({ node, onClose }) {
-  return (
-    <div className={drawerStyles.drawerOverlay} onClick={onClose}>
-      <div className={drawerStyles.drawerPanel} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-          <h3 style={{ margin: 0, color: 'var(--primary)' }}>Métriques du Nœud : {node.id}</h3>
-          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
-        </div>
-        <div style={{ fontSize: '0.85rem' }}>
-          <p>Statut : <strong style={{ color: 'green' }}>{node.status}</strong></p>
-          <p>Pairs connectés : <strong>{node.peers} Nœuds</strong></p>
-          <p>Consensus : <strong>Proof of Authority (IBFT 2.0)</strong></p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-// 6. Drawer Modifier un Paramètre Système — PUT /configurations/:cle.
+// Drawer Modifier un Paramètre Système — PUT /configurations/:cle.
 export function ConfigEditDrawer({ config, onClose, onSaved }) {
   const [valeur, setValeur] = useState(config.valeur);
   const [description, setDescription] = useState(config.description ?? '');

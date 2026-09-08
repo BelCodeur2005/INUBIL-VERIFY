@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import {
   Search, X, Loader2, AlertTriangle, ScrollText, ChevronDown,
   FileText, GraduationCap, Users, Building2, Award, ShieldCheck,
-  Mail, Webhook, Handshake, KeyRound, Settings2, LayoutGrid,
+  Mail, Webhook, Handshake, KeyRound, Settings2, LayoutGrid, FileDown,
 } from 'lucide-react';
-import { listerJournalAudit } from '../../../core/admin/admin.api';
+import { listerJournalAudit, exporterJournalAuditCsv } from '../../../core/admin/admin.api';
 import { ApiError } from '../../../core/api/client';
 import Pagination from '../Pagination/Pagination';
 import { infosAction, labelModule, CATEGORIES } from './audit-labels';
@@ -57,6 +57,7 @@ export default function JournalAudit({ titre = "Journal d'audit", sousTitre }) {
   const [recherche, setRecherche] = useState('');
 
   const [entreeSelectionnee, setEntreeSelectionnee] = useState(null);
+  const [exportEnCours, setExportEnCours] = useState(false);
 
   useEffect(() => {
     let annule = false;
@@ -101,6 +102,21 @@ export default function JournalAudit({ titre = "Journal d'audit", sousTitre }) {
     setModuleFiltre(''); setDateDebut(''); setDateFin(''); setRecherche(''); setPage(1);
   };
 
+  const exporterCsv = async () => {
+    setExportEnCours(true);
+    try {
+      await exporterJournalAuditCsv({
+        module: moduleFiltre || undefined,
+        date_debut: dateDebut || undefined,
+        date_fin: dateFin || undefined,
+      });
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : 'Export impossible.');
+    } finally {
+      setExportEnCours(false);
+    }
+  };
+
   return (
     <div className={styles.card}>
       <div className={styles.header}>
@@ -108,7 +124,12 @@ export default function JournalAudit({ titre = "Journal d'audit", sousTitre }) {
           <h2 className={styles.title}>{titre}</h2>
           {sousTitre && <p className={styles.subtitle}>{sousTitre}</p>}
         </div>
-        <span className={styles.totalCount}>{total} entrée{total !== 1 ? 's' : ''}</span>
+        <div className={styles.headerActions}>
+          <span className={styles.totalCount}>{total} entrée{total !== 1 ? 's' : ''}</span>
+          <button type="button" className={styles.exportBtn} onClick={exporterCsv} disabled={exportEnCours}>
+            <FileDown size={14} /> {exportEnCours ? 'Export…' : 'Exporter CSV'}
+          </button>
+        </div>
       </div>
 
       <div className={styles.filtersBar}>

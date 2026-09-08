@@ -36,6 +36,35 @@
   border-radius: 9999px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.exportBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #2b56cb;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.exportBtn:hover {
+  background: #f8fafc;
+}
+
+.exportBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* ── Filtres ── */
 .filtersBar {
   display: flex;

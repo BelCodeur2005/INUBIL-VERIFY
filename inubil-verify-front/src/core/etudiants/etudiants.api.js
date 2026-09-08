@@ -1,4 +1,5 @@
 import { api } from '../api/client';
+import { telechargerFichier } from '../api/download';
 
 /** GET /etudiants/moi — dossier academique de l'etudiant connecte (nom certifie, matricule, telephone...). */
 export function getMonProfilEtudiant() {
@@ -48,6 +49,14 @@ export function rechercherEtudiants(search, { page = 1, limit = 20 } = {}) {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (search) params.set('search', search);
   return api.get(`/admin/etudiants?${params.toString()}`);
+}
+
+/** GET /admin/etudiants/export — telecharge les etudiants visibles en CSV (meme filtre de recherche). */
+export function exporterEtudiantsCsv(search) {
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  const qs = params.toString();
+  return telechargerFichier(`/admin/etudiants/export${qs ? `?${qs}` : ''}`, 'etudiants.csv');
 }
 
 /** POST /admin/etudiants — cree un dossier etudiant (CreerEtudiantAdminDto). */

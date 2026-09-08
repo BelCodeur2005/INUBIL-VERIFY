@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditQueryDto } from './dto/audit-query.dto';
 import { AuditEntryDto, AuditListDto } from './dto/audit-response.dto';
+import { toCsv } from '../common/csv.util';
 
 @Injectable()
 export class AdminAuditService {
@@ -19,7 +24,9 @@ export class AdminAuditService {
    * "super_admin" ou "admin_istama" (supervision inter-universites) — verifie
    * par nom de role, jamais devine depuis l'absence d'universite.
    */
-  private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
+  private async getActeurUniversiteId(
+    acteurId: string,
+  ): Promise<string | null> {
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id: acteurId },
       select: {
@@ -35,11 +42,14 @@ export class AdminAuditService {
     return u.universite_id;
   }
 
-  async lireJournal(query: AuditQueryDto, acteurId: string): Promise<AuditListDto> {
+  async lireJournal(
+    query: AuditQueryDto,
+    acteurId: string,
+  ): Promise<AuditListDto> {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
-    const page  = query.page  ?? 1;
+    const page = query.page ?? 1;
     const limit = query.limit ?? 50;
-    const skip  = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
     const where: Prisma.journal_auditWhereInput = {};
 
@@ -52,13 +62,15 @@ export class AdminAuditService {
       where.utilisateurs = { universite_id: acteurUnivId };
     }
 
-    if (query.utilisateur_id)        where.utilisateur_id   = query.utilisateur_id;
-    if (query.action)                where.action            = { contains: query.action, mode: 'insensitive' };
-    if (query.module)                where.module            = { contains: query.module, mode: 'insensitive' };
+    if (query.utilisateur_id) where.utilisateur_id = query.utilisateur_id;
+    if (query.action)
+      where.action = { contains: query.action, mode: 'insensitive' };
+    if (query.module)
+      where.module = { contains: query.module, mode: 'insensitive' };
     if (query.date_debut || query.date_fin) {
       where.created_at = {};
       if (query.date_debut) where.created_at.gte = new Date(query.date_debut);
-      if (query.date_fin)   where.created_at.lte = new Date(query.date_fin);
+      if (query.date_fin) where.created_at.lte = new Date(query.date_fin);
     }
 
     const [entries, total] = await Promise.all([
@@ -72,22 +84,42 @@ export class AdminAuditService {
     ]);
 
     return {
-      data: entries.map((e) => ({
-        id:               e.id,
-        utilisateur_id:   e.utilisateur_id ?? null,
-        nom_utilisateur:  e.nom_utilisateur ?? null,
-        action:           e.action,
-        module:           e.module,
-        table_concernee:  e.table_concernee ?? null,
-        enregistrement_id: e.enregistrement_id ?? null,
-        ip_address:       e.ip_address ?? null,
-        user_agent:       e.user_agent ?? null,
-        created_at:       e.created_at,
-      } satisfies AuditEntryDto)),
+      data: entries.map(
+        (e) =>
+          ({
+            id: e.id,
+            utilisateur_id: e.utilisateur_id ?? null,
+            nom_utilisateur: e.nom_utilisateur ?? null,
+            action: e.action,
+            module: e.module,
+            table_concernee: e.table_concernee ?? null,
+            enregistrement_id: e.enregistrement_id ?? null,
+            ip_address: e.ip_address ?? null,
+            user_agent: e.user_agent ?? null,
+            created_at: e.created_at,
+          }) satisfies AuditEntryDto,
+      ),
       total,
       page,
       limit,
     };
+  }
+
+  /** Export CSV du journal visible par l'acteur — mêmes filtres que lireJournal(), plafonné à 10 000 lignes. */
+  async exporterCsv(query: AuditQueryDto, acteurId: string): Promise<string> {
+    const { data } = await this.lireJournal(
+      { ...query, page: 1, limit: 10_000 },
+      acteurId,
+    );
+
+    return toCsv(data, [
+      { header: 'Date', value: (e) => e.created_at?.toISOString() },
+      { header: 'Utilisateur', value: (e) => e.nom_utilisateur },
+      { header: 'Action', value: (e) => e.action },
+      { header: 'Module', value: (e) => e.module },
+      { header: 'Table concernée', value: (e) => e.table_concernee },
+      { header: 'Adresse IP', value: (e) => e.ip_address },
+    ]);
   }
 
   // ─── Gestion utilisateurs admin ─────────────────────────────────────────────
@@ -107,14 +139,18 @@ export class AdminAuditService {
     ip?: string,
   ) {
     if (id === acteurId) {
-      throw new ForbiddenException('Vous ne pouvez pas modifier votre propre statut');
+      throw new ForbiddenException(
+        'Vous ne pouvez pas modifier votre propre statut',
+      );
     }
 
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id, deleted_at: null },
       include: {
-        roles_utilisateurs_role_idToroles:                    { select: { id: true, nom: true } },
-        universites_utilisateurs_universite_idTouniversites:  { select: { id: true, nom: true } },
+        roles_utilisateurs_role_idToroles: { select: { id: true, nom: true } },
+        universites_utilisateurs_universite_idTouniversites: {
+          select: { id: true, nom: true },
+        },
       },
     });
 
@@ -124,30 +160,37 @@ export class AdminAuditService {
       where: { id },
       data: { statut: nouveauStatut as any },
       include: {
-        roles_utilisateurs_role_idToroles:                    { select: { id: true, nom: true } },
-        universites_utilisateurs_universite_idTouniversites:  { select: { id: true, nom: true } },
+        roles_utilisateurs_role_idToroles: { select: { id: true, nom: true } },
+        universites_utilisateurs_universite_idTouniversites: {
+          select: { id: true, nom: true },
+        },
       },
     });
 
     await this.audit.log({
       utilisateurId: acteurId,
-      action:        nouveauStatut === 'actif' ? 'ADMIN_UTILISATEUR_ACTIVE' : 'ADMIN_UTILISATEUR_DESACTIVE',
-      module:        'admin',
+      action:
+        nouveauStatut === 'actif'
+          ? 'ADMIN_UTILISATEUR_ACTIVE'
+          : 'ADMIN_UTILISATEUR_DESACTIVE',
+      module: 'admin',
       tableConcernee: 'utilisateurs',
       enregistrementId: id,
       ip,
     });
 
     return {
-      id:                 updated.id,
-      nom:                updated.nom,
-      prenom:             updated.prenom,
-      email:              updated.email,
-      statut:             updated.statut,
-      role:               (updated as any).roles_utilisateurs_role_idToroles ?? null,
-      universite:         (updated as any).universites_utilisateurs_universite_idTouniversites ?? null,
+      id: updated.id,
+      nom: updated.nom,
+      prenom: updated.prenom,
+      email: updated.email,
+      statut: updated.statut,
+      role: (updated as any).roles_utilisateurs_role_idToroles ?? null,
+      universite:
+        (updated as any).universites_utilisateurs_universite_idTouniversites ??
+        null,
       derniere_connexion: updated.derniere_connexion ?? null,
-      created_at:         updated.created_at,
+      created_at: updated.created_at,
     };
   }
 }

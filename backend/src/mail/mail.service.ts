@@ -415,6 +415,62 @@ export class MailService {
     );
   }
 
+  /** Notification interne (staff) — decision (validation/rejet) sur un dossier saisi. Format sobre. */
+  async sendDocumentTraiteParStaff(
+    destinataire: string,
+    data: {
+      prenomNomEtudiant: string;
+      typeDocument: string;
+      numeroUnique: string;
+      decision: 'valide' | 'rejete';
+      motifRejet?: string;
+    },
+  ): Promise<void> {
+    const nom = await this.nomApplication();
+    const prenomNomEtudiant = this.esc(data.prenomNomEtudiant);
+    const typeDocument = this.esc(data.typeDocument);
+    const numeroUnique = this.esc(data.numeroUnique);
+    const estValide = data.decision === 'valide';
+    const accent = estValide ? '#16a34a' : '#a5680f';
+    const titre = estValide ? 'Document validé' : 'Document rejeté';
+    const motifRejet = data.motifRejet ? this.esc(data.motifRejet) : null;
+
+    const html = `
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+  .container { max-width: 600px; margin: 0 auto; background: #fff; border: 1px solid #e2e8f0; }
+  .header { border-top: 4px solid ${accent}; padding: 24px 32px 16px 32px; }
+  .header .app { font-size: 13px; font-weight: bold; color: #2b56cb; letter-spacing: .3px; margin: 0 0 4px 0; }
+  .header h1 { color: #0b192c; margin: 0; font-size: 18px; font-weight: 600; }
+  .body { padding: 8px 32px 32px 32px; color: #333; line-height: 1.6; font-size: 14px; }
+  table.recap { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+  table.recap td { padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+  table.recap td:first-child { color: #64748b; width: 40%; }
+  table.recap td:last-child { color: #0b192c; font-weight: 600; }
+  .motif { background: #f9fafb; border-left: 3px solid ${accent}; padding: 10px 14px; margin: 16px 0; font-size: 13px; }
+  .footer { padding: 16px 32px; background: #f9fafb; font-size: 11px; color: #94a3b8; border-top: 1px solid #e5e7eb; }
+</style></head><body>
+<div class="container">
+  <div class="header">
+    <p class="app">${nom}</p>
+    <h1>${titre}</h1>
+  </div>
+  <div class="body">
+    <p>Le dossier que vous avez saisi a été ${estValide ? 'validé et certifié' : 'rejeté'}.</p>
+    <table class="recap">
+      <tr><td>Étudiant</td><td>${prenomNomEtudiant}</td></tr>
+      <tr><td>Document</td><td>${typeDocument}</td></tr>
+      <tr><td>Référence</td><td>${numeroUnique}</td></tr>
+    </table>
+    ${motifRejet ? `<div class="motif"><strong>Motif du rejet :</strong> ${motifRejet}</div>` : ''}
+  </div>
+  <div class="footer">${nom} — Plateforme de certification blockchain des diplômes · Douala, Cameroun</div>
+</div>
+</body></html>`;
+    await this.envoyer(destinataire, `${titre} — ${data.numeroUnique}`, html);
+  }
+
   async sendPartageCreé(
     destinataire: string,
     data: {
