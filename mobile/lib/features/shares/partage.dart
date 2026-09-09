@@ -67,6 +67,25 @@ class Partage {
     if (dateExpiration == null) return '—';
     return 'Expire le ${_formatDate(dateExpiration!)}';
   }
+
+  /// Construit un [Partage] depuis un PartageResponseDto reel
+  /// (GET /etudiants/moi/partages). Le backend n'a pas de champ "permanent"
+  /// explicite : un date_expiration absent (et statut actif) EST le permanent.
+  factory Partage.depuisJson(Map<String, dynamic> json) {
+    final dateExpirationStr = json['date_expiration'] as String?;
+    return Partage(
+      id: json['id'] as String,
+      documentTitre: json['document_titre'] as String,
+      tokenAcces: json['token_acces'] as String,
+      statut: StatutPartage.values.byName(json['statut'] as String),
+      dateCreation: DateTime.parse(json['created_at'] as String),
+      nbConsultations: json['nb_consultations'] as int,
+      dateExpiration: dateExpirationStr == null ? null : DateTime.parse(dateExpirationStr),
+      permanent: dateExpirationStr == null,
+      emailDestinataire: json['email_destinataire'] as String?,
+      universiteDestinataire: json['universite_destinataire'] as String?,
+    );
+  }
 }
 
 final List<Partage> partagesFactices = [

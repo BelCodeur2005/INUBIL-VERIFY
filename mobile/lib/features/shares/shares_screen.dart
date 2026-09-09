@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
+import '../../core/api/api_client.dart';
+import '../../shared/widgets/etat_async.dart';
+import '../../shared/widgets/message_banner.dart';
 import '../../theme/app_theme.dart';
 import '../diplomas/diploma.dart';
 import 'partage.dart';
 import 'partage_card.dart';
 
+/// Ecran "Mes partages" — branche sur GET/POST/DELETE
+/// /etudiants/moi/partages. Important : l'API ne retourne que les liens au
+/// statut actif (filtre cote backend) — un lien revoque disparait donc
+/// reellement de la liste au prochain chargement, il n'est jamais renvoye
+/// avec un badge "Revoque". La revocation retire donc l'entree de la liste
+/// localement plutot que de changer son statut sur place.
 class SharesScreen extends StatefulWidget {
   const SharesScreen({super.key});
 
@@ -12,98 +21,131 @@ class SharesScreen extends StatefulWidget {
 }
 
 class _SharesScreenState extends State<SharesScreen> {
-  final List<Partage> _partages = List.of(partagesFactices);
+  late Future<(List<Partage>, List<Diplome>)> _chargement;
 
-  int get _liensActifs => _partages.where((p) => p.statut == StatutPartage.actif).length;
-  int get _totalConsultations => _partages.fold(0, (somme, p) => somme + p.nbConsultations);
+  @override
+  void initState() {
+    super.initState();
+    _chargement = _charger();
+  }
 
-  Future<void> _revoquer(Partage cible) async {
-    // TODO(etape 3) : POST /etudiants/moi/partages/:id -> DELETE reel.
-    await Future.delayed(const Duration(milliseconds: 500));
+  Future<(List<Partage>, List<Diplome>)> _charger() async {
+    final resultats = await Future.wait([
+      ApiClient.get('/etudiants/moi/partages'),
+      ApiClient.get('/etudiants/moi/documents?statut=actif&limit=100'),
+    ]);
+    final partages = (resultats[0] as List).map((p) => Partage.depuisJson(p as Map<String, dynamic>)).toList();
+    final documentsJson = (resultats[1] as Map<String, dynamic>)['data'] as List;
+    final documents = documentsJson.map((d) => Diplome.depuisJson(d as Map<String, dynamic>)).toList();
+    return (partages, documents);
+  }
+
+  Future<void> _rafraichir() async {
+    final chargement = _charger();
+    setState(() => _chargement = chargement);
+    await chargement;
+  }
+
+  Future<void> _revoquer(List<Partage> partagesActuels, List<Diplome> documents, Partage cible) async {
+    await ApiClient.delete('/etudiants/moi/partages/${cible.id}');
     if (!mounted) return;
-    setState(() {
-      final i = _partages.indexWhere((p) => p.id == cible.id);
-      if (i != -1) {
-        _partages[i] = Partage(
-          id: cible.id,
-          documentTitre: cible.documentTitre,
-          tokenAcces: cible.tokenAcces,
-          statut: StatutPartage.revoque,
-          dateCreation: cible.dateCreation,
-          nbConsultations: cible.nbConsultations,
-          dateExpiration: cible.dateExpiration,
-          permanent: cible.permanent,
-          emailDestinataire: cible.emailDestinataire,
-          universiteDestinataire: cible.universiteDestinataire,
-        );
-      }
-    });
+    final nouveauxPartages = partagesActuels.where((p) => p.id != cible.id).toList();
+    setState(() => _chargement = Future.value((nouveauxPartages, documents)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Lien révoqué.'), behavior: SnackBarBehavior.floating),
+    );
   }
 
-  void _creerPartage(Partage nouveau) {
-    setState(() => _partages.insert(0, nouveau));
+  void _ajouterPartageCree(List<Partage> partagesActuels, List<Diplome> documents, Partage nouveau) {
+    final nouveauxPartages = <Partage>[nouveau, ...partagesActuels];
+    setState(() => _chargement = Future.value((nouveauxPartages, documents)));
   }
 
-  Future<void> _ouvrirCreation() async {
-    final documentsPartageables = diplomesFactices.where((d) => d.statut == StatutDiplome.certifie).toList();
+  Future<void> _ouvrirCreation(List<Partage> partagesActuels, List<Diplome> documents) async {
     final resultat = await showModalBottomSheet<Partage>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _FeuilleCreationPartage(documents: documentsPartageables),
+      builder: (_) => _FeuilleCreationPartage(documents: documents),
     );
-    if (resultat != null) _creerPartage(resultat);
+    if (resultat != null) _ajouterPartageCree(partagesActuels, documents, resultat);
   }
 
   @override
   Widget build(BuildContext context) {
-    final documentsPartageables = diplomesFactices.where((d) => d.statut == StatutDiplome.certifie).toList();
+    return FutureBuilder<(List<Partage>, List<Diplome>)>(
+      future: _chargement,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const EtatChargement();
+        }
+        if (snapshot.hasError) {
+          return EtatErreur(message: messageErreurApi(snapshot.error!), onReessayer: _rafraichir);
+        }
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: documentsPartageables.isEmpty ? null : _ouvrirCreation,
-        icon: const Icon(Icons.add_link_rounded),
-        label: const Text('Nouveau lien'),
-      ),
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenMargin, AppSpacing.base, AppSpacing.screenMargin, AppSpacing.xs,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Mes partages', style: AppTypography.headlineMd),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Les accès sécurisés que vous avez générés pour des recruteurs ou institutions.',
-                      style: AppTypography.bodySm,
+        final (partages, documentsPartageables) = snapshot.data!;
+        final liensActifs = partages.where((p) => p.statut == StatutPartage.actif).length;
+        final totalConsultations = partages.fold(0, (somme, p) => somme + p.nbConsultations);
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: documentsPartageables.isEmpty ? null : () => _ouvrirCreation(partages, documentsPartageables),
+            icon: const Icon(Icons.add_link_rounded),
+            label: const Text('Nouveau lien'),
+          ),
+          body: SafeArea(
+            child: RefreshIndicator(
+              onRefresh: _rafraichir,
+              color: AppColors.primary,
+              child: CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.screenMargin, AppSpacing.base, AppSpacing.screenMargin, AppSpacing.xs,
                     ),
-                    const SizedBox(height: AppSpacing.base),
-                    _RangeeStatistiques(liensActifs: _liensActifs, consultations: _totalConsultations, total: _partages.length),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
-                ),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Mes partages', style: AppTypography.headlineMd),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Les accès sécurisés que vous avez générés pour des recruteurs ou institutions.',
+                            style: AppTypography.bodySm,
+                          ),
+                          const SizedBox(height: AppSpacing.base),
+                          _RangeeStatistiques(liensActifs: liensActifs, consultations: totalConsultations, total: partages.length),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (partages.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _EtatVide(
+                        onCreer: documentsPartageables.isEmpty ? null : () => _ouvrirCreation(partages, documentsPartageables),
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.screenMargin, 0, AppSpacing.screenMargin, 96),
+                      sliver: SliverList.separated(
+                        itemCount: partages.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (_, i) => PartageCard(
+                          partage: partages[i],
+                          onRevoquer: () => _revoquer(partages, documentsPartageables, partages[i]),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-            if (_partages.isEmpty)
-              SliverFillRemaining(hasScrollBody: false, child: _EtatVide(onCreer: documentsPartageables.isEmpty ? null : _ouvrirCreation))
-            else
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.screenMargin, 0, AppSpacing.screenMargin, 96),
-                sliver: SliverList.separated(
-                  itemCount: _partages.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (_, i) => PartageCard(partage: _partages[i], onRevoquer: () => _revoquer(_partages[i])),
-                ),
-              ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -218,6 +260,7 @@ class _FeuilleCreationPartageState extends State<_FeuilleCreationPartage> {
   final _emailController = TextEditingController();
   String _duree = '30';
   bool _enCours = false;
+  String? _erreur;
 
   @override
   void dispose() {
@@ -227,29 +270,28 @@ class _FeuilleCreationPartageState extends State<_FeuilleCreationPartage> {
 
   Future<void> _generer() async {
     if (_documentChoisi == null) return;
-    setState(() => _enCours = true);
-    // TODO(etape 3) : POST /etudiants/moi/partages avec {document_id, email_destinataire?, duree}.
-    await Future.delayed(const Duration(milliseconds: 700));
-    if (!mounted) return;
-    final email = _emailController.text.trim();
-    final nouveau = Partage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      documentTitre: '${_documentChoisi!.typeDocument} — ${_documentChoisi!.numeroUnique}',
-      tokenAcces: _genererToken(),
-      statut: StatutPartage.actif,
-      dateCreation: DateTime.now(),
-      nbConsultations: 0,
-      permanent: _duree == 'permanent',
-      dateExpiration: _duree == 'permanent' ? null : DateTime.now().add(Duration(days: int.parse(_duree))),
-      emailDestinataire: email.isEmpty ? null : email,
-    );
-    Navigator.of(context).pop(nouveau);
-  }
-
-  String _genererToken() {
-    const car = 'abcdef0123456789';
-    final rnd = DateTime.now().microsecondsSinceEpoch;
-    return List.generate(12, (i) => car[(rnd ~/ (i + 1)) % car.length]).join();
+    setState(() {
+      _enCours = true;
+      _erreur = null;
+    });
+    try {
+      final email = _emailController.text.trim();
+      final corps = <String, dynamic>{
+        'document_id': _documentChoisi!.id,
+        if (email.isNotEmpty) 'email_destinataire': email,
+        if (_duree == 'permanent')
+          'permanent': true
+        else
+          'date_expiration': DateTime.now().toUtc().add(Duration(days: int.parse(_duree))).toIso8601String(),
+      };
+      final reponse = await ApiClient.post('/etudiants/moi/partages', corps: corps) as Map<String, dynamic>;
+      if (!mounted) return;
+      Navigator.of(context).pop(Partage.depuisJson(reponse));
+    } catch (e) {
+      if (mounted) setState(() => _erreur = messageErreurApi(e));
+    } finally {
+      if (mounted) setState(() => _enCours = false);
+    }
   }
 
   @override
@@ -289,6 +331,10 @@ class _FeuilleCreationPartageState extends State<_FeuilleCreationPartage> {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
+                if (_erreur != null) ...[
+                  MessageBanner(texte: _erreur!, type: MessageBannerType.erreur),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
                 Text('Diplôme concerné', style: AppTypography.labelMd),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<Diplome>(
