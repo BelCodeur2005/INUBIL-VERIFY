@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../core/api/api_client.dart';
+import '../../shared/widgets/etat_async.dart';
 import '../../theme/app_theme.dart';
 import 'trust_ring.dart';
 import 'verification.dart';
 import 'verification_tile.dart';
 
+/// Ecran "Verifications" — branche sur GET /etudiants/moi/verifications
+/// (limit:100, meme plafond que VerificationsActivite.jsx).
 class VerificationsScreen extends StatefulWidget {
   const VerificationsScreen({super.key});
 
@@ -12,10 +16,15 @@ class VerificationsScreen extends StatefulWidget {
 }
 
 class _VerificationsScreenState extends State<VerificationsScreen> {
-  final List<Verif> _verifications = List.of(verificationsFactices)
-    ..sort((a, b) => b.dateCreation.compareTo(a.dateCreation));
   final _rechercheController = TextEditingController();
   String _recherche = '';
+  late Future<List<Verif>> _chargement;
+
+  @override
+  void initState() {
+    super.initState();
+    _chargement = _charger();
+  }
 
   @override
   void dispose() {
@@ -23,100 +32,119 @@ class _VerificationsScreenState extends State<VerificationsScreen> {
     super.dispose();
   }
 
-  Future<void> _rafraichir() async {
-    // TODO(etape 3) : GET /etudiants/moi/verifications reel.
-    await Future.delayed(const Duration(milliseconds: 600));
+  Future<List<Verif>> _charger() async {
+    final reponse = await ApiClient.get('/etudiants/moi/verifications?limit=100') as Map<String, dynamic>;
+    final data = reponse['data'] as List;
+    return data.map((v) => Verif.depuisJson(v as Map<String, dynamic>)).toList()
+      ..sort((a, b) => b.dateCreation.compareTo(a.dateCreation));
   }
 
-  List<Verif> get _filtrees {
-    final terme = _recherche.trim().toLowerCase();
-    if (terme.isEmpty) return _verifications;
-    return _verifications
-        .where((v) => v.typeDocument.toLowerCase().contains(terme) || v.numeroUnique.toLowerCase().contains(terme))
-        .toList();
+  Future<void> _rafraichir() async {
+    final chargement = _charger();
+    setState(() => _chargement = chargement);
+    await chargement;
   }
 
   @override
   Widget build(BuildContext context) {
-    final total = _verifications.length;
-    final nbAuthentiques = _verifications.where((v) => v.resultat == ResultatVerification.authentique).length;
-    final nbDocumentsDistincts = _verifications.map((v) => v.numeroUnique).toSet().length;
-    final taux = total > 0 ? ((nbAuthentiques / total) * 100).round() : null;
-    final filtrees = _filtrees;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _rafraichir,
-          color: AppColors.primary,
-          child: CustomScrollView(
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.screenMargin, AppSpacing.base, AppSpacing.screenMargin, AppSpacing.xs,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Vérifications', style: AppTypography.headlineMd),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Chaque contrôle public effectué sur vos documents — lien, QR code ou hash.',
-                        style: AppTypography.bodySm,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Center(child: TrustRing(taux: taux, total: total)),
-                      const SizedBox(height: AppSpacing.md),
-                      Row(
+        child: FutureBuilder<List<Verif>>(
+          future: _chargement,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const EtatChargement();
+            }
+            if (snapshot.hasError) {
+              return EtatErreur(message: messageErreurApi(snapshot.error!), onReessayer: _rafraichir);
+            }
+
+            final verifications = snapshot.data!;
+            final terme = _recherche.trim().toLowerCase();
+            final filtrees = terme.isEmpty
+                ? verifications
+                : verifications
+                    .where((v) => v.typeDocument.toLowerCase().contains(terme) || v.numeroUnique.toLowerCase().contains(terme))
+                    .toList();
+
+            final total = verifications.length;
+            final nbAuthentiques = verifications.where((v) => v.resultat == ResultatVerification.authentique).length;
+            final nbDocumentsDistincts = verifications.map((v) => v.numeroUnique).toSet().length;
+            final taux = total > 0 ? ((nbAuthentiques / total) * 100).round() : null;
+
+            return RefreshIndicator(
+              onRefresh: _rafraichir,
+              color: AppColors.primary,
+              child: CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.screenMargin, AppSpacing.base, AppSpacing.screenMargin, AppSpacing.xs,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: _ChipStat(valeur: '$total', label: 'Vérifications', icone: Icons.shield_outlined),
+                          Text('Vérifications', style: AppTypography.headlineMd),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Chaque contrôle public effectué sur vos documents — lien, QR code ou hash.',
+                            style: AppTypography.bodySm,
                           ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: _ChipStat(valeur: '$nbDocumentsDistincts', label: 'Documents distincts', icone: Icons.description_outlined),
+                          const SizedBox(height: AppSpacing.md),
+                          Center(child: TrustRing(taux: taux, total: total)),
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _ChipStat(valeur: '$total', label: 'Vérifications', icone: Icons.shield_outlined),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: _ChipStat(valeur: '$nbDocumentsDistincts', label: 'Documents distincts', icone: Icons.description_outlined),
+                              ),
+                            ],
                           ),
+                          const SizedBox(height: AppSpacing.md),
+                          TextField(
+                            controller: _rechercheController,
+                            onChanged: (v) => setState(() => _recherche = v),
+                            decoration: InputDecoration(
+                              hintText: 'Rechercher un diplôme, un numéro…',
+                              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                              suffixIcon: _recherche.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      icon: const Icon(Icons.close_rounded, size: 18),
+                                      onPressed: () => setState(() {
+                                        _rechercheController.clear();
+                                        _recherche = '';
+                                      }),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.base),
+                          Text('Historique', style: AppTypography.headlineSm),
+                          const SizedBox(height: AppSpacing.sm),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextField(
-                        controller: _rechercheController,
-                        onChanged: (v) => setState(() => _recherche = v),
-                        decoration: InputDecoration(
-                          hintText: 'Rechercher un diplôme, un numéro…',
-                          prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                          suffixIcon: _recherche.isEmpty
-                              ? null
-                              : IconButton(
-                                  icon: const Icon(Icons.close_rounded, size: 18),
-                                  onPressed: () => setState(() {
-                                    _rechercheController.clear();
-                                    _recherche = '';
-                                  }),
-                                ),
-                        ),
+                    ),
+                  ),
+                  if (filtrees.isEmpty)
+                    SliverFillRemaining(hasScrollBody: false, child: _EtatVide(recherche: _recherche.isNotEmpty))
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.screenMargin, 0, AppSpacing.screenMargin, AppSpacing.lg),
+                      sliver: SliverList.builder(
+                        itemCount: filtrees.length,
+                        itemBuilder: (context, i) => VerificationTile(verif: filtrees[i]),
                       ),
-                      const SizedBox(height: AppSpacing.base),
-                      Text('Historique', style: AppTypography.headlineSm),
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
-                  ),
-                ),
+                    ),
+                ],
               ),
-              if (filtrees.isEmpty)
-                SliverFillRemaining(hasScrollBody: false, child: _EtatVide(recherche: _recherche.isNotEmpty))
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.screenMargin, 0, AppSpacing.screenMargin, AppSpacing.lg),
-                  sliver: SliverList.builder(
-                    itemCount: filtrees.length,
-                    itemBuilder: (context, i) => VerificationTile(verif: filtrees[i]),
-                  ),
-                ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

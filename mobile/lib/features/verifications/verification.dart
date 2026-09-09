@@ -68,65 +68,49 @@ class Verif {
     final m = dateCreation.minute.toString().padLeft(2, '0');
     return '${dateCreation.day} ${mois[dateCreation.month - 1]} · $h:$m';
   }
+
+  /// Construit un [Verif] depuis un VerificationEtudiantDto reel
+  /// (GET /etudiants/moi/verifications). type_document/numero_unique sont
+  /// nullable cote backend (verification sur un hash/document qui ne
+  /// correspond a rien de reel — cas non_trouve/falsifie) : fallback textuel
+  /// plutot qu'un champ vide.
+  factory Verif.depuisJson(Map<String, dynamic> json) {
+    return Verif(
+      id: json['id'] as String,
+      typeDocument: json['type_document'] as String? ?? 'Document inconnu',
+      numeroUnique: json['numero_unique'] as String? ?? '—',
+      canal: _canalDepuisJson(json['type_verification'] as String),
+      resultat: _resultatDepuisJson(json['resultat'] as String),
+      dateCreation: DateTime.parse(json['created_at'] as String),
+      destinatairePartage: json['destinataire_partage'] as String?,
+    );
+  }
 }
 
-final List<Verif> verificationsFactices = [
-  Verif(
-    id: 'v1',
-    typeDocument: 'Licence en Informatique',
-    numeroUnique: 'INUB-2026-0001',
-    canal: CanalVerification.qrCode,
-    resultat: ResultatVerification.authentique,
-    dateCreation: DateTime.now().subtract(const Duration(minutes: 22)),
-  ),
-  Verif(
-    id: 'v2',
-    typeDocument: 'Licence en Informatique',
-    numeroUnique: 'INUB-2026-0001',
-    canal: CanalVerification.lienUnique,
-    resultat: ResultatVerification.authentique,
-    dateCreation: DateTime.now().subtract(const Duration(hours: 3)),
-    destinatairePartage: 'recrutement@techcorp-cm.com',
-  ),
-  Verif(
-    id: 'v3',
-    typeDocument: 'Licence en Génie Logiciel',
-    numeroUnique: 'INUB-2024-0087',
-    canal: CanalVerification.lienUnique,
-    resultat: ResultatVerification.authentique,
-    dateCreation: DateTime.now().subtract(const Duration(days: 1, hours: 4)),
-    destinatairePartage: 'Université de Douala — Bureau des admissions',
-  ),
-  Verif(
-    id: 'v4',
-    typeDocument: 'Licence en Informatique',
-    numeroUnique: 'INUB-2026-0001',
-    canal: CanalVerification.hash,
-    resultat: ResultatVerification.authentique,
-    dateCreation: DateTime.now().subtract(const Duration(days: 2)),
-  ),
-  Verif(
-    id: 'v5',
-    typeDocument: 'Relevé provisoire',
-    numeroUnique: 'INUB-2024-0033',
-    canal: CanalVerification.uploadPdf,
-    resultat: ResultatVerification.revoque,
-    dateCreation: DateTime.now().subtract(const Duration(days: 4)),
-  ),
-  Verif(
-    id: 'v6',
-    typeDocument: 'Licence en Génie Logiciel',
-    numeroUnique: 'INUB-2024-0087',
-    canal: CanalVerification.qrCode,
-    resultat: ResultatVerification.authentique,
-    dateCreation: DateTime.now().subtract(const Duration(days: 6)),
-  ),
-  Verif(
-    id: 'v7',
-    typeDocument: 'Document inconnu',
-    numeroUnique: 'INUB-2023-9912',
-    canal: CanalVerification.hash,
-    resultat: ResultatVerification.falsifie,
-    dateCreation: DateTime.now().subtract(const Duration(days: 9)),
-  ),
-];
+CanalVerification _canalDepuisJson(String canal) {
+  switch (canal) {
+    case 'lien_unique':
+      return CanalVerification.lienUnique;
+    case 'qr_code':
+      return CanalVerification.qrCode;
+    case 'upload_pdf':
+      return CanalVerification.uploadPdf;
+    case 'hash':
+    default:
+      return CanalVerification.hash;
+  }
+}
+
+ResultatVerification _resultatDepuisJson(String resultat) {
+  switch (resultat) {
+    case 'authentique':
+      return ResultatVerification.authentique;
+    case 'revoque':
+      return ResultatVerification.revoque;
+    case 'falsifie':
+      return ResultatVerification.falsifie;
+    case 'non_trouve':
+    default:
+      return ResultatVerification.nonTrouve;
+  }
+}
