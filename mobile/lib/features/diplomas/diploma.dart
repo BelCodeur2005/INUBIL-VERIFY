@@ -66,6 +66,46 @@ class Diplome {
     if (hashSha256 == null || hashSha256!.length < 20) return hashSha256;
     return '${hashSha256!.substring(0, 10)}…${hashSha256!.substring(hashSha256!.length - 6)}';
   }
+
+  /// Construit un [Diplome] depuis un DocumentEtudiantDto reel
+  /// (GET /etudiants/moi/documents). `statut` backend a 5 valeurs
+  /// (brouillon/en_validation/actif/revoque/expire) ; brouillon et
+  /// en_validation sont tous deux affiches "En cours" (meme regroupement
+  /// que STATUT_LABEL cote web).
+  factory Diplome.depuisJson(Map<String, dynamic> json) {
+    return Diplome(
+      id: json['id'] as String,
+      categorie: json['categorie'] as String,
+      typeDocument: json['type_document'] as String,
+      universite: json['universite'] as String,
+      statut: _statutDepuisJson(json['statut'] as String),
+      dateEmission: json['date_emission'] == null
+          ? DateTime.now()
+          : DateTime.parse(json['date_emission'] as String),
+      numeroUnique: json['numero_unique'] as String,
+      mention: json['mention'] as String?,
+      hashSha256: json['hash_sha256'] as String?,
+      transactionHash: json['transaction_hash'] as String?,
+      reseau: json['reseau'] as String?,
+      aUnPdf: json['a_un_pdf'] as bool? ?? false,
+      urlVerification: json['url_verification'] as String?,
+    );
+  }
+}
+
+StatutDiplome _statutDepuisJson(String statut) {
+  switch (statut) {
+    case 'actif':
+      return StatutDiplome.certifie;
+    case 'revoque':
+      return StatutDiplome.revoque;
+    case 'expire':
+      return StatutDiplome.expire;
+    case 'brouillon':
+    case 'en_validation':
+    default:
+      return StatutDiplome.enCours;
+  }
 }
 
 /// Donnees factices — etape 1 de la methode. GET /etudiants/moi/documents sera

@@ -1,55 +1,134 @@
 import 'package:flutter/material.dart';
+import '../../core/api/api_client.dart';
+import '../../core/api/api_exception.dart';
+import '../../core/auth/auth_service.dart';
+import '../../shared/widgets/message_banner.dart';
 import '../../theme/app_theme.dart';
+import '../diplomas/diploma.dart';
+import 'statistiques_etudiant.dart';
 
-/// Ecran Accueil — etape 1 de la methode (design + donnees statiques).
-/// Reprend le contenu de AccueilEtudiant.jsx (bandeau de bienvenue, compteurs,
-/// diplomes recents, conseil de securite) adapte en colonne unique scrollable.
-/// GET /etudiants/moi/statistiques + GET /etudiants/moi/documents seront
-/// branches a l'etape 3.
-class AccueilScreen extends StatelessWidget {
+/// Ecran Accueil — branche sur GET /etudiants/moi/statistiques +
+/// GET /etudiants/moi/documents?limit=2 (meme paire d'appels en parallele
+/// que AccueilEtudiant.jsx).
+class AccueilScreen extends StatefulWidget {
   const AccueilScreen({super.key});
 
-  // Donnees factices — etape 1 uniquement.
-  static const _prenom = 'Bertrand';
-  static const _diplomesCertifies = 3;
-  static const _enAttente = 1;
-  static const _verificationsRecues = 12;
-  static const _diplomesRecents = [
-    _DiplomeApercu(
-      type: 'Licence en Informatique',
-      universite: 'ISTAMA INUBIL',
-      mention: 'Assez Bien',
-      numero: 'INUB-2026-0001',
-      statut: _StatutDiplome.actif,
-    ),
-    _DiplomeApercu(
-      type: 'Relevé de notes — Licence 3',
-      universite: 'ISTAMA INUBIL',
-      mention: null,
-      numero: 'INUB-2026-0002',
-      statut: _StatutDiplome.enCours,
-    ),
-  ];
+  @override
+  State<AccueilScreen> createState() => _AccueilScreenState();
+}
+
+class _AccueilScreenState extends State<AccueilScreen> {
+  late Future<(StatistiquesEtudiant, List<Diplome>)> _chargement;
+
+  @override
+  void initState() {
+    super.initState();
+    _chargement = _charger();
+  }
+
+  Future<(StatistiquesEtudiant, List<Diplome>)> _charger() async {
+    final resultats = await Future.wait([
+      ApiClient.get('/etudiants/moi/statistiques'),
+      ApiClient.get('/etudiants/moi/documents?limit=2'),
+    ]);
+    final stats = StatistiquesEtudiant.depuisJson(resultats[0] as Map<String, dynamic>);
+    final documentsJson = (resultats[1] as Map<String, dynamic>)['data'] as List;
+    final documents = documentsJson.map((d) => Diplome.depuisJson(d as Map<String, dynamic>)).toList();
+    return (stats, documents);
+  }
+
+  Future<void> _rafraichir() async {
+    final chargement = _charger();
+    setState(() => _chargement = chargement);
+    await chargement;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.screenMargin),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const _BandeauBienvenue(prenom: _prenom),
-          const SizedBox(height: AppSpacing.md),
-          const _RangeeStatistiques(
-            certifies: _diplomesCertifies,
-            enAttente: _enAttente,
-            verifications: _verificationsRecues,
+    return RefreshIndicator(
+      onRefresh: _rafraichir,
+      color: AppColors.primary,
+      child: FutureBuilder<(StatistiquesEtudiant, List<Diplome>)>(
+        future: _chargement,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const _EtatChargement();
+          }
+          if (snapshot.hasError) {
+            final message = snapshot.error is ApiException
+                ? (snapshot.error as ApiException).message
+                : 'Impossible de charger votre espace. Vérifiez votre connexion.';
+            return _EtatErreur(message: message, onReessayer: _rafraichir);
+          }
+
+          final (stats, diplomesRecents) = snapshot.data!;
+          final prenom = authService.utilisateur?.prenom ?? '';
+
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(AppSpacing.screenMargin),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _BandeauBienvenue(prenom: prenom),
+                const SizedBox(height: AppSpacing.md),
+                _RangeeStatistiques(
+                  certifies: stats.documentsActifs,
+                  enAttente: stats.documentsEnValidation,
+                  verifications: stats.verificationsTotal,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _SectionDiplomesRecents(diplomes: diplomesRecents),
+                const SizedBox(height: AppSpacing.md),
+                const _ConseilSecurite(),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _EtatChargement extends StatelessWidget {
+  const _EtatChargement();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+  }
+}
+
+class _EtatErreur extends StatelessWidget {
+  const _EtatErreur({required this.message, required this.onReessayer});
+  final String message;
+  final Future<void> Function() onReessayer;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.screenMargin),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  MessageBanner(texte: message, type: MessageBannerType.erreur),
+                  const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton.icon(
+                    onPressed: onReessayer,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Réessayer'),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          _SectionDiplomesRecents(diplomes: _diplomesRecents),
-          const SizedBox(height: AppSpacing.md),
-          const _ConseilSecurite(),
-        ],
+        ),
       ),
     );
   }
@@ -187,28 +266,10 @@ class _CarteStatistique extends StatelessWidget {
   }
 }
 
-enum _StatutDiplome { actif, enCours, revoque, expire }
-
-class _DiplomeApercu {
-  const _DiplomeApercu({
-    required this.type,
-    required this.universite,
-    required this.mention,
-    required this.numero,
-    required this.statut,
-  });
-
-  final String type;
-  final String universite;
-  final String? mention;
-  final String numero;
-  final _StatutDiplome statut;
-}
-
 class _SectionDiplomesRecents extends StatelessWidget {
   const _SectionDiplomesRecents({required this.diplomes});
 
-  final List<_DiplomeApercu> diplomes;
+  final List<Diplome> diplomes;
 
   @override
   Widget build(BuildContext context) {
@@ -257,16 +318,11 @@ class _SectionDiplomesRecents extends StatelessWidget {
 class _CarteDiplome extends StatelessWidget {
   const _CarteDiplome({required this.diplome});
 
-  final _DiplomeApercu diplome;
+  final Diplome diplome;
 
   @override
   Widget build(BuildContext context) {
-    final (label, couleur) = switch (diplome.statut) {
-      _StatutDiplome.actif => ('Actif', AppColors.success),
-      _StatutDiplome.enCours => ('En cours', AppColors.warning),
-      _StatutDiplome.revoque => ('Révoqué', AppColors.error),
-      _StatutDiplome.expire => ('Expiré', AppColors.textMuted),
-    };
+    final visuel = visuelPour(diplome.statut);
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
@@ -285,7 +341,7 @@ class _CarteDiplome extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(diplome.type, style: AppTypography.bodyMd.copyWith(fontWeight: FontWeight.w700)),
+                    Text(diplome.typeDocument, style: AppTypography.bodyMd.copyWith(fontWeight: FontWeight.w700)),
                     Text(diplome.universite, style: AppTypography.bodySm),
                   ],
                 ),
@@ -293,12 +349,12 @@ class _CarteDiplome extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: couleur.withValues(alpha: 0.12),
+                  color: visuel.couleur.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(AppRadius.xl),
                 ),
                 child: Text(
-                  label,
-                  style: AppTypography.labelMd.copyWith(color: couleur, letterSpacing: 0),
+                  visuel.label,
+                  style: AppTypography.labelMd.copyWith(color: visuel.couleur, letterSpacing: 0),
                 ),
               ),
             ],
@@ -310,7 +366,7 @@ class _CarteDiplome extends StatelessWidget {
                 child: _MetaChamp(label: 'Mention', valeur: diplome.mention ?? '—'),
               ),
               Expanded(
-                child: _MetaChamp(label: 'Numéro', valeur: diplome.numero, mono: true),
+                child: _MetaChamp(label: 'Numéro', valeur: diplome.numeroUnique, mono: true),
               ),
             ],
           ),
