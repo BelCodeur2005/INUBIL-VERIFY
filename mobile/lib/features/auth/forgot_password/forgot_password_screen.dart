@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/api/api_exception.dart';
 import '../../../shared/widgets/bandeau_marque.dart';
 import '../../../shared/widgets/feuille_contenu.dart';
 import '../../../shared/widgets/message_banner.dart';
@@ -6,8 +8,7 @@ import '../../../theme/app_theme.dart';
 
 /// Ecran "mot de passe oublie" — reprend l'habillage de LoginScreen
 /// (BandeauMarque/FeuilleContenu partages) pour rester coherent visuellement.
-/// Etape 1 de la methode : design + donnees statiques, POST /auth/forgot-password
-/// pas encore branche (a faire a l'etape 3, en meme temps que la connexion).
+/// Branche sur POST /auth/forgot-password (anonyme, sans jeton).
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -34,15 +35,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _enCours = true);
-    // TODO(etape 3) : remplacer par un vrai appel POST /auth/forgot-password.
-    // Reponse volontairement identique que l'email existe ou non cote backend
-    // (anti-enumeration) — le succes s'affiche donc toujours ici.
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    setState(() {
-      _enCours = false;
-      _succes = true;
-    });
+    try {
+      // Reponse volontairement identique que l'email existe ou non cote
+      // backend (anti-enumeration) — le succes s'affiche donc toujours ici,
+      // seules les erreurs reseau/throttling remontent une ApiException.
+      await ApiClient.post(
+        '/auth/forgot-password',
+        corps: {'email': _emailController.text.trim()},
+        auth: false,
+      );
+      if (!mounted) return;
+      setState(() => _succes = true);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _erreur = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _erreur = 'Impossible de joindre le serveur. Vérifiez votre connexion.');
+    } finally {
+      if (mounted) setState(() => _enCours = false);
+    }
   }
 
   @override

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/api/api_exception.dart';
+import '../../../core/auth/auth_service.dart';
 import '../../../shared/widgets/bandeau_marque.dart';
 import '../../../shared/widgets/feuille_contenu.dart';
 import '../../../shared/widgets/main_shell.dart';
@@ -6,10 +8,7 @@ import '../../../shared/widgets/message_banner.dart';
 import '../../../theme/app_theme.dart';
 import '../forgot_password/forgot_password_screen.dart';
 
-/// Ecran de connexion — etape 1 de la methode (design + donnees statiques).
-/// _handleSubmit ne fait qu'une validation locale et simule un court chargement
-/// pour previsualiser l'etat "Connexion..." ; le vrai POST /auth/login sera
-/// branche a l'etape 3 (core/auth/auth_repository.dart).
+/// Ecran de connexion — branche sur POST /auth/login (core/auth/auth_service.dart).
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -38,13 +37,24 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _enCours = true);
-    // TODO(etape 3) : remplacer par un vrai appel POST /auth/login.
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    setState(() => _enCours = false);
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainShell()),
-    );
+    try {
+      await authService.connecter(
+        email: _emailController.text.trim(),
+        motDePasse: _passwordController.text,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainShell()),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _erreur = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _erreur = 'Impossible de joindre le serveur. Vérifiez votre connexion.');
+    } finally {
+      if (mounted) setState(() => _enCours = false);
+    }
   }
 
   @override

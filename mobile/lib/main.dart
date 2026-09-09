@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'features/auth/login/login_screen.dart';
+import 'shared/widgets/bootstrap_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -15,7 +15,7 @@ class InubilVerifyApp extends StatelessWidget {
       title: 'INUBIL Verify',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const LoginScreen(),
+      home: const BootstrapScreen(),
     );
   }
 }

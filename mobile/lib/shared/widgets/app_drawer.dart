@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/auth/auth_service.dart';
+import '../../features/auth/login/login_screen.dart';
 import '../../features/settings/parametres_screen.dart';
 import '../../theme/app_theme.dart';
 
@@ -134,9 +136,16 @@ class AppDrawer extends StatelessWidget {
                     couleur: AppColors.error,
                     label: 'Se déconnecter',
                     texteEnCouleur: true,
-                    onTap: () {
-                      // TODO(etape 3) : POST /auth/logout + retour a LoginScreen.
-                      Navigator.of(context).pop();
+                    onTap: () async {
+                      // Navigator capture avant les await : le context du tiroir
+                      // est demonte des le pop, mais le NavigatorState reste valide.
+                      final navigator = Navigator.of(context);
+                      navigator.pop();
+                      await authService.deconnecter();
+                      navigator.pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        (route) => false,
+                      );
                     },
                   ),
                 ],
