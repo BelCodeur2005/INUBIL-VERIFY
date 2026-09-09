@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import 'diploma.dart';
 
 const _labelsReseau = {
   'polygon_amoy': 'Polygon Amoy (Testnet)',
   'polygon_mainnet': 'Polygon Mainnet',
+};
+
+const _explorateurUrl = {
+  'polygon_amoy': 'https://amoy.polygonscan.com/tx/',
+  'polygon_mainnet': 'https://polygonscan.com/tx/',
 };
 
 /// Ecran de detail d'un certificat — push complet plutot qu'un drawer modal
@@ -80,14 +87,17 @@ class DiplomaDetailScreen extends StatelessWidget {
                 label: 'Transaction (${_labelsReseau[diplome.reseau] ?? diplome.reseau ?? 'Polygon'})',
                 valeur: diplome.transactionHash!,
               ),
-              const SizedBox(height: AppSpacing.sm),
-              OutlinedButton.icon(
-                onPressed: () {
-                  // TODO(etape 3) : url_launcher vers l'explorateur Polygon.
-                },
-                icon: const Icon(Icons.open_in_new, size: 16),
-                label: const Text("Vérifier sur l'explorateur"),
-              ),
+              if (_explorateurUrl[diplome.reseau] != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton.icon(
+                  onPressed: () => launchUrl(
+                    Uri.parse('${_explorateurUrl[diplome.reseau]}${diplome.transactionHash}'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  icon: const Icon(Icons.open_in_new, size: 16),
+                  label: const Text("Vérifier sur l'explorateur"),
+                ),
+              ],
             ],
           ] else
             Container(
@@ -131,6 +141,14 @@ class _BlocHash extends StatelessWidget {
   final String label;
   final String valeur;
 
+  Future<void> _copier(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: valeur));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Copié dans le presse-papiers.'), behavior: SnackBarBehavior.floating),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -138,22 +156,29 @@ class _BlocHash extends StatelessWidget {
       children: [
         Text(label, style: AppTypography.labelMd),
         const SizedBox(height: 4),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            border: Border.all(color: AppColors.border),
+        Material(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(valeur, style: AppTypography.codeMd.copyWith(fontSize: 12)),
+            onTap: () => _copier(context),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
-              const SizedBox(width: 6),
-              const Icon(Icons.copy_outlined, size: 16, color: AppColors.textMuted),
-            ],
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(valeur, style: AppTypography.codeMd.copyWith(fontSize: 12)),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.copy_outlined, size: 16, color: AppColors.textMuted),
+                ],
+              ),
+            ),
           ),
         ),
       ],

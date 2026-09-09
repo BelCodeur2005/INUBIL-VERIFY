@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import 'diploma.dart';
 
@@ -192,10 +193,18 @@ class _BlocEmpreinte extends StatelessWidget {
 
   final Diplome diplome;
 
+  Future<void> _copier(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: diplome.hashSha256!));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Hash copié dans le presse-papiers.'), behavior: SnackBarBehavior.floating),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ancre = diplome.hashCourt != null;
-    return Container(
+    final contenu = Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.borderLight,
@@ -221,6 +230,18 @@ class _BlocEmpreinte extends StatelessWidget {
           if (ancre)
             Icon(Icons.copy_outlined, size: 14, color: AppColors.textMuted),
         ],
+      ),
+    );
+
+    if (!ancre) return contenu;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: () => _copier(context),
+        child: contenu,
       ),
     );
   }

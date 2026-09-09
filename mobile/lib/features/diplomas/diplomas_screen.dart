@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/api/api_client.dart';
+import '../../shared/widgets/etat_async.dart';
 import '../../theme/app_theme.dart';
 import 'diploma.dart';
 import 'diploma_card.dart';
@@ -6,9 +10,9 @@ import 'diploma_detail_screen.dart';
 
 enum _Filtre { tous, certifies, enAttente }
 
-/// Ecran "Mes diplomes" — etape 1 de la methode (design + donnees statiques).
-/// GET /etudiants/moi/documents + GET /etudiants/moi/documents/:id/pdf seront
-/// branches a l'etape 3.
+/// Ecran "Mes diplomes" — branche sur GET /etudiants/moi/documents (limit:100,
+/// recherche/filtre cote client, meme approche que MesDiplomes.jsx) et
+/// GET /etudiants/moi/documents/:id/pdf pour le telechargement.
 class DiplomasScreen extends StatefulWidget {
   const DiplomasScreen({super.key});
 
@@ -21,6 +25,13 @@ class _DiplomasScreenState extends State<DiplomasScreen> {
   String _recherche = '';
   _Filtre _filtre = _Filtre.tous;
   String? _telechargementEnCoursId;
+  late Future<List<Diplome>> _chargement;
+
+  @override
+  void initState() {
+    super.initState();
+    _chargement = _charger();
+  }
 
   @override
   void dispose() {
@@ -28,107 +39,147 @@ class _DiplomasScreenState extends State<DiplomasScreen> {
     super.dispose();
   }
 
+  Future<List<Diplome>> _charger() async {
+    final reponse = await ApiClient.get('/etudiants/moi/documents?limit=100') as Map<String, dynamic>;
+    final documentsJson = reponse['data'] as List;
+    return documentsJson.map((d) => Diplome.depuisJson(d as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> _rafraichir() async {
+    final chargement = _charger();
+    setState(() => _chargement = chargement);
+    await chargement;
+  }
+
   Future<void> _telecharger(Diplome d) async {
     setState(() => _telechargementEnCoursId = d.id);
-    // TODO(etape 3) : GET /etudiants/moi/documents/:id/pdf puis ouvrir l'URL presignee.
-    await Future.delayed(const Duration(milliseconds: 700));
-    if (!mounted) return;
-    setState(() => _telechargementEnCoursId = null);
+    try {
+      final reponse = await ApiClient.get('/etudiants/moi/documents/${d.id}/pdf') as Map<String, dynamic>;
+      final url = reponse['url'] as String;
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(messageErreurApi(e)), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _telechargementEnCoursId = null);
+    }
   }
 
   void _partager(Diplome d) {
-    // TODO(etape 3) : Share.share (package share_plus) du lien de verification.
+    final url = d.urlVerification;
+    if (url == null) return;
+    SharePlus.instance.share(ShareParams(text: url, subject: d.typeDocument));
   }
 
   @override
   Widget build(BuildContext context) {
-    final nbCertifies = diplomesFactices.where((d) => d.statut == StatutDiplome.certifie).length;
-    final nbEnAttente = diplomesFactices.where((d) => d.statut == StatutDiplome.enCours).length;
+    return RefreshIndicator(
+      onRefresh: _rafraichir,
+      color: AppColors.primary,
+      child: FutureBuilder<List<Diplome>>(
+        future: _chargement,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const EtatChargement();
+          }
+          if (snapshot.hasError) {
+            return EtatErreur(message: messageErreurApi(snapshot.error!), onReessayer: _rafraichir);
+          }
 
-    final filtres = diplomesFactices.where((d) {
-      final correspondRecherche = _recherche.isEmpty ||
-          d.typeDocument.toLowerCase().contains(_recherche) ||
-          d.universite.toLowerCase().contains(_recherche) ||
-          d.numeroUnique.toLowerCase().contains(_recherche);
-      final correspondFiltre = switch (_filtre) {
-        _Filtre.tous => true,
-        _Filtre.certifies => d.statut == StatutDiplome.certifie,
-        _Filtre.enAttente => d.statut == StatutDiplome.enCours,
-      };
-      return correspondRecherche && correspondFiltre;
-    }).toList();
+          final diplomes = snapshot.data!;
+          final nbCertifies = diplomes.where((d) => d.statut == StatutDiplome.certifie).length;
+          final nbEnAttente = diplomes.where((d) => d.statut == StatutDiplome.enCours).length;
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.screenMargin,
-            AppSpacing.sm,
-            AppSpacing.screenMargin,
-            0,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          final filtres = diplomes.where((d) {
+            final correspondRecherche = _recherche.isEmpty ||
+                d.typeDocument.toLowerCase().contains(_recherche) ||
+                d.universite.toLowerCase().contains(_recherche) ||
+                d.numeroUnique.toLowerCase().contains(_recherche);
+            final correspondFiltre = switch (_filtre) {
+              _Filtre.tous => true,
+              _Filtre.certifies => d.statut == StatutDiplome.certifie,
+              _Filtre.enAttente => d.statut == StatutDiplome.enCours,
+            };
+            return correspondRecherche && correspondFiltre;
+          }).toList();
+
+          return Column(
             children: [
-              TextField(
-                controller: _rechercheController,
-                onChanged: (v) => setState(() => _recherche = v.toLowerCase()),
-                decoration: const InputDecoration(
-                  hintText: 'Rechercher par intitulé, établissement...',
-                  prefixIcon: Icon(Icons.search, size: 20),
-                  isDense: true,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenMargin,
+                  AppSpacing.sm,
+                  AppSpacing.screenMargin,
+                  0,
                 ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _ChipFiltre(
-                      label: 'Tous (${diplomesFactices.length})',
-                      selectionne: _filtre == _Filtre.tous,
-                      onTap: () => setState(() => _filtre = _Filtre.tous),
+                    TextField(
+                      controller: _rechercheController,
+                      onChanged: (v) => setState(() => _recherche = v.toLowerCase()),
+                      decoration: const InputDecoration(
+                        hintText: 'Rechercher par intitulé, établissement...',
+                        prefixIcon: Icon(Icons.search, size: 20),
+                        isDense: true,
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    _ChipFiltre(
-                      label: 'Certifiés ($nbCertifies)',
-                      selectionne: _filtre == _Filtre.certifies,
-                      onTap: () => setState(() => _filtre = _Filtre.certifies),
-                    ),
-                    const SizedBox(width: 8),
-                    _ChipFiltre(
-                      label: 'En attente ($nbEnAttente)',
-                      selectionne: _filtre == _Filtre.enAttente,
-                      onTap: () => setState(() => _filtre = _Filtre.enAttente),
+                    const SizedBox(height: AppSpacing.sm),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _ChipFiltre(
+                            label: 'Tous (${diplomes.length})',
+                            selectionne: _filtre == _Filtre.tous,
+                            onTap: () => setState(() => _filtre = _Filtre.tous),
+                          ),
+                          const SizedBox(width: 8),
+                          _ChipFiltre(
+                            label: 'Certifiés ($nbCertifies)',
+                            selectionne: _filtre == _Filtre.certifies,
+                            onTap: () => setState(() => _filtre = _Filtre.certifies),
+                          ),
+                          const SizedBox(width: 8),
+                          _ChipFiltre(
+                            label: 'En attente ($nbEnAttente)',
+                            selectionne: _filtre == _Filtre.enAttente,
+                            onTap: () => setState(() => _filtre = _Filtre.enAttente),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: filtres.isEmpty
-              ? _EtatVide(recherche: _recherche.isNotEmpty)
-              : ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.screenMargin),
-                  itemCount: filtres.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (context, i) {
-                    final d = filtres[i];
-                    return DiplomaCard(
-                      diplome: d,
-                      telechargementEnCours: _telechargementEnCoursId == d.id,
-                      onOuvrir: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => DiplomaDetailScreen(diplome: d)),
+              Expanded(
+                child: filtres.isEmpty
+                    ? _EtatVide(recherche: _recherche.isNotEmpty)
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(AppSpacing.screenMargin),
+                        itemCount: filtres.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, i) {
+                          final d = filtres[i];
+                          return DiplomaCard(
+                            diplome: d,
+                            telechargementEnCours: _telechargementEnCoursId == d.id,
+                            onOuvrir: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => DiplomaDetailScreen(diplome: d)),
+                            ),
+                            onTelecharger: () => _telecharger(d),
+                            onPartager: () => _partager(d),
+                          );
+                        },
                       ),
-                      onTelecharger: () => _telecharger(d),
-                      onPartager: () => _partager(d),
-                    );
-                  },
-                ),
-        ),
-      ],
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

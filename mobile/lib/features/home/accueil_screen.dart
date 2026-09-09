@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
-import '../../core/api/api_exception.dart';
 import '../../core/auth/auth_service.dart';
-import '../../shared/widgets/message_banner.dart';
+import '../../shared/widgets/etat_async.dart';
 import '../../theme/app_theme.dart';
 import '../diplomas/diploma.dart';
 import 'statistiques_etudiant.dart';
@@ -52,13 +51,10 @@ class _AccueilScreenState extends State<AccueilScreen> {
         future: _chargement,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const _EtatChargement();
+            return const EtatChargement();
           }
           if (snapshot.hasError) {
-            final message = snapshot.error is ApiException
-                ? (snapshot.error as ApiException).message
-                : 'Impossible de charger votre espace. Vérifiez votre connexion.';
-            return _EtatErreur(message: message, onReessayer: _rafraichir);
+            return EtatErreur(message: messageErreurApi(snapshot.error!), onReessayer: _rafraichir);
           }
 
           final (stats, diplomesRecents) = snapshot.data!;
@@ -85,50 +81,6 @@ class _AccueilScreenState extends State<AccueilScreen> {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _EtatChargement extends StatelessWidget {
-  const _EtatChargement();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-  }
-}
-
-class _EtatErreur extends StatelessWidget {
-  const _EtatErreur({required this.message, required this.onReessayer});
-  final String message;
-  final Future<void> Function() onReessayer;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.screenMargin),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  MessageBanner(texte: message, type: MessageBannerType.erreur),
-                  const SizedBox(height: AppSpacing.sm),
-                  OutlinedButton.icon(
-                    onPressed: onReessayer,
-                    icon: const Icon(Icons.refresh_rounded, size: 18),
-                    label: const Text('Réessayer'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
