@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../core/api/api_client.dart';
+import '../../shared/widgets/etat_async.dart';
 import '../../theme/app_theme.dart';
 import 'notification.dart';
 import 'notification_tile.dart';
 
+/// Ecran Notifications — branche sur GET /notifications/moi (limit:50, meme
+/// plafond que NotificationsPanel.jsx), PATCH .../lire, PATCH
+/// .../tout-lire, DELETE /notifications/:id.
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
@@ -11,82 +16,142 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  late final List<Notif> _notifications = List.of(notificationsFactices)
-    ..sort((a, b) => b.dateCreation.compareTo(a.dateCreation));
+  late Future<List<Notif>> _chargement;
 
-  int get _nonLues => _notifications.where((n) => n.statut == StatutNotif.nonLue).length;
+  @override
+  void initState() {
+    super.initState();
+    _chargement = _charger();
+  }
+
+  Future<List<Notif>> _charger() async {
+    final reponse = await ApiClient.get('/notifications/moi?limit=50') as Map<String, dynamic>;
+    final data = reponse['data'] as List;
+    final notifications = data
+        .map((n) => Notif.depuisJson(n as Map<String, dynamic>))
+        // archivee ne doit jamais s'afficher — l'API n'a pas de filtre
+        // d'exclusion, seulement un filtre par valeur unique (voir notification.dart).
+        .where((n) => n.statut != StatutNotif.archivee)
+        .toList()
+      ..sort((a, b) => b.dateCreation.compareTo(a.dateCreation));
+    return notifications;
+  }
 
   Future<void> _rafraichir() async {
-    // TODO(etape 3) : GET /notifications/moi reel.
-    await Future.delayed(const Duration(milliseconds: 600));
+    final chargement = _charger();
+    setState(() => _chargement = chargement);
+    await chargement;
   }
 
-  void _ouvrir(Notif notif) {
-    setState(() {
-      final i = _notifications.indexWhere((n) => n.id == notif.id);
-      if (i != -1) _notifications[i] = notif.copierAvec(statut: StatutNotif.lue);
-    });
-    // TODO(etape 3) : naviguer vers notif.lien une fois les ecrans cibles routes.
+  void _ouvrir(List<Notif> notificationsActuelles, Notif notif) {
+    if (notif.statut != StatutNotif.nonLue) return;
+    final misesAJour = notificationsActuelles
+        .map((n) => n.id == notif.id ? n.copierAvec(statut: StatutNotif.lue) : n)
+        .toList();
+    setState(() => _chargement = Future.value(misesAJour));
+    // Best-effort, comme cote web : le marquage-lu n'est pas bloquant pour
+    // la navigation qui suivra une fois notif.lien route.
+    ApiClient.patch('/notifications/${notif.id}/lire').catchError((_) => null);
   }
 
-  void _archiver(Notif notif) {
-    setState(() => _notifications.removeWhere((n) => n.id == notif.id));
-    // TODO(etape 3) : DELETE /notifications/:id reel.
-  }
-
-  void _toutMarquerLu() {
-    setState(() {
-      for (var i = 0; i < _notifications.length; i++) {
-        _notifications[i] = _notifications[i].copierAvec(statut: StatutNotif.lue);
+  Future<void> _archiver(List<Notif> notificationsActuelles, Notif notif) async {
+    final misesAJour = notificationsActuelles.where((n) => n.id != notif.id).toList();
+    setState(() => _chargement = Future.value(misesAJour));
+    try {
+      await ApiClient.delete('/notifications/${notif.id}');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(messageErreurApi(e)), behavior: SnackBarBehavior.floating),
+        );
       }
-    });
+    }
+  }
+
+  Future<void> _toutMarquerLu(List<Notif> notificationsActuelles) async {
+    try {
+      await ApiClient.patch('/notifications/moi/tout-lire');
+      if (!mounted) return;
+      final misesAJour = notificationsActuelles.map((n) => n.copierAvec(statut: StatutNotif.lue)).toList();
+      setState(() => _chargement = Future.value(misesAJour));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(messageErreurApi(e)), behavior: SnackBarBehavior.floating),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final entrees = _construireEntrees(_notifications);
+    return FutureBuilder<List<Notif>>(
+      future: _chargement,
+      builder: (context, snapshot) {
+        final chargementTermine = snapshot.connectionState == ConnectionState.done;
+        final notifications = chargementTermine && !snapshot.hasError ? snapshot.data! : null;
+        final nonLues = notifications?.where((n) => n.statut == StatutNotif.nonLue).length ?? 0;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Notifications'),
-        actions: [
-          if (_nonLues > 0)
-            TextButton(
-              onPressed: _toutMarquerLu,
-              child: const Text('Tout marquer lu', style: TextStyle(fontWeight: FontWeight.w600)),
-            ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        child: _notifications.isEmpty
-            ? const _EtatVide()
-            : RefreshIndicator(
-                onRefresh: _rafraichir,
-                color: AppColors.primary,
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(top: AppSpacing.xs, bottom: AppSpacing.lg),
-                  itemCount: entrees.length,
-                  itemBuilder: (context, index) {
-                    final entree = entrees[index];
-                    if (entree is String) {
-                      return _EnteteGroupe(texte: entree);
-                    }
-                    final notif = entree as Notif;
-                    final suivante = index + 1 < entrees.length ? entrees[index + 1] : null;
-                    final estDernierDuGroupe = suivante is! Notif;
-                    return NotificationTile(
-                      notif: notif,
-                      estDernierDuGroupe: estDernierDuGroupe,
-                      onOuvrir: () => _ouvrir(notif),
-                      onArchiver: () => _archiver(notif),
-                    );
-                  },
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            title: const Text('Notifications'),
+            actions: [
+              if (nonLues > 0)
+                TextButton(
+                  onPressed: () => _toutMarquerLu(notifications!),
+                  child: const Text('Tout marquer lu', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
-              ),
-      ),
+              const SizedBox(width: 4),
+            ],
+          ),
+          body: SafeArea(
+            top: false,
+            child: !chargementTermine
+                ? const EtatChargement()
+                : snapshot.hasError
+                    ? EtatErreur(message: messageErreurApi(snapshot.error!), onReessayer: _rafraichir)
+                    : RefreshIndicator(
+                        onRefresh: _rafraichir,
+                        color: AppColors.primary,
+                        child: notifications!.isEmpty
+                            ? LayoutBuilder(
+                                builder: (context, constraints) => SingleChildScrollView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                                    child: const _EtatVide(),
+                                  ),
+                                ),
+                              )
+                            : Builder(
+                                builder: (context) {
+                                  final entrees = _construireEntrees(notifications);
+                                  return ListView.builder(
+                                    padding: const EdgeInsets.only(top: AppSpacing.xs, bottom: AppSpacing.lg),
+                                    itemCount: entrees.length,
+                                    itemBuilder: (context, index) {
+                                      final entree = entrees[index];
+                                      if (entree is String) {
+                                        return _EnteteGroupe(texte: entree);
+                                      }
+                                      final notif = entree as Notif;
+                                      final suivante = index + 1 < entrees.length ? entrees[index + 1] : null;
+                                      final estDernierDuGroupe = suivante is! Notif;
+                                      return NotificationTile(
+                                        notif: notif,
+                                        estDernierDuGroupe: estDernierDuGroupe,
+                                        onOuvrir: () => _ouvrir(notifications, notif),
+                                        onArchiver: () => _archiver(notifications, notif),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                      ),
+          ),
+        );
+      },
     );
   }
 }

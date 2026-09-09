@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/api/api_client.dart';
 import '../../features/diplomas/diplomas_screen.dart';
 import '../../features/home/accueil_screen.dart';
-import '../../features/notifications/notification.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/shares/shares_screen.dart';
 import '../../features/verifications/verifications_screen.dart';
@@ -23,6 +23,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
+  int _nonLues = 0;
 
   static const _titres = ['Accueil', 'Mes diplômes', 'Mes partages', 'Vérifications'];
 
@@ -32,6 +33,28 @@ class _MainShellState extends State<MainShell> {
     SharesScreen(),
     VerificationsScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _rafraichirNonLues();
+  }
+
+  Future<void> _rafraichirNonLues() async {
+    try {
+      final reponse = await ApiClient.get('/notifications/moi/non-lues/count') as Map<String, dynamic>;
+      if (mounted) setState(() => _nonLues = reponse['count'] as int);
+    } catch (_) {
+      // Best-effort : le badge garde simplement sa derniere valeur connue.
+    }
+  }
+
+  Future<void> _ouvrirNotifications() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+    );
+    _rafraichirNonLues();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,9 +74,7 @@ class _MainShellState extends State<MainShell> {
       appBar: AppBar(
         title: Text(_titres[_index]),
         actions: [
-          _BoutonNotifications(
-            nonLues: notificationsFactices.where((n) => n.statut == StatutNotif.nonLue).length,
-          ),
+          _BoutonNotifications(nonLues: _nonLues, onTap: _ouvrirNotifications),
           const SizedBox(width: AppSpacing.xs),
         ],
       ),
@@ -73,8 +94,9 @@ class _MainShellState extends State<MainShell> {
 }
 
 class _BoutonNotifications extends StatelessWidget {
-  const _BoutonNotifications({required this.nonLues});
+  const _BoutonNotifications({required this.nonLues, required this.onTap});
   final int nonLues;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -82,9 +104,7 @@ class _BoutonNotifications extends StatelessWidget {
       padding: const EdgeInsets.only(right: AppSpacing.xs),
       child: IconButton(
         tooltip: 'Notifications',
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-        ),
+        onPressed: onTap,
         icon: Badge(
           isLabelVisible: nonLues > 0,
           label: Text('$nonLues'),
