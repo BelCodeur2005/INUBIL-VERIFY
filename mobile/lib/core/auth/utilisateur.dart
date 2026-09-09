@@ -16,4 +16,11 @@ class Utilisateur {
         nom: json['nom'] as String,
         prenom: json['prenom'] as String,
       );
+
+  Utilisateur copierAvec({String? nom, String? prenom}) => Utilisateur(
+        id: id,
+        email: email,
+        nom: nom ?? this.nom,
+        prenom: prenom ?? this.prenom,
+      );
 }

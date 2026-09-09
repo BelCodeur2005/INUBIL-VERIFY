@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/api/api_client.dart';
+import '../../core/api/api_exception.dart';
+import '../../shared/widgets/etat_async.dart';
 import '../../shared/widgets/message_banner.dart';
 import '../../theme/app_theme.dart';
 import 'session.dart';
@@ -24,13 +27,19 @@ class _SecuriteScreenState extends State<SecuriteScreen> {
   String? _erreur;
   Timer? _timerSucces;
 
-  late final List<SessionActive> _sessions = List.of(sessionsFactices);
   String? _revocationEnCoursId;
+  late Future<List<SessionActive>> _chargementSessions;
 
   @override
   void initState() {
     super.initState();
     _nouveauController.addListener(() => setState(() {}));
+    _chargementSessions = _chargerSessions();
+  }
+
+  Future<List<SessionActive>> _chargerSessions() async {
+    final reponse = await ApiClient.get('/auth/sessions') as List;
+    return reponse.map((s) => SessionActive.depuisJson(s as Map<String, dynamic>)).toList();
   }
 
   @override
@@ -61,23 +70,33 @@ class _SecuriteScreenState extends State<SecuriteScreen> {
       return;
     }
     setState(() => _enCours = true);
-    // TODO(etape 3) : PATCH /auth/password reel.
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (!mounted) return;
-    setState(() {
-      _enCours = false;
-      _succes = true;
-      _actuelController.clear();
-      _nouveauController.clear();
-      _confirmerController.clear();
-    });
-    _timerSucces?.cancel();
-    _timerSucces = Timer(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _succes = false);
-    });
+    try {
+      await ApiClient.patch('/auth/password', corps: {
+        'ancien_mot_de_passe': _actuelController.text,
+        'nouveau_mot_de_passe': _nouveauController.text,
+        'confirmation_mot_de_passe': _confirmerController.text,
+      });
+      if (!mounted) return;
+      setState(() {
+        _succes = true;
+        _actuelController.clear();
+        _nouveauController.clear();
+        _confirmerController.clear();
+      });
+      _timerSucces?.cancel();
+      _timerSucces = Timer(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _succes = false);
+      });
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _erreur = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _erreur = 'Impossible de joindre le serveur. Vérifiez votre connexion.');
+    } finally {
+      if (mounted) setState(() => _enCours = false);
+    }
   }
 
-  Future<void> _confirmerRevocation(SessionActive session) async {
+  Future<void> _confirmerRevocation(List<SessionActive> sessionsActuelles, SessionActive session) async {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -98,16 +117,23 @@ class _SecuriteScreenState extends State<SecuriteScreen> {
     if (confirme != true || !mounted) return;
 
     setState(() => _revocationEnCoursId = session.id);
-    // TODO(etape 3) : DELETE /auth/sessions/:id reel.
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    setState(() {
-      _sessions.removeWhere((s) => s.id == session.id);
-      _revocationEnCoursId = null;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Session révoquée.'), behavior: SnackBarBehavior.floating),
-    );
+    try {
+      await ApiClient.delete('/auth/sessions/${session.id}');
+      if (!mounted) return;
+      final nouvellesSessions = sessionsActuelles.where((s) => s.id != session.id).toList();
+      setState(() => _chargementSessions = Future.value(nouvellesSessions));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Session révoquée.'), behavior: SnackBarBehavior.floating),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(messageErreurApi(e)), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _revocationEnCoursId = null);
+    }
   }
 
   @override
@@ -185,23 +211,42 @@ class _SecuriteScreenState extends State<SecuriteScreen> {
             _CarteSection(
               titre: 'Sessions actives',
               sousTitre: 'Les appareils actuellement connectés à votre compte.',
-              enfant: _sessions.isEmpty
-                  ? Padding(
+              enfant: FutureBuilder<List<SessionActive>>(
+                future: _chargementSessions,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                      child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                      child: Text(messageErreurApi(snapshot.error!), style: AppTypography.bodySm.copyWith(color: AppColors.error)),
+                    );
+                  }
+                  final sessions = snapshot.data!;
+                  if (sessions.isEmpty) {
+                    return Padding(
                       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                       child: Text('Aucune session active.', style: AppTypography.bodySm),
-                    )
-                  : Column(
-                      children: [
-                        for (var i = 0; i < _sessions.length; i++) ...[
-                          if (i > 0) const Divider(height: AppSpacing.md),
-                          _LigneSession(
-                            session: _sessions[i],
-                            revocationEnCours: _revocationEnCoursId == _sessions[i].id,
-                            onRevoquer: () => _confirmerRevocation(_sessions[i]),
-                          ),
-                        ],
+                    );
+                  }
+                  return Column(
+                    children: [
+                      for (var i = 0; i < sessions.length; i++) ...[
+                        if (i > 0) const Divider(height: AppSpacing.md),
+                        _LigneSession(
+                          session: sessions[i],
+                          revocationEnCours: _revocationEnCoursId == sessions[i].id,
+                          onRevoquer: () => _confirmerRevocation(sessions, sessions[i]),
+                        ),
                       ],
-                    ),
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         ),

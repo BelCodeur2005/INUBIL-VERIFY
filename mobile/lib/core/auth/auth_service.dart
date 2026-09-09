@@ -53,6 +53,14 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Met a jour l'identite locale apres un PATCH /auth/me reussi ailleurs
+  /// dans l'app (ParametresScreen) — evite un GET /auth/me redondant juste
+  /// pour rafraichir ce que l'appelant connait deja.
+  void mettreAJourUtilisateur(Utilisateur utilisateur) {
+    _utilisateur = utilisateur;
+    notifyListeners();
+  }
+
   Future<void> deconnecter() async {
     final refreshToken = await TokenStorage.refreshToken;
     if (refreshToken != null) {

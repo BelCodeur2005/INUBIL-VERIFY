@@ -61,25 +61,13 @@ class SessionActive {
     final m = dateCreation.minute.toString().padLeft(2, '0');
     return '${dateCreation.day} ${mois[dateCreation.month - 1]} ${dateCreation.year} · $h:$m';
   }
-}
 
-final List<SessionActive> sessionsFactices = [
-  SessionActive(
-    id: 's1',
-    userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/128.0 Mobile Safari/537.36',
-    ipAddress: '154.72.18.204',
-    dateCreation: DateTime.now().subtract(const Duration(minutes: 4)),
-  ),
-  SessionActive(
-    id: 's2',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36',
-    ipAddress: '154.72.18.204',
-    dateCreation: DateTime.now().subtract(const Duration(hours: 6)),
-  ),
-  SessionActive(
-    id: 's3',
-    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1',
-    ipAddress: '196.230.14.87',
-    dateCreation: DateTime.now().subtract(const Duration(days: 5)),
-  ),
-];
+  factory SessionActive.depuisJson(Map<String, dynamic> json) {
+    return SessionActive(
+      id: json['id'] as String,
+      userAgent: json['user_agent'] as String?,
+      ipAddress: json['ip_address'] as String?,
+      dateCreation: DateTime.parse(json['created_at'] as String),
+    );
+  }
+}

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../core/api/api_client.dart';
+import '../../core/auth/auth_service.dart';
+import '../../shared/widgets/etat_async.dart';
 import '../../theme/app_theme.dart';
 import 'compte.dart';
 import 'preferences_screen.dart';
 import 'securite_screen.dart';
 
+/// Ecran Paramètres — branche sur GET/PATCH /auth/me (identite, modifiable)
+/// + GET /etudiants/moi (dossier academique, lecture seule).
 class ParametresScreen extends StatefulWidget {
   const ParametresScreen({super.key});
 
@@ -13,15 +18,33 @@ class ParametresScreen extends StatefulWidget {
 
 class _ParametresScreenState extends State<ParametresScreen> {
   final _formKey = GlobalKey<FormState>();
-  late final _prenomController = TextEditingController(text: compteFactice.prenom);
-  late final _nomController = TextEditingController(text: compteFactice.nom);
+  final _prenomController = TextEditingController();
+  final _nomController = TextEditingController();
   bool _enregistrementEnCours = false;
+  CompteEtudiant? _compteOriginal;
+  late Future<CompteEtudiant> _chargement;
 
   @override
   void initState() {
     super.initState();
     _prenomController.addListener(_onChamp);
     _nomController.addListener(_onChamp);
+    _chargement = _charger();
+  }
+
+  Future<CompteEtudiant> _charger() async {
+    final resultats = await Future.wait([
+      ApiClient.get('/auth/me'),
+      ApiClient.get('/etudiants/moi'),
+    ]);
+    final compte = CompteEtudiant.depuisJson(
+      profilAuth: resultats[0] as Map<String, dynamic>,
+      profilEtudiant: resultats[1] as Map<String, dynamic>,
+    );
+    _compteOriginal = compte;
+    _prenomController.text = compte.prenom;
+    _nomController.text = compte.nom;
+    return compte;
   }
 
   @override
@@ -33,129 +56,167 @@ class _ParametresScreenState extends State<ParametresScreen> {
 
   void _onChamp() => setState(() {});
 
-  bool get _modifie =>
-      _prenomController.text.trim() != compteFactice.prenom || _nomController.text.trim() != compteFactice.nom;
+  bool get _modifie {
+    final original = _compteOriginal;
+    if (original == null) return false;
+    return _prenomController.text.trim() != original.prenom || _nomController.text.trim() != original.nom;
+  }
 
   void _annuler() {
+    final original = _compteOriginal;
+    if (original == null) return;
     setState(() {
-      _prenomController.text = compteFactice.prenom;
-      _nomController.text = compteFactice.nom;
+      _prenomController.text = original.prenom;
+      _nomController.text = original.nom;
     });
   }
 
   Future<void> _enregistrer() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _enregistrementEnCours = true);
-    // TODO(etape 3) : PATCH /auth/me reel avec {prenom, nom}.
-    await Future.delayed(const Duration(milliseconds: 700));
-    if (!mounted) return;
-    setState(() => _enregistrementEnCours = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profil mis à jour.'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.successDark,
-      ),
-    );
+    try {
+      final prenom = _prenomController.text.trim();
+      final nom = _nomController.text.trim();
+      await ApiClient.patch('/auth/me', corps: {'prenom': prenom, 'nom': nom});
+      if (!mounted) return;
+      setState(() => _compteOriginal = _compteOriginal!.copierAvec(prenom: prenom, nom: nom));
+      final utilisateur = authService.utilisateur;
+      if (utilisateur != null) {
+        authService.mettreAJourUtilisateur(utilisateur.copierAvec(prenom: prenom, nom: nom));
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profil mis à jour.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.successDark,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(messageErreurApi(e)), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _enregistrementEnCours = false);
+    }
+  }
+
+  Future<void> _rafraichir() async {
+    final chargement = _charger();
+    setState(() => _chargement = chargement);
+    await chargement;
   }
 
   @override
   Widget build(BuildContext context) {
-    final initiales = '${compteFactice.prenom.isNotEmpty ? compteFactice.prenom[0] : ''}'
-        '${compteFactice.nom.isNotEmpty ? compteFactice.nom[0] : ''}';
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Paramètres')),
       body: SafeArea(
         top: false,
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.screenMargin, AppSpacing.base, AppSpacing.screenMargin, 120,
-            ),
-            children: [
-              _EnTeteProfil(initiales: initiales, nom: '${compteFactice.prenom} ${compteFactice.nom}', email: compteFactice.email),
-              const SizedBox(height: AppSpacing.md),
-              _CarteSection(
-                titre: 'Informations du compte',
-                enfant: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _ChampTexte(label: 'Prénom', controller: _prenomController, icone: Icons.badge_outlined),
-                    const SizedBox(height: AppSpacing.sm),
-                    _ChampTexte(label: 'Nom', controller: _nomController, icone: Icons.badge_outlined),
-                    const SizedBox(height: AppSpacing.sm),
-                    _LigneInfoVerrouillee(
-                      icone: Icons.mail_outline_rounded,
-                      label: 'Adresse email',
-                      valeur: compteFactice.email,
-                      note: 'Utilisée pour se connecter — non modifiable ici.',
-                    ),
-                  ],
+        child: FutureBuilder<CompteEtudiant>(
+          future: _chargement,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const EtatChargement();
+            }
+            if (snapshot.hasError) {
+              return EtatErreur(message: messageErreurApi(snapshot.error!), onReessayer: _rafraichir);
+            }
+
+            final compte = snapshot.data!;
+            final initiales = '${compte.prenom.isNotEmpty ? compte.prenom[0] : ''}${compte.nom.isNotEmpty ? compte.nom[0] : ''}';
+
+            return Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenMargin, AppSpacing.base, AppSpacing.screenMargin, 120,
                 ),
+                children: [
+                  _EnTeteProfil(initiales: initiales, nom: '${compte.prenom} ${compte.nom}', email: compte.email),
+                  const SizedBox(height: AppSpacing.md),
+                  _CarteSection(
+                    titre: 'Informations du compte',
+                    enfant: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _ChampTexte(label: 'Prénom', controller: _prenomController, icone: Icons.badge_outlined),
+                        const SizedBox(height: AppSpacing.sm),
+                        _ChampTexte(label: 'Nom', controller: _nomController, icone: Icons.badge_outlined),
+                        const SizedBox(height: AppSpacing.sm),
+                        _LigneInfoVerrouillee(
+                          icone: Icons.mail_outline_rounded,
+                          label: 'Adresse email',
+                          valeur: compte.email,
+                          note: 'Utilisée pour se connecter — non modifiable ici.',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _CarteSection(
+                    titre: 'Dossier académique',
+                    badge: 'Géré par l’établissement',
+                    enfant: Column(
+                      children: [
+                        _LigneInfo(icone: Icons.school_outlined, label: 'Nom sur le diplôme', valeur: compte.nomSurDiplome),
+                        const Divider(height: AppSpacing.md),
+                        _LigneInfo(icone: Icons.badge_outlined, label: 'Matricule étudiant', valeur: compte.matricule),
+                        const Divider(height: AppSpacing.md),
+                        _LigneInfo(icone: Icons.account_balance_outlined, label: 'Établissement', valeur: compte.universite),
+                        const Divider(height: AppSpacing.md),
+                        _LigneInfo(
+                          icone: Icons.call_outlined,
+                          label: 'Téléphone',
+                          valeur: compte.telephone ?? 'Non renseigné',
+                          attenue: compte.telephone == null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _CarteSection(
+                    titre: 'Autres réglages',
+                    enfant: Column(
+                      children: [
+                        _LigneNavigation(
+                          icone: Icons.shield_outlined,
+                          couleur: AppColors.success,
+                          label: 'Sécurité du compte',
+                          sousTitre: 'Mot de passe et sessions actives',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const SecuriteScreen()),
+                          ),
+                        ),
+                        const Divider(height: AppSpacing.md),
+                        _LigneNavigation(
+                          icone: Icons.notifications_outlined,
+                          couleur: AppColors.warning,
+                          label: 'Préférences de notification',
+                          sousTitre: 'Alertes email et types de notification',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const PreferencesScreen()),
+                          ),
+                        ),
+                        const Divider(height: AppSpacing.md),
+                        _LigneNavigation(
+                          icone: Icons.help_outline_rounded,
+                          couleur: AppColors.textSecondary,
+                          label: 'Aide & support',
+                          sousTitre: 'Questions fréquentes et contact',
+                          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Bientôt disponible.'), behavior: SnackBarBehavior.floating),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.md),
-              _CarteSection(
-                titre: 'Dossier académique',
-                badge: 'Géré par l’établissement',
-                enfant: Column(
-                  children: [
-                    _LigneInfo(icone: Icons.school_outlined, label: 'Nom sur le diplôme', valeur: compteFactice.nomSurDiplome),
-                    const Divider(height: AppSpacing.md),
-                    _LigneInfo(icone: Icons.badge_outlined, label: 'Matricule étudiant', valeur: compteFactice.matricule),
-                    const Divider(height: AppSpacing.md),
-                    _LigneInfo(icone: Icons.account_balance_outlined, label: 'Établissement', valeur: compteFactice.universite),
-                    const Divider(height: AppSpacing.md),
-                    _LigneInfo(
-                      icone: Icons.call_outlined,
-                      label: 'Téléphone',
-                      valeur: compteFactice.telephone ?? 'Non renseigné',
-                      attenue: compteFactice.telephone == null,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _CarteSection(
-                titre: 'Autres réglages',
-                enfant: Column(
-                  children: [
-                    _LigneNavigation(
-                      icone: Icons.shield_outlined,
-                      couleur: AppColors.success,
-                      label: 'Sécurité du compte',
-                      sousTitre: 'Mot de passe et sessions actives',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SecuriteScreen()),
-                      ),
-                    ),
-                    const Divider(height: AppSpacing.md),
-                    _LigneNavigation(
-                      icone: Icons.notifications_outlined,
-                      couleur: AppColors.warning,
-                      label: 'Préférences de notification',
-                      sousTitre: 'Alertes email et types de notification',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const PreferencesScreen()),
-                      ),
-                    ),
-                    const Divider(height: AppSpacing.md),
-                    _LigneNavigation(
-                      icone: Icons.help_outline_rounded,
-                      couleur: AppColors.textSecondary,
-                      label: 'Aide & support',
-                      sousTitre: 'Questions fréquentes et contact',
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Bientôt disponible.'), behavior: SnackBarBehavior.floating),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
       bottomNavigationBar: _BarreEnregistrement(
