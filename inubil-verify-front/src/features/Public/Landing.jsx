@@ -57,9 +57,6 @@ export default function Landing() {
       <section className={styles.heroSection}>
         <div className={styles.heroContent}>
           <div className={styles.heroCopy}>
-            <div className={styles.heroBadge}>
-              Intégrité & Transparence
-            </div>
             <h1 className={styles.heroTitle}>
               Authentifiez et validez vos diplômes académiques en quelques secondes
             </h1>
@@ -95,7 +92,7 @@ export default function Landing() {
                 <h3 className={styles.diplomaInstitution}>Institut Universitaire Bilingue du Littoral</h3>
                 <div className={styles.diplomaDivider}></div>
                 <p className={styles.diplomaGrantText}>Ce document certifie que</p>
-                <p className={styles.diplomaRecipient}>Prénom NOM</p>
+                <p className={styles.diplomaRecipient}>NOM Prénom</p>
                 <p className={styles.diplomaDegree}>a obtenu le diplôme de Licence Professionnelle</p>
                 <div className={styles.diplomaDivider}></div>
                 <div className={styles.diplomaFooterRow}>

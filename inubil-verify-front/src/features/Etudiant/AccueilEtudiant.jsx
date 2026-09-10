@@ -117,7 +117,7 @@ export default function AccueilEtudiant({ prenom, setActiveMenu }) {
                     <div className={styles.cardMainRow}>
                       <div className={styles.degreeTitles}>
                         <h3 className={styles.degreeName}>
-                          {doc.type_document}{doc.filiere ? ` — ${doc.filiere}` : ''}
+                          {doc.type_document}
                         </h3>
                         <p className={styles.degreeInstitution}>{doc.universite}</p>
                       </div>
