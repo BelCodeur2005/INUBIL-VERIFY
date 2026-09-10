@@ -5,9 +5,9 @@
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <!-- Autorise le trafic HTTP en clair (localhost, IP locale de dev) —
-         uniquement en debug : Android bloque le HTTP par defaut depuis l'API 28.
+    <!-- Autorise le trafic HTTP en clair (localhost, IP locale de dev) en
+         debug uniquement : Android bloque le HTTP par defaut depuis l'API 28.
          Ne s'applique pas aux builds release/profile, qui doivent pointer vers
-         un backend HTTPS (voir ApiConfig.baseUrl / --dart-define API_BASE_URL). -->
+         un backend HTTPS (voir ApiConfig.baseUrl et l'option API_BASE_URL). -->
     <application android:usesCleartextTraffic="true"/>
 </manifest>
