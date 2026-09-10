@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Requis pour tous les appels API (login, chargement des ecrans...) —
+         sans cette permission, le reseau echoue silencieusement sur Android
+         des qu'on sort du mode debug (le debug/AndroidManifest.xml l'ajoute
+         deja mais uniquement pour les besoins internes du hot reload). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="inubil_verify_mobile"
         android:name="${applicationName}"

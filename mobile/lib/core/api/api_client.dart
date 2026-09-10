@@ -12,6 +12,11 @@ import 'api_exception.dart';
 class ApiClient {
   ApiClient._();
 
+  /// Sans ceci, un backend injoignable (serveur eteint, mauvaise IP...) fait
+  /// pendre indefiniment n'importe quel ecran — et bloque meme le demarrage
+  /// de l'app (BootstrapScreen attend GET /auth/me avant de choisir un ecran).
+  static const _delaiRequete = Duration(seconds: 20);
+
   static Future<void>? _rafraichissementEnCours;
 
   static Future<dynamic> get(String chemin, {bool auth = true}) =>
@@ -68,13 +73,13 @@ class ApiClient {
 
     switch (methode) {
       case 'GET':
-        return http.get(uri, headers: headers);
+        return http.get(uri, headers: headers).timeout(_delaiRequete);
       case 'POST':
-        return http.post(uri, headers: headers, body: corpsJson);
+        return http.post(uri, headers: headers, body: corpsJson).timeout(_delaiRequete);
       case 'PATCH':
-        return http.patch(uri, headers: headers, body: corpsJson);
+        return http.patch(uri, headers: headers, body: corpsJson).timeout(_delaiRequete);
       case 'DELETE':
-        return http.delete(uri, headers: headers);
+        return http.delete(uri, headers: headers).timeout(_delaiRequete);
       default:
         throw ArgumentError('Methode HTTP non supportee : $methode');
     }
@@ -97,7 +102,7 @@ class ApiClient {
       Uri.parse('${ApiConfig.baseUrl}/auth/refresh'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'refresh_token': refreshToken}),
-    );
+    ).timeout(_delaiRequete);
 
     if (reponse.statusCode != 200) {
       await TokenStorage.effacer();

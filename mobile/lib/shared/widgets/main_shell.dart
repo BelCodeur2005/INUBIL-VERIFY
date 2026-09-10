@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
+import '../../core/auth/auth_service.dart';
 import '../../features/diplomas/diplomas_screen.dart';
 import '../../features/home/accueil_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
@@ -24,20 +25,25 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
   int _nonLues = 0;
+  String? _matricule;
 
   static const _titres = ['Accueil', 'Mes diplômes', 'Mes partages', 'Vérifications'];
 
-  static const _ecrans = [
-    AccueilScreen(),
-    DiplomasScreen(),
-    SharesScreen(),
-    VerificationsScreen(),
-  ];
+  List<Widget> get _ecrans => [
+        AccueilScreen(
+          onVoirDiplomes: () => setState(() => _index = 1),
+          onVoirPartages: () => setState(() => _index = 2),
+        ),
+        const DiplomasScreen(),
+        const SharesScreen(),
+        const VerificationsScreen(),
+      ];
 
   @override
   void initState() {
     super.initState();
     _rafraichirNonLues();
+    _chargerMatricule();
   }
 
   Future<void> _rafraichirNonLues() async {
@@ -46,6 +52,15 @@ class _MainShellState extends State<MainShell> {
       if (mounted) setState(() => _nonLues = reponse['count'] as int);
     } catch (_) {
       // Best-effort : le badge garde simplement sa derniere valeur connue.
+    }
+  }
+
+  Future<void> _chargerMatricule() async {
+    try {
+      final profil = await ApiClient.get('/etudiants/moi') as Map<String, dynamic>;
+      if (mounted) setState(() => _matricule = profil['numero_etudiant'] as String?);
+    } catch (_) {
+      // Best-effort : le tiroir affiche le nom sans matricule le temps de charger.
     }
   }
 
@@ -58,16 +73,16 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final utilisateur = authService.utilisateur;
     return Scaffold(
       backgroundColor: AppColors.background,
-      // Donnees factices — etape 1, meme utilisateur simule que sur AccueilScreen.
       // Le hamburger qui ouvre ce tiroir est ajoute automatiquement par Flutter
       // en tete d'AppBar des que Scaffold.drawer est renseigne (pas besoin de
       // le cabler a la main).
       drawer: AppDrawer(
-        prenom: 'Bertrand',
-        nom: 'KAMGA',
-        matricule: 'INUB-ETU-00214',
+        prenom: utilisateur?.prenom ?? '',
+        nom: utilisateur?.nom ?? '',
+        matricule: _matricule ?? '',
         indexActuel: _index,
         onChangerIndex: (i) => setState(() => _index = i),
       ),

@@ -10,7 +10,12 @@ import 'statistiques_etudiant.dart';
 /// GET /etudiants/moi/documents?limit=2 (meme paire d'appels en parallele
 /// que AccueilEtudiant.jsx).
 class AccueilScreen extends StatefulWidget {
-  const AccueilScreen({super.key});
+  const AccueilScreen({super.key, required this.onVoirDiplomes, required this.onVoirPartages});
+
+  /// Bascule MainShell sur l'onglet "Mes diplomes" / "Mes partages" — Accueil
+  /// n'a pas son propre Navigator, ce sont des onglets freres geres par le parent.
+  final VoidCallback onVoirDiplomes;
+  final VoidCallback onVoirPartages;
 
   @override
   State<AccueilScreen> createState() => _AccueilScreenState();
@@ -66,7 +71,7 @@ class _AccueilScreenState extends State<AccueilScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _BandeauBienvenue(prenom: prenom),
+                _BandeauBienvenue(prenom: prenom, onPartager: widget.onVoirPartages),
                 const SizedBox(height: AppSpacing.md),
                 _RangeeStatistiques(
                   certifies: stats.documentsActifs,
@@ -74,7 +79,7 @@ class _AccueilScreenState extends State<AccueilScreen> {
                   verifications: stats.verificationsTotal,
                 ),
                 const SizedBox(height: AppSpacing.md),
-                _SectionDiplomesRecents(diplomes: diplomesRecents),
+                _SectionDiplomesRecents(diplomes: diplomesRecents, onVoirTout: widget.onVoirDiplomes),
                 const SizedBox(height: AppSpacing.md),
                 const _ConseilSecurite(),
               ],
@@ -87,9 +92,10 @@ class _AccueilScreenState extends State<AccueilScreen> {
 }
 
 class _BandeauBienvenue extends StatelessWidget {
-  const _BandeauBienvenue({required this.prenom});
+  const _BandeauBienvenue({required this.prenom, required this.onPartager});
 
   final String prenom;
+  final VoidCallback onPartager;
 
   @override
   Widget build(BuildContext context) {
@@ -117,9 +123,7 @@ class _BandeauBienvenue extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           OutlinedButton.icon(
-            onPressed: () {
-              // TODO(navigation) : basculer sur l'onglet Mes partages.
-            },
+            onPressed: onPartager,
             icon: const Icon(Icons.ios_share, size: 16, color: Colors.white),
             label: const Text('Partager un diplôme'),
             style: OutlinedButton.styleFrom(
@@ -219,9 +223,10 @@ class _CarteStatistique extends StatelessWidget {
 }
 
 class _SectionDiplomesRecents extends StatelessWidget {
-  const _SectionDiplomesRecents({required this.diplomes});
+  const _SectionDiplomesRecents({required this.diplomes, required this.onVoirTout});
 
   final List<Diplome> diplomes;
+  final VoidCallback onVoirTout;
 
   @override
   Widget build(BuildContext context) {
@@ -233,9 +238,7 @@ class _SectionDiplomesRecents extends StatelessWidget {
           children: [
             Text('Mes diplômes récents', style: AppTypography.headlineSm),
             TextButton(
-              onPressed: () {
-                // TODO(navigation) : basculer sur l'onglet Mes diplomes.
-              },
+              onPressed: onVoirTout,
               child: const Text('Tout voir'),
             ),
           ],
