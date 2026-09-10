@@ -46,13 +46,6 @@ export default function ForgotPassword() {
         {/* VOLET DROIT - TON CODE AMÉLIORÉ ICI */}
         <div className={styles.formSection}>
 
-          {/* Badge de catégorie */}
-          <div className={styles.topBadgeWrapper}>
-            <span className={styles.topBadge}>
-              <span className={styles.badgeDot}></span> SÉCURITÉ DU COMPTE
-            </span>
-          </div>
-
           {/* Icône stylisée avec glow */}
           {/*<div className={styles.iconContainer}>
             <div className={styles.lockIconBox}>

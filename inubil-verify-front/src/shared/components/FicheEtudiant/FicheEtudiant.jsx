@@ -120,6 +120,23 @@ export default function FicheEtudiant() {
   const [form, setForm] = useState(CHAMPS_VIDES);
   const [enregistrement, setEnregistrement] = useState(false);
   const [erreurForm, setErreurForm] = useState(null);
+  const [matriculeDoublon, setMatriculeDoublon] = useState(null);
+
+  // Verification en direct du matricule (au blur), en creation comme en modification —
+  // numero_etudiant est unique en base, un doublon echouerait de toute facon a
+  // l'enregistrement, autant prevenir tout de suite. En modification, exclut l'etudiant
+  // en cours d'edition lui-meme (sinon il "matche" toujours son propre matricule).
+  const verifierMatricule = async () => {
+    const matricule = form.numero_etudiant.trim();
+    if (!matricule) { setMatriculeDoublon(null); return; }
+    try {
+      const res = await rechercherEtudiants(matricule);
+      const existant = (res.data ?? []).find((e) => e.numero_etudiant === matricule && e.id !== selectionne?.id);
+      setMatriculeDoublon(existant ?? null);
+    } catch {
+      // non bloquant : un echec de cette verification ne doit jamais empecher la saisie
+    }
+  };
 
   const [confirmSuppression, setConfirmSuppression] = useState(false);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
@@ -143,11 +160,29 @@ export default function FicheEtudiant() {
     return () => clearTimeout(t);
   }, [rechercheInput]);
 
+  // Vrai si la fiche en cours (edition ou creation) contient des changements non
+  // enregistres — evite d'ecraser silencieusement une saisie en cours quand l'agent
+  // clique sur un autre etudiant ou sur "Nouveau" sans avoir clique "Enregistrer".
+  const formModifie = () => {
+    if (mode === 'edition') return JSON.stringify(form) !== JSON.stringify(mapVersForm(selectionne));
+    if (mode === 'creation') {
+      return Object.entries(form).some(([champ, valeur]) => champ !== 'departement_id' && String(valeur).trim() !== '');
+    }
+    return false;
+  };
+
+  const confirmerAbandon = () => {
+    if (!formModifie()) return true;
+    return window.confirm('Des modifications non enregistrées seront perdues. Continuer ?');
+  };
+
   const selectionner = (e) => {
+    if (!confirmerAbandon()) return;
     setSelectionne(e);
     setForm(mapVersForm(e));
     setMode('vue');
     setErreurForm(null);
+    setMatriculeDoublon(null);
   };
 
   useEffect(() => {
@@ -177,15 +212,18 @@ export default function FicheEtudiant() {
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const demarrerCreation = () => {
+    if (!confirmerAbandon()) return;
     setSelectionne(null);
     setForm({ ...CHAMPS_VIDES, departement_id: acteurDepartements.length === 1 ? acteurDepartements[0].id : '' });
     setErreurForm(null);
+    setMatriculeDoublon(null);
     setMode('creation');
   };
 
   const demarrerEdition = () => {
     setForm(mapVersForm(selectionne));
     setErreurForm(null);
+    setMatriculeDoublon(null);
     setMode('edition');
   };
 
@@ -197,6 +235,7 @@ export default function FicheEtudiant() {
       setMode('vide');
     }
     setErreurForm(null);
+    setMatriculeDoublon(null);
   };
 
   const majChamp = (champ) => (e) => setForm((f) => ({ ...f, [champ]: e.target.value }));
@@ -215,12 +254,14 @@ export default function FicheEtudiant() {
         setSelectionne(cree);
         setForm(mapVersForm(cree));
         setMode('vue');
+        setMatriculeDoublon(null);
       } else {
         const maj = await modifierEtudiant(selectionne.id, payload);
         setItems((prev) => prev.map((it) => (it.id === maj.id ? maj : it)));
         setSelectionne(maj);
         setForm(mapVersForm(maj));
         setMode('vue');
+        setMatriculeDoublon(null);
       }
     } catch (err) {
       setErreurForm(err instanceof ApiError ? err.message : 'Enregistrement impossible.');
@@ -255,8 +296,20 @@ export default function FicheEtudiant() {
       {erreurForm && <p className={styles.errorText}><AlertTriangle size={14} /> {erreurForm}</p>}
       <div className={styles.formGrid}>
         <label>Matricule
-          <input value={form.numero_etudiant} onChange={majChamp('numero_etudiant')} required minLength={3} maxLength={50} />
+          <input
+            value={form.numero_etudiant}
+            onChange={(e) => { majChamp('numero_etudiant')(e); setMatriculeDoublon(null); }}
+            onBlur={verifierMatricule}
+            required
+            minLength={3}
+            maxLength={50}
+          />
         </label>
+        {matriculeDoublon && (
+          <p className={styles.doublonWarning}>
+            <AlertTriangle size={14} /> Ce matricule est déjà utilisé par {matriculeDoublon.prenom} {matriculeDoublon.nom}.
+          </p>
+        )}
         <label>Nom
           <input value={form.nom} onChange={majChamp('nom')} required minLength={2} maxLength={100} />
         </label>
