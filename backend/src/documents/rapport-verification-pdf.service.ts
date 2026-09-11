@@ -51,7 +51,6 @@ const NAVY = '#062362';
 const OR = '#0350bd';
 const GRIS = '#475569';
 const BLANC = '#ffffff';
-const VERT = '#16a34a';
 const ROUGE = '#dc2626';
 const ORANGE = '#a5680f';
 
@@ -336,7 +335,7 @@ export class RapportVerificationPdfService {
       { couleur: string; libelle: string; icone: string }
     > = {
       authentique: {
-        couleur: VERT,
+        couleur: OR,
         libelle: 'DOCUMENT AUTHENTIQUE',
         icone: '✓',
       },
@@ -353,7 +352,7 @@ export class RapportVerificationPdfService {
 
   private couleurFond(resultat: string): string {
     const map: Record<string, string> = {
-      authentique: '#f0fdf4',
+      authentique: '#eef2ff',
       revoque: '#fef2f2',
       non_trouve: '#fffbeb',
       falsifie: '#fef2f2',
