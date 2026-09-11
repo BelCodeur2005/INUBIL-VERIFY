@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import 'diploma.dart';
@@ -73,6 +75,10 @@ class DiplomaDetailScreen extends StatelessWidget {
             const SizedBox(height: 4),
             _LigneIcone(icone: Icons.military_tech_outlined, texte: 'Mention ${diplome.mention}'),
           ],
+          if (diplome.urlVerification != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            _BlocQrCode(urlVerification: diplome.urlVerification!, typeDocument: diplome.typeDocument),
+          ],
           const SizedBox(height: AppSpacing.md),
           Text('Preuve cryptographique', style: AppTypography.headlineSm.copyWith(fontSize: 16)),
           const SizedBox(height: AppSpacing.xs),
@@ -111,6 +117,69 @@ class DiplomaDetailScreen extends StatelessWidget {
                 style: AppTypography.bodySm.copyWith(color: AppColors.warning),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// QR code scannable pointant vers la page de verification publique — permet
+/// de montrer l'ecran a une tierce personne pour une verification instantanee
+/// sur son propre appareil, sans avoir a taper de lien.
+class _BlocQrCode extends StatelessWidget {
+  const _BlocQrCode({required this.urlVerification, required this.typeDocument});
+
+  final String urlVerification;
+  final String typeDocument;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: QrImageView(
+              data: urlVerification,
+              version: QrVersions.auto,
+              size: 88,
+              backgroundColor: Colors.white,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Vérification rapide', style: AppTypography.labelMd),
+                const SizedBox(height: 4),
+                Text(
+                  "Faites scanner ce code pour que quelqu'un vérifie ce document instantanément, sans compte.",
+                  style: AppTypography.bodySm,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton.icon(
+                  onPressed: () => SharePlus.instance.share(
+                    ShareParams(text: urlVerification, subject: typeDocument),
+                  ),
+                  icon: const Icon(Icons.share_outlined, size: 16),
+                  label: const Text('Partager le lien'),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
