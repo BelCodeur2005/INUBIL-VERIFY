@@ -118,7 +118,7 @@ export class DocumentResponseDto {
 
   @ApiProperty({
     example: 'actif',
-    enum: ['brouillon', 'en_validation', 'actif', 'revoque', 'expire'],
+    enum: ['brouillon', 'en_validation', 'actif', 'revoque', 'rejete', 'expire'],
   })
   statut: string;
 

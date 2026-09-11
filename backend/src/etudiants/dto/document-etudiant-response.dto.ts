@@ -3,9 +3,12 @@ import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class DocumentsEtudiantQueryDto {
-  @ApiPropertyOptional({ enum: ['brouillon', 'en_validation', 'actif', 'revoque', 'expire'], example: 'actif' })
+  @ApiPropertyOptional({
+    enum: ['brouillon', 'en_validation', 'actif', 'revoque', 'rejete', 'expire'],
+    example: 'actif',
+  })
   @IsOptional()
-  @IsIn(['brouillon', 'en_validation', 'actif', 'revoque', 'expire'])
+  @IsIn(['brouillon', 'en_validation', 'actif', 'revoque', 'rejete', 'expire'])
   statut?: string;
 
   @ApiPropertyOptional({ example: 1, default: 1, minimum: 1 })
@@ -50,10 +53,15 @@ export class DocumentEtudiantDto {
   @ApiProperty({ example: 'Licence' })
   type_document: string;
 
-  @ApiProperty({ example: 'diplome', enum: ['diplome', 'releve_notes', 'attestation'] })
+  @ApiProperty({
+    example: 'diplome',
+    enum: ['diplome', 'releve_notes', 'attestation'],
+  })
   categorie: string;
 
-  @ApiPropertyOptional({ example: 'Licence en Informatique option Génie Logiciel' })
+  @ApiPropertyOptional({
+    example: 'Licence en Informatique option Génie Logiciel',
+  })
   filiere: string | null;
 
   @ApiPropertyOptional({ example: '2025-2026' })
@@ -62,7 +70,10 @@ export class DocumentEtudiantDto {
   @ApiPropertyOptional({ example: '2026-06-12T00:00:00.000Z' })
   date_emission: Date | null;
 
-  @ApiProperty({ example: 'actif', enum: ['brouillon', 'en_validation', 'actif', 'revoque', 'expire'] })
+  @ApiProperty({
+    example: 'actif',
+    enum: ['brouillon', 'en_validation', 'actif', 'revoque', 'rejete', 'expire'],
+  })
   statut: string;
 
   @ApiPropertyOptional({ example: 'Assez Bien' })
@@ -71,7 +82,9 @@ export class DocumentEtudiantDto {
   @ApiPropertyOptional({ example: 13.5 })
   moyenne_generale: number | null;
 
-  @ApiPropertyOptional({ example: 'https://verify.inubil.com/d/INUB-2026-0001' })
+  @ApiPropertyOptional({
+    example: 'https://verify.inubil.com/d/INUB-2026-0001',
+  })
   url_verification: string | null;
 
   @ApiProperty({ type: [MatiereEtudiantDto] })
@@ -80,7 +93,11 @@ export class DocumentEtudiantDto {
   @ApiProperty({ example: 'ISTAMA INUBIL' })
   universite: string;
 
-  @ApiPropertyOptional({ example: 'a1b2c3...', description: 'Empreinte SHA-256 du PDF, presente une fois le document actif.' })
+  @ApiPropertyOptional({
+    example: 'a1b2c3...',
+    description:
+      'Empreinte SHA-256 du PDF, presente une fois le document actif.',
+  })
   hash_sha256: string | null;
 
   @ApiPropertyOptional({ example: '0xabc123...' })
@@ -95,7 +112,11 @@ export class DocumentEtudiantDto {
   @ApiPropertyOptional({ example: '2026-06-12T00:00:00.000Z' })
   date_enregistrement: Date | null;
 
-  @ApiProperty({ example: true, description: 'True si un PDF est associe (GET .../documents/:id/pdf disponible).' })
+  @ApiProperty({
+    example: true,
+    description:
+      'True si un PDF est associe (GET .../documents/:id/pdf disponible).',
+  })
   a_un_pdf: boolean;
 }
 

@@ -4,32 +4,50 @@ import { IsNumber, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class DocumentQueryDto {
-  @ApiPropertyOptional({ enum: ['brouillon', 'en_validation', 'actif', 'revoque', 'expire'], example: 'actif' })
+  @ApiPropertyOptional({
+    enum: ['brouillon', 'en_validation', 'actif', 'revoque', 'rejete', 'expire'],
+    example: 'actif',
+  })
   @IsOptional()
-  @IsIn(['brouillon', 'en_validation', 'actif', 'revoque', 'expire'])
+  @IsIn(['brouillon', 'en_validation', 'actif', 'revoque', 'rejete', 'expire'])
   statut?: string;
 
-  @ApiPropertyOptional({ format: 'uuid', example: 'b1e2d3f4-0000-0000-0000-000000000001' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    example: 'b1e2d3f4-0000-0000-0000-000000000001',
+  })
   @IsOptional()
   @IsUUID()
   universite_id?: string;
 
-  @ApiPropertyOptional({ format: 'uuid', example: 'c1d2e3f4-0000-0000-0000-000000000002' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    example: 'c1d2e3f4-0000-0000-0000-000000000002',
+  })
   @IsOptional()
   @IsUUID()
   etudiant_id?: string;
 
-  @ApiPropertyOptional({ format: 'uuid', example: 'd1e2f3a4-0000-0000-0000-000000000003' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    example: 'd1e2f3a4-0000-0000-0000-000000000003',
+  })
   @IsOptional()
   @IsUUID()
   type_document_id?: string;
 
-  @ApiPropertyOptional({ example: '2026-01-01', description: 'Filtre date d\'émission ≥ (ISO 8601)' })
+  @ApiPropertyOptional({
+    example: '2026-01-01',
+    description: "Filtre date d'émission ≥ (ISO 8601)",
+  })
   @IsOptional()
   @IsISO8601()
   date_debut?: string;
 
-  @ApiPropertyOptional({ example: '2026-12-31', description: 'Filtre date d\'émission ≤ (ISO 8601)' })
+  @ApiPropertyOptional({
+    example: '2026-12-31',
+    description: "Filtre date d'émission ≤ (ISO 8601)",
+  })
   @IsOptional()
   @IsISO8601()
   date_fin?: string;
