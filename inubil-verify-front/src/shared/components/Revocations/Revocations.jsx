@@ -255,14 +255,14 @@ function ModaleConfirmationRevocation({ document: doc, nomEtudiant, nomType, onC
           <div className={styles.modalHeaderIcon}><ShieldAlert size={20} /></div>
           <div>
             <h3>Révoquer {doc.numero_unique} ?</h3>
-            <p>{nomEtudiant} — {nomType}</p>
+            <p>{nomEtudiant} ({nomType})</p>
           </div>
           <button className={styles.closeBtn} onClick={onClose}><X size={18} /></button>
         </div>
 
         <div className={styles.modalBody}>
           <div className={styles.warningBanner}>
-            Cette action est irréversible. Le diplôme deviendra immédiatement invalide sur la page de vérification publique. Il ne pourra pas être réactivé — seule l'émission d'un nouveau document est possible.
+            Cette action est irréversible. Le diplôme deviendra immédiatement invalide sur la page de vérification publique. Il ne pourra pas être réactivé, seule l'émission d'un nouveau document est possible.
           </div>
 
           <div className={styles.formGroup}>
@@ -270,7 +270,7 @@ function ModaleConfirmationRevocation({ document: doc, nomEtudiant, nomType, onC
             <textarea
               value={raison}
               onChange={(e) => setRaison(e.target.value)}
-              placeholder="ex : Erreur sur le nom de l'étudiant — document réémis sous un nouveau numéro."
+              placeholder="ex : Erreur sur le nom de l'étudiant, document réémis sous un nouveau numéro."
               rows={3}
             />
           </div>

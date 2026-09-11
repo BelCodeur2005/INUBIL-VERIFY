@@ -152,7 +152,7 @@ export default function DashboardEtablissement() {
           Bonjour, {utilisateur?.prenom ?? ''}
         </h1>
         <p className={styles.subtitle}>
-          {formaterDateSalutation()} — {utilisateur?.universite?.nom ?? 'votre établissement'}
+          {formaterDateSalutation()}, {utilisateur?.universite?.nom ?? 'votre établissement'}
         </p>
       </div>
 
@@ -188,7 +188,7 @@ export default function DashboardEtablissement() {
             <span className={styles.kpiValue}>{chargement ? '—' : enAttente}</span>
             <span className={styles.kpiSub}>{compteurs.brouillons} brouillon{compteurs.brouillons > 1 ? 's' : ''} · {compteurs.enValidation} en cours</span>
             {compteurs.rejetes > 0 && (
-              <span className={styles.kpiSubWarn}>{compteurs.rejetes} rejeté{compteurs.rejetes > 1 ? 's' : ''} — à corriger</span>
+              <span className={styles.kpiSubWarn}>{compteurs.rejetes} rejeté{compteurs.rejetes > 1 ? 's' : ''}, à corriger</span>
             )}
           </div>
         </button>

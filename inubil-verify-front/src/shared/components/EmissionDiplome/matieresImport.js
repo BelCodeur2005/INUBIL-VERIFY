@@ -102,7 +102,7 @@ export function matieresDepuisCsv(texte) {
 
   if (indexParChamp.nom_matiere === undefined) {
     throw new Error(
-      'Colonne "Matière" introuvable — le fichier doit avoir une colonne Code, Matière, Crédits, Semestre, Note, Barème, Coefficient, Résultat.',
+      'Colonne "Matière" introuvable, le fichier doit avoir une colonne Code, Matière, Crédits, Semestre, Note, Barème, Coefficient, Résultat.',
     );
   }
 
@@ -131,7 +131,7 @@ export function matieresDepuisCsv(texte) {
     .filter(Boolean);
 
   if (matieres.length === 0) {
-    throw new Error('Aucune ligne exploitable — vérifiez que la colonne "Matière" est bien renseignée.');
+    throw new Error('Aucune ligne exploitable, vérifiez que la colonne "Matière" est bien renseignée.');
   }
 
   return matieres;

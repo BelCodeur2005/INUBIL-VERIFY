@@ -195,7 +195,7 @@ export default function ParametresEtudiant() {
 
           <div className={styles.sectionCard}>
             <h2 className={styles.sectionTitle}>Dossier académique</h2>
-            <p className={styles.sectionDesc}>Ces informations figurent sur vos diplômes — gérées par votre établissement.</p>
+            <p className={styles.sectionDesc}>Ces informations figurent sur vos diplômes, gérées par votre établissement.</p>
             <div className={styles.formGrid}>
               <div className={styles.formGroup}>
                 <label><IdCard size={15} /> Nom sur le diplôme</label>
@@ -272,7 +272,7 @@ export default function ParametresEtudiant() {
                     <Monitor size={20} className={styles.sessionIcon} />
                     <div>
                       <strong>{s.user_agent ?? 'Client inconnu'}</strong>
-                      <p>{s.ip_address ?? 'IP inconnue'} — connecté le {fmtDateHeure(s.created_at)}</p>
+                      <p>{s.ip_address ?? 'IP inconnue'}, connecté le {fmtDateHeure(s.created_at)}</p>
                     </div>
                   </div>
                   <button type="button" className={styles.revokeBtn} onClick={() => revoquer(s.id)} disabled={revoquant === s.id}>

@@ -122,7 +122,7 @@ export function ConfigEditDrawer({ config, onClose, onSaved }) {
             <p style={{ margin: '0.3rem 0 0 0', fontFamily: 'monospace', fontSize: '0.72rem', color: '#8a94a6' }}>{config.cle}</p>
             {!meta.connecte && (
               <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.72rem', color: '#a5680f', fontWeight: 600 }}>
-                ⚠ Non connecté — modifier cette valeur n&#x2019;a aucun effet réel côté backend.
+                ⚠ Non connecté : modifier cette valeur n&#x2019;a aucun effet réel côté backend.
               </p>
             )}
           </div>

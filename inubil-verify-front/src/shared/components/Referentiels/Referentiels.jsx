@@ -352,7 +352,7 @@ function PanneauAttribution() {
               <span className={styles.avatarLg}><UserCog size={22} /></span>
               <div className={styles.detailHeaderInfo}>
                 <h2>{selectionne.nom} {selectionne.prenom}</h2>
-                <span className={styles.mono}>{selectionne.email} — {LABEL_ROLE[selectionne.role?.nom] ?? selectionne.role?.nom}</span>
+                <span className={styles.mono}>{selectionne.email} ({LABEL_ROLE[selectionne.role?.nom] ?? selectionne.role?.nom})</span>
               </div>
             </div>
 
@@ -611,7 +611,7 @@ function PanneauReferentiel({ config }) {
           {!loadingListe && itemsFiltres.length === 0 && (
             <div className={styles.emptyList}>
               <ListChecks size={22} />
-              {texte ? 'Aucun résultat.' : `Aucun élément — cliquez sur « Nouveau » pour en créer un.`}
+              {texte ? 'Aucun résultat.' : `Aucun élément, cliquez sur « Nouveau » pour en créer un.`}
             </div>
           )}
           {!loadingListe && itemsFiltres.map((it) => (
@@ -638,7 +638,7 @@ function PanneauReferentiel({ config }) {
             <Icone size={40} />
             <p>
               Sélectionnez {config.article} dans la liste{peutEcrire ? ', ou créez-en un(e) nouveau(elle).' : '.'}
-              {!peutEcrire && <><br /><em>Lecture seule — géré par le responsable d'université.</em></>}
+              {!peutEcrire && <><br /><em>Lecture seule, géré par le responsable d'université.</em></>}
             </p>
           </div>
         )}
@@ -648,7 +648,7 @@ function PanneauReferentiel({ config }) {
             <div className={styles.detailHeader}>
               <span className={styles.avatarLg}><Plus size={22} /></span>
               <div className={styles.detailHeaderInfo}>
-                <h2>{config.genreNouveau} — {config.titre.replace(/s$/, '')}</h2>
+                <h2>{config.genreNouveau} {config.titre.replace(/s$/, '')}</h2>
                 <span className={styles.mono}>Fiche à compléter</span>
               </div>
             </div>
@@ -717,7 +717,7 @@ function PanneauReferentiel({ config }) {
               <div className={styles.modalHeaderIcon}><Trash2 size={18} /></div>
               <div>
                 <h3>Supprimer {config.nomSingulier} ?</h3>
-                <p>{selectionne.nom} — {selectionne.code}</p>
+                <p>{selectionne.nom} ({selectionne.code})</p>
               </div>
               <button type="button" className={styles.closeBtn} onClick={() => setConfirmSuppression(false)}><X size={18} /></button>
             </div>

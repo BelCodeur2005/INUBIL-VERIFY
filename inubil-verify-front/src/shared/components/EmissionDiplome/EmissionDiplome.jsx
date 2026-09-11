@@ -151,7 +151,7 @@ export default function EmissionDiplome() {
         const res = await rechercherEtudiants(q);
         setSearchResults(res.data ?? []);
       } catch (err) {
-        setSearchError(err instanceof ApiError ? err.message : 'Recherche impossible — réessayez.');
+        setSearchError(err instanceof ApiError ? err.message : 'Recherche impossible, réessayez.');
       } finally {
         setSearching(false);
       }
@@ -380,7 +380,7 @@ export default function EmissionDiplome() {
 
       if (studentMode === 'create') {
         if (!universiteId) {
-          throw new Error("Impossible de déterminer votre établissement — reconnectez-vous et réessayez.");
+          throw new Error("Impossible de déterminer votre établissement, reconnectez-vous et réessayez.");
         }
         const cree = await creerEtudiant({
           numero_etudiant: newStudent.numero_etudiant,
@@ -489,7 +489,7 @@ export default function EmissionDiplome() {
           </p>
           <p className={styles.successHint}>
             Les informations du diplôme ({typesDocument.find((t) => t.id === diplome.type_document_id)?.nom}
-            {diplome.filiere_id ? ` — ${filieres.find((f) => f.id === diplome.filiere_id)?.nom ?? ''}` : ''}) restent pré-remplies pour l'étudiant suivant.
+            {diplome.filiere_id ? `, ${filieres.find((f) => f.id === diplome.filiere_id)?.nom ?? ''}` : ''}) restent pré-remplies pour l'étudiant suivant.
           </p>
           <button type="button" className={styles.primaryBtn} onClick={resetWizard}>
             Émettre un autre diplôme
@@ -527,7 +527,7 @@ export default function EmissionDiplome() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>Émission d'un diplôme</h1>
-        <p className={styles.subtitle}>Renseignez le dossier en 4 étapes — chaque étape est validée avant de passer à la suivante.</p>
+        <p className={styles.subtitle}>Renseignez le dossier en 4 étapes, chaque étape est validée avant de passer à la suivante.</p>
       </div>
 
       {/* Rail de progression */}
@@ -592,7 +592,7 @@ export default function EmissionDiplome() {
 
                 <div className={styles.resultsList}>
                   {!searching && searchQuery.trim().length >= 2 && searchResults.length === 0 && !searchError && (
-                    <p className={styles.noResults}>Aucun étudiant trouvé — essayez « Créer un nouveau dossier ».</p>
+                    <p className={styles.noResults}>Aucun étudiant trouvé, essayez « Créer un nouveau dossier ».</p>
                   )}
                   {searchQuery.trim().length < 2 && (
                     <p className={styles.noResults}>Tapez au moins 2 caractères pour lancer la recherche.</p>
@@ -607,7 +607,7 @@ export default function EmissionDiplome() {
                       <div className={styles.resultAvatar}>{e.prenom.charAt(0)}{e.nom.charAt(0)}</div>
                       <div className={styles.resultTexts}>
                         <strong>{e.prenom} {e.nom}</strong>
-                        <span>{e.numero_etudiant}{e.universite_nom ? ` — ${e.universite_nom}` : ''}</span>
+                        <span>{e.numero_etudiant}{e.universite_nom ? ` (${e.universite_nom})` : ''}</span>
                       </div>
                       {selectedStudent?.id === e.id && <Check size={18} className={styles.resultCheck} />}
                     </button>
@@ -643,7 +643,7 @@ export default function EmissionDiplome() {
 
             {studentMode === 'create' && matriculeDoublon && (
               <p className={styles.doublonWarning}>
-                <AlertTriangle size={14} /> Ce matricule existe déjà — {matriculeDoublon.prenom} {matriculeDoublon.nom}. Utilisez plutôt « Rechercher un étudiant existant » ci-dessus.
+                <AlertTriangle size={14} /> Ce matricule existe déjà : {matriculeDoublon.prenom} {matriculeDoublon.nom}. Utilisez plutôt « Rechercher un étudiant existant » ci-dessus.
               </p>
             )}
           </section>
@@ -709,7 +709,7 @@ export default function EmissionDiplome() {
               <p className={styles.doublonWarning}>
                 <AlertTriangle size={14} />
                 {etudiant?.prenom} {etudiant?.nom} a déjà un document « {typesDocument.find((t) => t.id === diplome.type_document_id)?.nom} »
-                ({doublonPertinent.numero_unique}, {LABEL_STATUT_DOUBLON[doublonPertinent.statut] ?? doublonPertinent.statut}) — vérifiez qu'il ne s'agit pas d'un doublon avant de continuer.
+                ({doublonPertinent.numero_unique}, {LABEL_STATUT_DOUBLON[doublonPertinent.statut] ?? doublonPertinent.statut}), vérifiez qu'il ne s'agit pas d'un doublon avant de continuer.
               </p>
             )}
 
@@ -719,7 +719,7 @@ export default function EmissionDiplome() {
                   <div>
                     <h3 className={styles.matieresTitle}><BookOpen size={16} /> Matières</h3>
                     <p className={styles.matieresSubtitle}>
-                      Ce type de document affiche un relevé de notes — renseignez au moins une matière.
+                      Ce type de document affiche un relevé de notes, renseignez au moins une matière.
                     </p>
                   </div>
                   <div className={styles.matieresActions}>
@@ -752,7 +752,7 @@ export default function EmissionDiplome() {
 
                 {matieres.length === 0 ? (
                   <div className={styles.matieresEmpty}>
-                    <AlertTriangle size={16} /> Aucune matière renseignée — cliquez sur « Ajouter une matière ».
+                    <AlertTriangle size={16} /> Aucune matière renseignée, cliquez sur « Ajouter une matière ».
                   </div>
                 ) : (
                   <>
@@ -772,7 +772,7 @@ export default function EmissionDiplome() {
                               className={styles.matiereNomInput}
                               value={m.nom_matiere}
                               onChange={majMatiere(idx, 'nom_matiere')}
-                              placeholder="Nom de la matière — ex : Algorithmique"
+                              placeholder="Nom de la matière, ex : Algorithmique"
                             />
                             <button type="button" className={styles.removeMatiereBtn} title="Retirer" onClick={() => retirerMatiere(idx)}>
                               <Trash2 size={15} />
@@ -837,7 +837,7 @@ export default function EmissionDiplome() {
                 <div className={styles.fileIconBox}><FileText size={20} /></div>
                 <div className={styles.fileDetails}>
                   <p className={styles.fileName}>{selectedFile.name}</p>
-                  <p className={styles.fileStatus}>{(selectedFile.size / (1024 * 1024)).toFixed(2)} Mo — prêt</p>
+                  <p className={styles.fileStatus}>{(selectedFile.size / (1024 * 1024)).toFixed(2)} Mo, prêt</p>
                 </div>
                 <button type="button" className={styles.removeFileBtn} onClick={() => { setSelectedFile(null); setFileError(null); }}>
                   <X size={16} />
@@ -853,14 +853,14 @@ export default function EmissionDiplome() {
               <div className={styles.recapBlock}>
                 <h3 className={styles.recapTitle}><UserPlus size={16} /> Étudiant</h3>
                 <p><strong>{etudiant?.prenom} {etudiant?.nom}</strong></p>
-                <p className={styles.recapMuted}>{etudiant?.numero_etudiant}{etudiant?.universite_nom ? ` — ${etudiant.universite_nom}` : ''}</p>
+                <p className={styles.recapMuted}>{etudiant?.numero_etudiant}{etudiant?.universite_nom ? ` (${etudiant.universite_nom})` : ''}</p>
               </div>
               <div className={styles.recapBlock}>
                 <h3 className={styles.recapTitle}><GraduationCap size={16} /> Diplôme</h3>
                 <p><strong>{typesDocument.find((t) => t.id === diplome.type_document_id)?.nom}</strong></p>
                 <p className={styles.recapMuted}>{filieres.find((f) => f.id === diplome.filiere_id)?.nom}</p>
                 <p className={styles.recapMuted}>
-                  {diplome.mention_id ? `Mention ${mentions.find((m) => m.id === diplome.mention_id)?.nom} — ` : ''}
+                  {diplome.mention_id ? `Mention ${mentions.find((m) => m.id === diplome.mention_id)?.nom}, ` : ''}
                   {diplome.annee_academique}
                 </p>
                 {aDesMatieres && (

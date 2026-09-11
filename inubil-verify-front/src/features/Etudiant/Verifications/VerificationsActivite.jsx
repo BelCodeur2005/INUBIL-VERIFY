@@ -166,7 +166,7 @@ export default function VerificationsActivite({ searchTerm = '' } = {}) {
                   <div className={styles.verifInfo}>
                     <div className={styles.verifHeader}>
                       <h3 className={styles.docTitle}>
-                        {v.type_document ?? 'Document'}{v.numero_unique ? ` — ${v.numero_unique}` : ''}
+                        {v.type_document ?? 'Document'}{v.numero_unique ? ` (${v.numero_unique})` : ''}
                       </h3>
                       <span className={`${styles.resultBadge} ${styles[resultat.classe]}`}>
                         <IconeResultat size={12} /> {resultat.label}

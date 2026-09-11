@@ -499,14 +499,14 @@ export default function FicheEtudiant() {
               <div className={styles.modalHeaderIcon}><Trash2 size={18} /></div>
               <div>
                 <h3>Supprimer cette fiche ?</h3>
-                <p>{selectionne.prenom} {selectionne.nom} — {selectionne.numero_etudiant}</p>
+                <p>{selectionne.prenom} {selectionne.nom} ({selectionne.numero_etudiant})</p>
               </div>
               <button type="button" className={styles.closeBtn} onClick={() => setConfirmSuppression(false)}><X size={18} /></button>
             </div>
             <div className={styles.modalBody}>
               <p className={styles.warningBanner}>
                 {selectionne.nb_documents > 0
-                  ? `Cet étudiant a ${selectionne.nb_documents} document(s) émis — la suppression sera refusée tant qu'ils existent.`
+                  ? `Cet étudiant a ${selectionne.nb_documents} document(s) émis, la suppression sera refusée tant qu'ils existent.`
                   : "Cette fiche sera masquée et n'apparaîtra plus dans les recherches."}
               </p>
               {erreurSuppression && <p className={styles.errorText}><AlertTriangle size={14} /> {erreurSuppression}</p>}
