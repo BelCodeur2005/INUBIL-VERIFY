@@ -13,11 +13,15 @@ class NavItem {
 /// defaut (barre plate collee au bord, indicateur statique). Ici : la barre
 /// flotte au-dessus du bord de l'ecran avec une ombre diffuse (meme token
 /// d'elevation que DESIGN.md), et l'onglet actif glisse d'une position a
-/// l'autre via un pastille animee plutot que de sauter instantanement — c'est
+/// l'autre via une pastille animee plutot que de sauter instantanement — c'est
 /// ce glissement qui donne l'impression de fluidite, pas la couleur en soi.
-/// Seul l'onglet actif affiche son libelle (motif "pilule qui s'etend"),
-/// les autres restent juste une icone — reduit le bruit visuel et distingue
-/// clairement l'etat actif sans avoir besoin d'un texte partout.
+///
+/// Adaptation aux petits ecrans : la marge laterale se resserre sous 400 dp, le
+/// libelle de l'onglet actif ne s'affiche que si chaque case fait au moins
+/// [_largeurMinLibelle] ; en dessous, tous les onglets restent en icone seule
+/// (la pastille suffit a marquer l'actif). Le libelle est de toute facon
+/// contraint (Flexible + fade + une seule ligne) et son agrandissement par la
+/// police systeme est plafonne, pour qu'aucun debordement ne soit possible.
 class SplendidBottomNav extends StatelessWidget {
   const SplendidBottomNav({
     super.key,
@@ -30,14 +34,20 @@ class SplendidBottomNav extends StatelessWidget {
   final ValueChanged<int> onChanged;
   final List<NavItem> items;
 
+  /// En dessous de cette largeur par case, on n'affiche plus le libelle.
+  static const double _largeurMinLibelle = 92;
+
   @override
   Widget build(BuildContext context) {
+    final largeurEcran = MediaQuery.sizeOf(context).width;
+    final margeLaterale = largeurEcran < 400 ? 10.0 : 16.0;
+
     return SafeArea(
       top: false,
       minimum: const EdgeInsets.only(bottom: 8),
       child: Container(
         height: 64,
-        margin: const EdgeInsets.symmetric(horizontal: 16),
+        margin: EdgeInsets.symmetric(horizontal: margeLaterale),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(24),
@@ -52,6 +62,7 @@ class SplendidBottomNav extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final largeurItem = constraints.maxWidth / items.length;
+            final afficherLibelle = largeurItem >= _largeurMinLibelle;
             return Stack(
               children: [
                 AnimatedPositioned(
@@ -75,6 +86,7 @@ class SplendidBottomNav extends StatelessWidget {
                         child: _BoutonNav(
                           item: items[i],
                           selectionne: i == index,
+                          afficherLibelle: afficherLibelle,
                           onTap: () => onChanged(i),
                         ),
                       ),
@@ -90,15 +102,22 @@ class SplendidBottomNav extends StatelessWidget {
 }
 
 class _BoutonNav extends StatelessWidget {
-  const _BoutonNav({required this.item, required this.selectionne, required this.onTap});
+  const _BoutonNav({
+    required this.item,
+    required this.selectionne,
+    required this.afficherLibelle,
+    required this.onTap,
+  });
 
   final NavItem item;
   final bool selectionne;
+  final bool afficherLibelle;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final couleur = selectionne ? AppColors.primary : AppColors.textMuted;
+    final montrerTexte = selectionne && afficherLibelle;
 
     return Material(
       color: Colors.transparent,
@@ -107,37 +126,47 @@ class _BoutonNav extends StatelessWidget {
         onTap: onTap,
         child: SizedBox(
           height: 64,
-          child: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedScale(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeOutBack,
-                  scale: selectionne ? 1.08 : 1.0,
-                  child: Icon(
-                    selectionne ? item.selectedIcon : item.icon,
-                    color: couleur,
-                    size: 22,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedScale(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutBack,
+                    scale: selectionne ? 1.08 : 1.0,
+                    child: Icon(
+                      selectionne ? item.selectedIcon : item.icon,
+                      color: couleur,
+                      size: 22,
+                    ),
                   ),
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeOutCubic,
-                  child: selectionne
-                      ? Padding(
-                          padding: const EdgeInsets.only(left: 6),
-                          child: Text(
-                            item.label,
-                            style: AppTypography.bodySm.copyWith(
-                              color: couleur,
-                              fontWeight: FontWeight.w700,
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
+                    child: montrerTexte
+                        ? Flexible(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 6),
+                              child: Text(
+                                item.label,
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.fade,
+                                textScaler: MediaQuery.textScalerOf(context)
+                                    .clamp(maxScaleFactor: 1.2),
+                                style: AppTypography.bodySm.copyWith(
+                                  color: couleur,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
-                          ),
-                        )
-                      : const SizedBox(width: 0, height: 22),
-                ),
-              ],
+                          )
+                        : const SizedBox(width: 0, height: 22),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

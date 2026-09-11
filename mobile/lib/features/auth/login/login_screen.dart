@@ -70,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             BandeauMarque(
               hauteur: hauteurHero,
-              legende: "Vos diplômes, ancrés et vérifiables — n'importe où, en un instant.",
+              legende: "Vos diplômes, ancrés et vérifiables, n'importe où et en un instant.",
             ),
             FeuilleContenu(
               hauteurMinimale: hauteurEcran - hauteurHero,
