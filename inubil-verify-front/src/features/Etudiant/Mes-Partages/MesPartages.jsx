@@ -18,7 +18,7 @@ import { listerMesPartages, creerPartage, revoquerPartage, listerMesDocuments } 
 import { ApiError } from '../../../core/api/client';
 import styles from './MesPartages.module.css';
 
-const URL_PARTAGE_BASE = 'https://verify.inubil.com/partages/';
+const URL_PARTAGE_BASE = `${window.location.origin}/partage/`;
 
 const DUREES = [
   { valeur: '7',         label: '7 jours' },
