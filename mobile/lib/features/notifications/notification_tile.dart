@@ -82,6 +82,8 @@ class NotificationTile extends StatelessWidget {
                                     fontWeight: nonLue ? FontWeight.w700 : FontWeight.w600,
                                     color: AppColors.textPrimary,
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (nonLue) ...[
