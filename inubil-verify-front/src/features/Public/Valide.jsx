@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './Valide.module.css';
 import PublicHeader from './PublicHeader';
 import { telechargerRapport } from '../../core/verify/verify.api';
+import { genererQrDataUrl } from '../../shared/components/DiplomaBadge/DiplomaBadge.download';
 
 const LABELS_CATEGORIE = {
   diplome: 'Diplôme',
@@ -38,8 +39,19 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
   const [erreurRapport, setErreurRapport] = useState(null);
   const [explorerOuvert, setExplorerOuvert] = useState(false);
   const [copieHash, setCopieHash] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState(null);
 
   const urlPartage = doc.url_verification || `${window.location.origin}/d/${doc.numero_unique}`;
+
+  useEffect(() => {
+    let annule = false;
+    genererQrDataUrl(urlPartage).then((dataUrl) => {
+      if (!annule) setQrDataUrl(dataUrl);
+    });
+    return () => {
+      annule = true;
+    };
+  }, [urlPartage]);
 
   const copierLien = () => {
     navigator.clipboard.writeText(urlPartage);
@@ -201,6 +213,28 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
                   <span className="material-symbols-outlined">{copie ? 'check' : 'content_copy'}</span>
                 </button>
               </div>
+
+              {qrDataUrl && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '20px' }}>
+                  <img
+                    src={qrDataUrl}
+                    alt="QR code de vérification"
+                    style={{ width: '96px', height: '96px', borderRadius: '8px', border: '1px solid #e0e0e0' }}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <p style={{ fontSize: '13px', color: '#42474f', margin: 0 }}>
+                      Faites scanner ce code par une autre personne pour qu'elle vérifie le document instantanément sur son propre appareil.
+                    </p>
+                    <a
+                      href={qrDataUrl}
+                      download={`qr-verification-${doc.numero_unique}.png`}
+                      style={{ fontSize: '13px', fontWeight: 600, color: '#002c53', textDecoration: 'none' }}
+                    >
+                      Télécharger le QR code
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
 
             {blockchain ? (
