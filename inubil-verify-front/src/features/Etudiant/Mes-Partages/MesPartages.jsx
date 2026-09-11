@@ -266,7 +266,7 @@ export default function MesPartages() {
                 >
                   {documentsActifs.map((doc) => (
                     <option key={doc.id} value={doc.id}>
-                      {doc.type_document} — {doc.numero_unique}
+                      {doc.type_document} ({doc.numero_unique})
                     </option>
                   ))}
                 </select>

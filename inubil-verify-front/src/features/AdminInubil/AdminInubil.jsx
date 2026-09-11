@@ -769,7 +769,7 @@ export default function AdminInubil() {
 
                     {ongletActif?.warn && (
                       <p className={styles.settingsTabWarnNote}>
-                        <AlertTriangle size={13} /> Présents en base mais non lus par le backend actuel — les modifier n'a aucun effet réel.
+                        <AlertTriangle size={13} /> Présents en base mais non lus par le backend actuel : les modifier n'a aucun effet réel.
                       </p>
                     )}
 
@@ -797,7 +797,7 @@ export default function AdminInubil() {
                 {backupErreur && <p className={styles.errorText}>{backupErreur}</p>}
                 {backupResultat && (
                   <p className={styles.backupSuccess}>
-                    {backupResultat.message} — <span className={styles.mono}>{backupResultat.fichier}</span> ({backupResultat.tailleMo} Mo)
+                    {backupResultat.message} : <span className={styles.mono}>{backupResultat.fichier}</span> ({backupResultat.tailleMo} Mo)
                   </p>
                 )}
                 <button className={styles.backupBtn} onClick={lancerBackup} disabled={backupEnCours}>

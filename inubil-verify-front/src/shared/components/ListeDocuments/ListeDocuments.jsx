@@ -236,7 +236,7 @@ export default function ListeDocuments({ admin = false }) {
     <div className={styles.page}>
       <div className={styles.tableCard}>
         <div className={styles.tableHeader}>
-          <div className={styles.tableTitle}>{admin ? 'Documents — toutes universités' : 'Registre des documents'}</div>
+          <div className={styles.tableTitle}>{admin ? 'Documents (toutes universités)' : 'Registre des documents'}</div>
           <div className={styles.headerActions}>
             <span className={styles.totalCount}>{total} document{total !== 1 ? 's' : ''}</span>
             <button type="button" className={styles.exportBtn} onClick={exporterCsv} disabled={exportEnCours}>

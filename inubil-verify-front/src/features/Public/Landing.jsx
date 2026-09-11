@@ -98,7 +98,7 @@ export default function Landing() {
                 <div className={styles.diplomaFooterRow}>
                   <div className={styles.diplomaFooterField}>
                     <span className={styles.diplomaFooterLabel}>Établissement</span>
-                    <span className={styles.diplomaFooterValue}>INUBIL — Douala</span>
+                    <span className={styles.diplomaFooterValue}>INUBIL, Douala</span>
                   </div>
                   <div className={styles.diplomaFooterField}>
                     <span className={styles.diplomaFooterLabel}>Numéro unique</span>

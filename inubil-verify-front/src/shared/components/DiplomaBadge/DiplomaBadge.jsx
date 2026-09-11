@@ -27,7 +27,7 @@ const DiplomaBadge = forwardRef(function DiplomaBadge(
 
         <h1 className={styles.name}>{prenom} {nom}</h1>
         <p className={styles.diploma}>
-          {typeDocument}{mention ? ` — ${mention}` : ''}
+          {typeDocument}{mention ? ` (${mention})` : ''}
         </p>
         <p className={styles.universite}>{universite}</p>
 

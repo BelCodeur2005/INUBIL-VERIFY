@@ -33,7 +33,7 @@ export default function RepartitionDocuments({ documents }) {
                   key={it.key}
                   className={`${styles.repartitionSegment} ${it.seg}`}
                   style={{ flexGrow: it.valeur || 0 }}
-                  title={`${it.label} — ${it.valeur} (${pct}%)`}
+                  title={`${it.label} : ${it.valeur} (${pct}%)`}
                 >
                   {pct >= 12 && <span>{pct}%</span>}
                 </div>

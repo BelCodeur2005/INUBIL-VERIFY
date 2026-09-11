@@ -137,7 +137,7 @@ export default function FileValidation() {
     try {
       await rejeterDocument(doc.id, motifRejet.trim());
       setItems((prev) => prev.filter((d) => d.id !== doc.id));
-      setMessageSucces(`${doc.numero_unique} rejeté — l'agent de saisie verra le motif.`);
+      setMessageSucces(`${doc.numero_unique} rejeté, l'agent de saisie verra le motif.`);
       setTimeout(() => setMessageSucces(null), 4000);
       setRejetOuvertId(null);
       setMotifRejet('');
@@ -152,7 +152,7 @@ export default function FileValidation() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>File de validation</h1>
-        <p className={styles.subtitle}>Documents prêts à être validés (PDF + empreinte déjà enregistrés) — un ancrage blockchain par document.</p>
+        <p className={styles.subtitle}>Documents prêts à être validés (PDF + empreinte déjà enregistrés), un ancrage blockchain par document.</p>
       </div>
 
       {messageSucces && <div className={styles.successBanner}><CheckCircle2 size={16} /> {messageSucces}</div>}
@@ -165,7 +165,7 @@ export default function FileValidation() {
       {!loading && items.length === 0 && (
         <div className={styles.emptyState}>
           <FileCheck2 size={28} />
-          <p>File de validation vide — tous les documents sont à jour.</p>
+          <p>File de validation vide, tous les documents sont à jour.</p>
         </div>
       )}
 

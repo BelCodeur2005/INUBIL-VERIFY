@@ -50,7 +50,7 @@ function parseUserAgent(ua) {
   else if (/iPhone|iPad/i.test(ua)) os = 'iOS';
   else if (/Linux/i.test(ua)) os = 'Linux';
   return {
-    label: os ? `${navigateur} — ${os}` : navigateur,
+    label: os ? `${navigateur} (${os})` : navigateur,
     Icon: mobile ? Smartphone : Laptop,
   };
 }
@@ -277,7 +277,7 @@ export default function MonCompte({ roleLabel }) {
                       <div>
                         <strong>{label}</strong>
                         <p>
-                          {s.ip_address ?? 'IP inconnue'} — connecté le{' '}
+                          {s.ip_address ?? 'IP inconnue'}, connecté le{' '}
                           {new Date(s.created_at).toLocaleString('fr-FR')}
                         </p>
                       </div>
@@ -338,7 +338,7 @@ export default function MonCompte({ roleLabel }) {
                 <strong>Connexion inhabituelle</strong>
                 <p>
                   Être alerté en cas de connexion depuis un nouvel appareil.{' '}
-                  <em>Préférence enregistrée, mais non appliquée pour l'instant — aucune détection de connexion inhabituelle n'existe encore sur la plateforme.</em>
+                  <em>Préférence enregistrée, mais non appliquée pour l'instant : aucune détection de connexion inhabituelle n'existe encore sur la plateforme.</em>
                 </p>
               </div>
               <label className={styles.switch}>
