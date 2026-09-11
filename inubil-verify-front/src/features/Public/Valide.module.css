@@ -1,13 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* --- LAYOUT GLOBAL & TYPOGRAPHIE --- */
 .page {
-  background-color: #f8f9fa;
-  color: #191c1d;
+  background-color: #f8fafc;
+  color: #0f172a;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Main Layout */
+/* --- MAIN & CONTAINER --- */
 .main {
   flex-grow: 1;
   padding-top: 40px;
@@ -15,148 +18,133 @@
 
 .mainContainer {
   max-width: 1280px;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 24px;
-  padding-right: 24px;
-  padding-bottom: 64px;
+  margin: 0 auto;
+  padding: 0 24px 40px;
   display: flex;
   flex-direction: column;
-  gap: 40px;
-}
-
-/* Bannière Succès Green */
-.banner {
-  background-color: #E8F5E9;
-  border: 1px solid #2E7D32;
-  padding: 24px;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   gap: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-@media (min-width: 768px) {
-  .banner {
-    flex-direction: row;
-  }
+/* --- BANNIÈRE VALIDATION (VERT ACCENT) --- */
+.banner {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 24px;
+  border-radius: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
 }
 
 .bannerIconContainer {
-  background-color: #2E7D32;
-  color: #ffffff;
-  padding: 12px;
-  border-radius: 9999px;
+  color: #16a34a;
   display: flex;
   align-items: center;
-  justify-content: center;
+  flex-shrink: 0;
 }
 
 .bannerTitle {
-  font-size: 24px;
-  font-weight: 700;
-  color: #2E7D32;
+  font-size: 16px;
+  font-weight: 800;
+  color: #15803d;
   letter-spacing: -0.01em;
+  margin-bottom: 4px;
 }
 
 .bannerDesc {
-  color: rgba(46, 125, 50, 0.9);
-  font-size: 16px;
-  margin-top: 4px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-/* Grille Principale */
+/* --- GRILLE PRINCIPALE --- */
 .grid {
   display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 24px;
+  align-items: stretch;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .grid {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-columns: repeat(12, 1fr);
   }
 }
 
-/* Section Données Certifiées (Gauche) */
+/* --- CARTE DU DIPLÔME (GAUCHE) --- */
 .leftCard {
-  grid-column: span 12 / span 12;
+  grid-column: span 12;
   background-color: #ffffff;
-  border-radius: 8px;
-  padding: 40px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  border: 1px solid #c2c6d1;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 36px;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .leftCard {
-    grid-column: span 7 / span 7;
+    grid-column: span 8;
   }
 }
 
 .watermark {
   position: absolute;
-  right: -64px;
-  bottom: -64px;
-  opacity: 0.05;
-  color: #191c1d;
+  right: -20px;
+  bottom: -20px;
+  opacity: 0.04;
+  transform: rotate(-15deg);
   pointer-events: none;
-  user-select: none;
+  color: #0f172a;
 }
 
 .watermarkIcon {
-  font-size: 240px !important;
+  width: 220px;
+  height: 220px;
 }
 
 .cardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 40px;
-  position: relative;
-  z-index: 10;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .cardTitle {
-  font-size: 20px;
-  font-weight: 600;
-  color: #002c53;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #062362;
 }
 
 .badge {
-  background-color: #E8F5E9;
-  color: #2E7D32;
-  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
   border-radius: 9999px;
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  border: 1px solid rgba(46, 125, 50, 0.2);
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .dataGrid {
   display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 24px 40px;
-  border-top: 1px solid #c2c6d1;
-  border-bottom: 1px solid #c2c6d1;
-  padding-top: 40px;
-  padding-bottom: 40px;
-  margin-bottom: 40px;
-  position: relative;
-  z-index: 10;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-bottom: 28px;
 }
 
 @media (min-width: 640px) {
   .dataGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -167,278 +155,280 @@
 }
 
 .label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   letter-spacing: 0.05em;
-  color: #42474f;
+  color: #64748b;
   text-transform: uppercase;
+  margin-bottom: 4px;
 }
 
 .valueBold {
-  font-size: 18px;
-  font-weight: 700;
-  color: #191c1d;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
 }
 
 .valueNormal {
-  font-size: 16px;
-  color: #191c1d;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
 }
 
 .valueAccent {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0060ac;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0350bd;
 }
 
 .valueCode {
   font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  background-color: #f8fafc;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  width: fit-content;
+}
+
+/* Relevé de matières */
+.matieresList {
+  margin-bottom: 32px;
+}
+
+.matiereRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background-color: #f8fafc;
+  border-radius: 6px;
   font-size: 14px;
-  font-weight: 700;
-  color: #002c53;
+}
+
+.matiereNote {
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .downloadBtn {
   width: 100%;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  background-color: #002c53;
-  color: #ffffff;
-  padding: 12px 24px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  border: none;
+  gap: 10px;
   cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
-  z-index: 10;
+  transition: opacity 0.2s, transform 0.1s;
 }
 
 .downloadBtn:hover {
-  opacity: 0.9;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  opacity: 0.95;
 }
 
 .downloadBtn:active {
   transform: scale(0.98);
 }
 
-/* Section Traçabilité (Droite) */
-.rightCard {
-  grid-column: span 12 / span 12;
-  background-color: #ffffff;
-  border-radius: 8px;
-  padding: 40px;
-  border: 1px solid #c2c6d1;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  display: flex;
-  flex-direction: column;
+.downloadBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-@media (min-width: 768px) {
+.downloadError {
+  color: #dc2626;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+/* --- CARTE PARTAGE / QR (DROITE) --- */
+.rightCard {
+  grid-column: span 12;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+@media (min-width: 1024px) {
   .rightCard {
-    grid-column: span 5 / span 5;
+    grid-column: span 4;
   }
 }
 
-.previewBox {
-  flex-grow: 1;
-  aspect-ratio: 4 / 3;
-  background-color: #e7e8e9;
-  border-radius: 8px;
-  margin-bottom: 24px;
-  position: relative;
-  overflow: hidden;
-}
-
-.previewImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.5;
-  filter: grayscale(100%);
-}
-
-.previewOverlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(0, 44, 83, 0.1);
-  transition: background-color 0.2s;
-}
-
-.previewOverlay:hover {
-  background-color: rgba(0, 44, 83, 0.2);
+.rightCardDesc {
+  font-size: 14px;
+  color: #475569;
+  margin: -12px 0 0;
 }
 
 .qrContainer {
-  border-top: 1px solid #c2c6d1;
-  padding-top: 24px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
+  gap: 16px;
 }
 
 .qrBox {
-  width: 128px;
-  height: 128px;
   background-color: #ffffff;
-  border: 2px solid rgba(0, 44, 83, 0.1);
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  margin-bottom: 24px;
-  padding: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
-.qrMock {
+.qrImage {
   width: 100%;
   height: 100%;
-  opacity: 0.8;
-  background-image: radial-gradient(circle, #000 1px, transparent 1px);
-  background-size: 8px 8px;
+  object-fit: contain;
 }
 
-/* Section Cryptographique (Bas Gauche) */
+.qrText {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.qrDesc {
+  font-size: 13px;
+  color: #475569;
+  margin: 0;
+}
+
+.qrDownloadLink {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0350bd;
+  text-decoration: none;
+}
+
+.qrDownloadLink:hover {
+  text-decoration: underline;
+}
+
+/* --- SECTION CRYPTOGRAPHIQUE --- */
 .cryptoCard {
-  grid-column: span 12 / span 12;
-  background-color: #ECEFF1;
-  border-radius: 8px;
-  padding: 40px;
-  border: 1px solid #c2c6d1;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+  grid-column: span 12;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .cryptoCard {
-    grid-column: span 8 / span 8;
+    grid-column: span 7;
   }
 }
 
 .cryptoTitleGroup {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #002c53;
-  margin-bottom: 24px;
+  gap: 10px;
+  color: #062362;
+  margin-bottom: 20px;
+}
+
+.cryptoTitleGroup h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
 }
 
 .cryptoList {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
+}
+
+.cryptoEmpty {
+  font-size: 14px;
+  color: #475569;
+  margin: 0;
 }
 
 .hashRow {
-  background-color: rgba(255, 255, 255, 0.5);
-  padding: 16px;
-  border-radius: 4px;
-  border: 1px solid #ffffff;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-@media (min-width: 640px) {
-  .hashRow {
-    flex-direction: row;
-    align-items: center;
-  }
-}
-
 .hashLabel {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: #42474f;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
+  color: #64748b;
   margin-bottom: 4px;
+  letter-spacing: 0.05em;
 }
 
 .hashCode {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  color: #002c53;
+  font-size: 13px;
+  color: #334155;
   word-break: break-all;
 }
 
 .copyBtn {
-  color: #002c53;
+  color: #0350bd;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 9999px;
+  padding: 4px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  align-self: flex-start;
-}
-
-@media (min-width: 640px) {
-  .copyBtn {
-    align-self: center;
-  }
-}
-
-.copyBtn:hover {
-  background-color: rgba(0, 44, 83, 0.1);
-  color: #0060ac;
+  transition: color 0.2s;
 }
 
 .copyBtnSuccess {
-  color: #22c486 !important;
+  color: #16a34a !important;
 }
 
 .subCryptoGrid {
   display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 24px;
+  grid-template-columns: 1fr;
+  gap: 14px;
 }
 
 @media (min-width: 640px) {
   .subCryptoGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 .cryptoBlock {
-  background-color: rgba(255, 255, 255, 0.5);
-  padding: 16px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  border: 1px solid #ffffff;
+  padding: 12px 16px;
 }
 
 .networkStatus {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.pulseDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #22c486;
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .5; }
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
 }
 
 .explorerBtn {
@@ -448,193 +438,56 @@
   gap: 8px;
   align-self: flex-start;
   background: none;
-  border: 1px solid #002c53;
-  color: #002c53;
+  border: 1px solid #0350bd;
+  color: #0350bd;
   padding: 10px 20px;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   cursor: pointer;
+  margin-top: 4px;
   transition: background-color 0.2s, color 0.2s;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .explorerBtn:hover {
-  background-color: #002c53;
+  background-color: #0350bd;
   color: #ffffff;
 }
 
-/* Modale Explorateur Blockchain */
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background-color: rgba(25, 28, 29, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
-.modalContent {
-  background-color: #ffffff;
-  border-radius: 8px;
-  max-width: 480px;
-  width: 100%;
-  padding: 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
-}
-
-.modalHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.modalTitleGroup {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.modalBadge {
-  background-color: #E8F5E9;
-  color: #2E7D32;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  padding: 4px 10px;
-  border-radius: 9999px;
-}
-
-.modalTitle {
-  font-size: 18px;
-  font-weight: 700;
-  color: #002c53;
-  margin: 0;
-}
-
-.closeBtn {
-  background: none;
-  border: none;
-  color: #737780;
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.closeBtn:hover {
-  background-color: #f3f4f5;
-}
-
-.modalSubtitle {
-  font-size: 13px;
-  color: #42474f;
-  margin: -8px 0 0;
-}
-
-.modalStatusRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.networkBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #002c53;
-}
-
-.confirmedTag {
-  background-color: #E8F5E9;
-  color: #2E7D32;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 4px 10px;
-  border-radius: 9999px;
-}
-
-.pendingTag {
-  background-color: #f3f4f5;
-  color: #737780;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 4px 10px;
-  border-radius: 9999px;
-}
-
-.modalField {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.modalExternalLink {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background-color: #002c53;
-  color: #ffffff;
-  padding: 12px 20px;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: opacity 0.2s;
-}
-
-.modalExternalLink:hover {
-  opacity: 0.9;
-}
-
-/* Section Historique d'Audit (Bas Droite) */
+/* --- SECTION AUDIT --- */
 .auditCard {
-  grid-column: span 12 / span 12;
-  background-color: #f3f4f5;
-  border-radius: 8px;
-  padding: 40px;
-  border: 1px solid #c2c6d1;
+  grid-column: span 12;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .auditCard {
-    grid-column: span 4 / span 4;
+    grid-column: span 5;
   }
 }
 
 .auditTitle {
-  font-size: 12px;
+  font-size: 18px;
   font-weight: 700;
-  color: #002c53;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 24px;
+  color: #062362;
+  margin-bottom: 20px;
 }
 
 .timeline {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .timelineItem {
   display: flex;
-  gap: 12px;
+  gap: 14px;
 }
 
 .timelineAxis {
@@ -644,35 +497,231 @@
 }
 
 .timelineDotGreen {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background-color: #22c486;
-  margin-top: 8px;
-}
-
-.timelineLine {
-  width: 1px;
-  flex-grow: 1;
-  background-color: #c2c6d1;
+  background-color: #16a34a;
 }
 
 .timelineDotOutline {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid #002c53;
-  margin-top: 6px;
+  border: 2px solid #0350bd;
+  background-color: #ffffff;
+}
+
+.timelineLine {
+  width: 2px;
+  flex-grow: 1;
+  background-color: #e2e8f0;
+  margin: 4px 0;
 }
 
 .timelineNodeTitle {
-  font-size: 12px;
-  font-weight: 700;
-  color: #191c1d;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
 }
 
 .timelineNodeTitleActive {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0350bd;
+}
+
+.timelineSub {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 400;
+  text-transform: none;
+  margin-top: 2px;
+}
+
+/* --- MODALE --- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(6, 35, 98, 0.4);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modalContent {
+  background-color: #ffffff;
+  border-radius: 12px;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(6, 35, 98, 0.15);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.modalHeader {
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f8fafc;
+}
+
+.modalTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #062362;
+  margin: 0;
+}
+
+.modalBadge {
+  background-color: #eef2ff;
+  color: #0350bd;
+  border: 1px solid #c7d2fe;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.closeBtn:hover {
+  color: #062362;
+}
+
+.modalSubtitle {
+  padding: 0 24px;
+  font-size: 13px;
+  color: #475569;
+  margin: 20px 0 0;
+}
+
+.modalStatusRow {
+  margin: 16px 24px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.networkBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #062362;
+}
+
+.pulseDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #16a34a;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+}
+
+.confirmedTag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   font-weight: 700;
-  color: #002c53;
+  color: #16a34a;
+  background-color: #f0fdf4;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  border: 1px solid #bbf7d0;
+}
+
+.pendingTag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  background-color: #f1f5f9;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+}
+
+.timestampText {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.modalField {
+  margin: 16px 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.infoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.copyIconButton {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #0350bd;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modalExternalLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 24px 24px 0;
+  padding: 14px;
+  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.modalExternalLink:hover {
+  opacity: 0.95;
+}
+
+.modalBottomSpacer {
+  height: 24px;
 }

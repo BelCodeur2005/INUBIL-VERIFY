@@ -52,107 +52,105 @@ export default function Revoque({ resultat, message, hashSoumis, blockchain, ver
       <main className={styles.main}>
         <div className={styles.mainContainer}>
 
+          {/* BANNIÈRE D'ALERTE */}
           <div className={styles.banner}>
-            <span className={`material-symbols-outlined ${styles.bannerIcon}`} style={{ fontVariationSettings: '"FILL" 1' }}>
-              warning
-            </span>
+            <div className={styles.bannerIconContainer}>
+              <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>warning</span>
+            </div>
             <div>
-              <h2 className={styles.bannerTitle}>{TITRES_RESULTAT[resultat] ?? 'DOCUMENT NON AUTHENTIQUE'}</h2>
-              <p className={styles.bannerDesc}>{message}</p>
+              <div className={styles.bannerTitle}>{TITRES_RESULTAT[resultat] ?? 'DOCUMENT NON AUTHENTIQUE'}</div>
+              <div className={styles.bannerDesc}>{message}</div>
             </div>
           </div>
 
           <div className={styles.grid}>
 
-            <div className={styles.leftCol}>
-              <div className={styles.sealWatermark}>
-                <span className={`material-symbols-outlined ${styles.sealIcon}`}>gpp_maybe</span>
+            {/* CARTE GAUCHE : RAPPORT D'ANALYSE */}
+            <div className={styles.leftCard}>
+              <div className={styles.watermark}>
+                <span className="material-symbols-outlined" style={{ fontSize: '220px' }}>gpp_maybe</span>
               </div>
 
-              <div className={styles.reportContent}>
-                <div className={styles.reportHeader}>
-                  <h3 className={styles.reportTitle}>Rapport d'Analyse d'Intégrité</h3>
-                  <div className={styles.statusBadge}>
-                    <span className={styles.pulseDot}></span>
-                    ÉCHEC DE VÉRIFICATION
+              <div style={{ position: 'relative', zIndex: 10 }}>
+                <div className={styles.cardHeader}>
+                  <div className={styles.cardTitle}>
+                    <span className="material-symbols-outlined">fact_check</span>
+                    Rapport d'Analyse d'Intégrité
                   </div>
+                  <span className={styles.badge}>{STATUTS_RESULTAT[resultat] ?? 'ÉCHOUÉ'}</span>
                 </div>
 
-                <div className={styles.detailsBlock}>
-                  <div className={styles.detailsGrid}>
-                    <div className={styles.infoGroup}>
-                      <div>
-                        <span className={styles.label}>Statut du Traitement</span>
-                        <span className={styles.valueAlert}>{STATUTS_RESULTAT[resultat] ?? 'ÉCHOUÉ'}</span>
-                      </div>
-                      <div>
-                        <span className={styles.label}>Date d'Analyse</span>
-                        <span className={styles.valueText}>{fmtDateHeure(verifieLe)}</span>
-                      </div>
-                    </div>
-                    {blockchain && (
-                      <div className={styles.infoGroup}>
-                        <div>
-                          <span className={styles.label}>Réseau de Vérification</span>
-                          <span className={styles.networkValue}>
-                            <span className={`material-symbols-outlined ${styles.networkIcon}`}>hub</span>
-                            {LABELS_RESEAU[blockchain.reseau] ?? blockchain.reseau}
-                          </span>
-                        </div>
-                      </div>
-                    )}
+                <div className={styles.dataGrid}>
+                  <div className={styles.field}>
+                    <span className={styles.label}>Statut du Traitement</span>
+                    <span className={styles.valueAlert}>{STATUTS_RESULTAT[resultat] ?? 'ÉCHOUÉ'}</span>
                   </div>
-
-                  {hashSoumis && (
-                    <div>
-                      <span className={styles.label}>Empreinte Numérique (Hash SHA-256)</span>
-                      <div className={styles.hashContainer}>
-                        <code className={styles.hashCode}>{hashSoumis}</code>
-                        <button
-                          className={`${styles.copyBtn} ${copie ? styles.copyBtnSuccess : ''}`}
-                          onClick={handleCopy}
-                          title="Copier le hash"
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                            {copie ? 'check' : 'content_copy'}
-                          </span>
-                        </button>
-                      </div>
+                  <div className={styles.field}>
+                    <span className={styles.label}>Date d'Analyse</span>
+                    <span className={styles.valueNormal}>{fmtDateHeure(verifieLe)}</span>
+                  </div>
+                  {blockchain && (
+                    <div className={styles.field}>
+                      <span className={styles.label}>Réseau de Vérification</span>
+                      <span className={styles.networkValue}>
+                        <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>hub</span>
+                        {LABELS_RESEAU[blockchain.reseau] ?? blockchain.reseau}
+                      </span>
                     </div>
                   )}
                 </div>
 
+                {hashSoumis && (
+                  <div>
+                    <div className={styles.hashRow}>
+                      <div style={{ minWidth: 0 }}>
+                        <div className={styles.hashLabel}>Empreinte Numérique (Hash SHA-256)</div>
+                        <div className={styles.hashCode}>{hashSoumis}</div>
+                      </div>
+                      <button
+                        className={`${styles.copyBtn} ${copie ? styles.copyBtnSuccess : ''}`}
+                        onClick={handleCopy}
+                        title="Copier le hash"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                          {copie ? 'check' : 'content_copy'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className={styles.actionsBar}>
                   <button className={styles.retryBtn} onClick={reessayer}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>refresh</span>
                     Réessayer la vérification
                   </button>
                   <a className={styles.supportLink} href="mailto:support@inubil-verify.ac">
-                    <span className="material-symbols-outlined">mail</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>mail</span>
                     Contacter le support
                   </a>
                 </div>
               </div>
             </div>
 
-            <div className={styles.rightCol}>
-              <div className={styles.explanationBox}>
-                <h4 className={styles.explanationTitle}>
-                  <span className="material-symbols-outlined">help_outline</span>
-                  Pourquoi ce résultat ?
-                </h4>
-                <div className={styles.explanationList}>
-                  <div className={styles.explanationCard}>
-                    <p className={styles.cardTitle}>Modification post-émission</p>
-                    <p className={styles.cardDesc}>Le fichier original a été altéré. Même un seul pixel ou caractère modifié change l'empreinte blockchain.</p>
-                  </div>
-                  <div className={styles.explanationCard}>
-                    <p className={styles.cardTitle}>Révocation Administrative</p>
-                    <p className={styles.cardDesc}>Le diplôme a été officiellement annulé par l'université émettrice suite à une erreur ou une fraude.</p>
-                  </div>
-                  <div className={styles.explanationCard}>
-                    <p className={styles.cardTitle}>Document Inexistant</p>
-                    <p className={styles.cardDesc}>Aucune preuve d'existence de ce document n'a jamais été enregistrée sur notre registre décentralisé.</p>
-                  </div>
+            {/* CARTE DROITE : EXPLICATIONS */}
+            <div className={styles.rightCard}>
+              <div className={styles.explanationTitle}>
+                <span className="material-symbols-outlined">help_outline</span>
+                Pourquoi ce résultat ?
+              </div>
+              <div className={styles.explanationList}>
+                <div className={styles.explanationCard}>
+                  <p className={styles.explanationCardTitle}>Modification post-émission</p>
+                  <p className={styles.explanationCardDesc}>Le fichier original a été altéré. Même un seul pixel ou caractère modifié change l'empreinte blockchain.</p>
+                </div>
+                <div className={styles.explanationCard}>
+                  <p className={styles.explanationCardTitle}>Révocation Administrative</p>
+                  <p className={styles.explanationCardDesc}>Le diplôme a été officiellement annulé par l'université émettrice suite à une erreur ou une fraude.</p>
+                </div>
+                <div className={styles.explanationCard}>
+                  <p className={styles.explanationCardTitle}>Document Inexistant</p>
+                  <p className={styles.explanationCardDesc}>Aucune preuve d'existence de ce document n'a jamais été enregistrée sur notre registre décentralisé.</p>
                 </div>
               </div>
             </div>
