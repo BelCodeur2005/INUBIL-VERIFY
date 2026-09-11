@@ -174,9 +174,15 @@ export class DocumentsService {
 
     const { matieres, ...champs } = dto;
 
+    const publicVerifyUrl = this.config.get<string>(
+      'PUBLIC_VERIFY_URL',
+      'https://verify.inubil.com',
+    );
+
     const doc = await this.prisma.documents.create({
       data: {
         numero_unique: numeroUnique,
+        url_verification: `${publicVerifyUrl}/d/${numeroUnique}`,
         etudiant_id: dto.etudiant_id,
         universite_id: etudiant.universite_id,
         type_document_id: dto.type_document_id,

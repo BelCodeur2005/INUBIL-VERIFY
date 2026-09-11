@@ -90,7 +90,7 @@ model filieres {
 model documents {
   id                                               String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   numero_unique                                    String                    @unique @db.VarChar(20)
-  url_verification                                 String?                   @default(dbgenerated("('https://verify.inubil.com/d/'::text || (numero_unique)::text)")) @db.VarChar(500)
+  url_verification                                 String?                   @db.VarChar(500)
   etudiant_id                                      String                    @db.Uuid
   universite_id                                    String                    @db.Uuid
   type_document_id                                 String                    @db.Uuid
