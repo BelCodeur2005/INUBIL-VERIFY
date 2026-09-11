@@ -123,6 +123,10 @@ export default function VerificationPublique() {
 
         <div className={styles.card}>
           <div className={styles.textCenter}>
+            <div className={styles.badge}>
+              <span className={styles.pulseDot}></span>
+              Réseau Blockchain Sécurisé
+            </div>
             <h1 className={styles.title}>Vérification de Diplôme</h1>
             <p className={styles.subtitle}>
               Déposez une attestation numérique au format PDF, ou collez directement son empreinte SHA-256,

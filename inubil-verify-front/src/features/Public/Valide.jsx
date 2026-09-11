@@ -85,34 +85,34 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
       <main className={styles.main}>
         <div className={styles.mainContainer}>
 
+          {/* BANNIÈRE VALIDATION */}
           <div className={styles.banner}>
             <div className={styles.bannerIconContainer}>
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>
-                check_circle
-              </span>
+              <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>check_circle</span>
             </div>
             <div>
-              <h2 className={styles.bannerTitle}>DOCUMENT AUTHENTIQUE & VALIDE</h2>
-              <p className={styles.bannerDesc}>
+              <div className={styles.bannerTitle}>DOCUMENT AUTHENTIQUE &amp; VALIDE</div>
+              <div className={styles.bannerDesc}>
                 Ce document académique a été certifié conforme par l'institution émettrice
                 {blockchain?.enregistre ? ' et ancré avec succès sur la blockchain Polygon.' : '.'}
-              </p>
+              </div>
             </div>
           </div>
 
           <div className={styles.grid}>
 
+            {/* CARTE GAUCHE : DONNÉES CERTIFIÉES */}
             <div className={styles.leftCard}>
               <div className={styles.watermark}>
-                <span className={`material-symbols-outlined ${styles.watermarkIcon}`}>verified</span>
+                <span className="material-symbols-outlined" style={{ fontSize: '220px' }}>verified</span>
               </div>
 
               <div style={{ position: 'relative', zIndex: 10 }}>
                 <div className={styles.cardHeader}>
-                  <h3 className={styles.cardTitle}>
+                  <div className={styles.cardTitle}>
                     <span className="material-symbols-outlined">description</span>
                     Données Certifiées
-                  </h3>
+                  </div>
                   <span className={styles.badge}>{LABELS_CATEGORIE[doc.categorie] ?? doc.categorie}</span>
                 </div>
 
@@ -164,19 +164,13 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
                 </div>
 
                 {doc.matieres?.length > 0 && (
-                  <div style={{ marginBottom: '32px' }}>
+                  <div className={styles.matieresList}>
                     <span className={styles.label}>Relevé des Matières</span>
                     <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {doc.matieres.map((m, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            display: 'flex', justifyContent: 'space-between', gap: '12px',
-                            padding: '8px 12px', background: '#f8f9fa', borderRadius: '6px', fontSize: '14px',
-                          }}
-                        >
+                        <div key={i} className={styles.matiereRow}>
                           <span>{m.nom_matiere}</span>
-                          <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          <span className={styles.matiereNote}>
                             {m.note !== null ? `${m.note}/${m.note_max}` : m.resultat}
                           </span>
                         </div>
@@ -189,17 +183,17 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
                   <span className="material-symbols-outlined">picture_as_pdf</span>
                   {telechargement ? 'Génération en cours…' : 'Télécharger le rapport de vérification (PDF)'}
                 </button>
-                {erreurRapport && (
-                  <p style={{ color: '#ba1a1a', fontSize: '13px', marginTop: '8px' }}>{erreurRapport}</p>
-                )}
+                {erreurRapport && <p className={styles.downloadError}>{erreurRapport}</p>}
               </div>
             </div>
 
+            {/* CARTE DROITE : PARTAGE & QR CODE */}
             <div className={styles.rightCard}>
-              <h3 className={styles.cardTitle} style={{ marginBottom: '24px' }}>Partager cette vérification</h3>
-              <p style={{ fontSize: '14px', color: '#42474f', marginBottom: '16px' }}>
+              <div className={styles.cardTitle} style={{ fontSize: '18px' }}>Partager cette vérification</div>
+              <p className={styles.rightCardDesc}>
                 Ce lien permet à quiconque de vérifier ce document, sans compte, en quelques secondes.
               </p>
+
               <div className={styles.hashRow}>
                 <div style={{ minWidth: 0 }}>
                   <span className={styles.hashLabel}>Lien de vérification</span>
@@ -215,20 +209,18 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
               </div>
 
               {qrDataUrl && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '20px' }}>
-                  <img
-                    src={qrDataUrl}
-                    alt="QR code de vérification"
-                    style={{ width: '96px', height: '96px', borderRadius: '8px', border: '1px solid #e0e0e0' }}
-                  />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={{ fontSize: '13px', color: '#42474f', margin: 0 }}>
+                <div className={styles.qrContainer}>
+                  <div className={styles.qrBox}>
+                    <img src={qrDataUrl} alt="QR code de vérification" className={styles.qrImage} />
+                  </div>
+                  <div className={styles.qrText}>
+                    <p className={styles.qrDesc}>
                       Faites scanner ce code par une autre personne pour qu'elle vérifie le document instantanément sur son propre appareil.
                     </p>
                     <a
                       href={qrDataUrl}
                       download={`qr-verification-${doc.numero_unique}.png`}
-                      style={{ fontSize: '13px', fontWeight: 600, color: '#002c53', textDecoration: 'none' }}
+                      className={styles.qrDownloadLink}
                     >
                       Télécharger le QR code
                     </a>
@@ -237,38 +229,37 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
               )}
             </div>
 
+            {/* SECTION CRYPTOGRAPHIQUE */}
             {blockchain ? (
               <div className={styles.cryptoCard}>
                 <div className={styles.cryptoTitleGroup}>
-                  <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>lock</span>
-                  <h3 className={styles.cardTitle} style={{ color: 'inherit' }}>Preuves Cryptographiques (Immuables)</h3>
+                  <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>lock</span>
+                  <h3>Preuves Cryptographiques (Immuables)</h3>
                 </div>
 
                 <div className={styles.cryptoList}>
                   {blockchain.transaction_hash && (
                     <div className={styles.hashRow}>
                       <div style={{ minWidth: 0 }}>
-                        <span className={styles.hashLabel}>Transaction Hash</span>
-                        <code className={styles.hashCode}>{blockchain.transaction_hash}</code>
+                        <div className={styles.hashLabel}>Transaction Hash</div>
+                        <div className={styles.hashCode}>{blockchain.transaction_hash}</div>
                       </div>
                     </div>
                   )}
 
                   <div className={styles.subCryptoGrid}>
                     <div className={styles.cryptoBlock}>
-                      <span className={styles.hashLabel}>Réseau Blockchain</span>
+                      <div className={styles.hashLabel}>Réseau Blockchain</div>
                       <div className={styles.networkStatus}>
                         <span className={styles.pulseDot}></span>
-                        <span className={styles.valueBold} style={{ fontSize: '16px' }}>
-                          {LABELS_RESEAU[blockchain.reseau] ?? blockchain.reseau}
-                        </span>
+                        <span>{LABELS_RESEAU[blockchain.reseau] ?? blockchain.reseau}</span>
                       </div>
                     </div>
                     <div className={styles.cryptoBlock}>
-                      <span className={styles.hashLabel}>Ancrage on-chain</span>
-                      <span className={styles.valueBold} style={{ fontSize: '16px' }}>
+                      <div className={styles.hashLabel}>Ancrage on-chain</div>
+                      <div className={styles.networkStatus}>
                         {blockchain.enregistre ? 'Confirmé' : 'Non confirmé'}
-                      </span>
+                      </div>
                     </div>
                   </div>
 
@@ -282,15 +273,16 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
               </div>
             ) : (
               <div className={styles.cryptoCard}>
-                <p style={{ fontSize: '14px', color: '#42474f', margin: 0 }}>
+                <p className={styles.cryptoEmpty}>
                   L'ancrage blockchain n'est pas disponible pour cette vérification. L'authenticité du document
                   reste garantie par l'établissement émetteur.
                 </p>
               </div>
             )}
 
+            {/* HISTORIQUE D'AUDIT */}
             <div className={styles.auditCard}>
-              <h4 className={styles.auditTitle}>Historique d'Audit</h4>
+              <div className={styles.auditTitle}>Historique d'Audit</div>
               <div className={styles.timeline}>
                 <div className={styles.timelineItem}>
                   <div className={styles.timelineAxis}>
@@ -298,10 +290,8 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
                     <div className={styles.timelineLine}></div>
                   </div>
                   <div>
-                    <p className={styles.timelineNodeTitle}>Certifié par {doc.universite}</p>
-                    <p className={styles.label} style={{ textTransform: 'none', color: '#42474f', fontWeight: 400 }}>
-                      {fmtDate(doc.date_emission)}
-                    </p>
+                    <div className={styles.timelineNodeTitle}>Certifié par {doc.universite}</div>
+                    <div className={styles.timelineSub}>{fmtDate(doc.date_emission)}</div>
                   </div>
                 </div>
 
@@ -312,10 +302,8 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
                       <div className={styles.timelineLine}></div>
                     </div>
                     <div>
-                      <p className={styles.timelineNodeTitle}>Ancrage Blockchain</p>
-                      <p className={styles.label} style={{ textTransform: 'none', color: '#42474f', fontWeight: 400 }}>
-                        {fmtDateHeure(blockchain.date_enregistrement)}
-                      </p>
+                      <div className={styles.timelineNodeTitle}>Ancrage Blockchain</div>
+                      <div className={styles.timelineSub}>{fmtDateHeure(blockchain.date_enregistrement)}</div>
                     </div>
                   </div>
                 )}
@@ -325,20 +313,18 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
                     <div className={styles.timelineDotOutline}></div>
                   </div>
                   <div>
-                    <p className={styles.timelineNodeTitleActive}>Consultation actuelle</p>
-                    <p className={styles.label} style={{ textTransform: 'none', color: '#42474f', fontWeight: 400 }}>
-                      {fmtDateHeure(verifieLe)}
-                    </p>
+                    <div className={styles.timelineNodeTitleActive}>Consultation actuelle</div>
+                    <div className={styles.timelineSub}>{fmtDateHeure(verifieLe)}</div>
                   </div>
                 </div>
               </div>
             </div>
 
           </div>
-
         </div>
       </main>
 
+      {/* MODALE EXPLORATEUR BLOCKCHAIN */}
       {explorerOuvert && blockchain && (
         <div className={styles.modalOverlay} onClick={() => setExplorerOuvert(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -368,14 +354,14 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
 
             <div className={styles.modalField}>
               <span className={styles.hashLabel}>Transaction Hash</span>
-              <div className={styles.hashRow}>
+              <div className={styles.infoRow}>
                 <code className={styles.hashCode} style={{ wordBreak: 'break-all' }}>{blockchain.transaction_hash}</code>
                 <button
-                  className={`${styles.copyBtn} ${copieHash ? styles.copyBtnSuccess : ''}`}
+                  className={`${styles.copyIconButton} ${copieHash ? styles.copyBtnSuccess : ''}`}
                   onClick={copierHash}
                   title="Copier le hash"
                 >
-                  <span className="material-symbols-outlined">{copieHash ? 'check' : 'content_copy'}</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{copieHash ? 'check' : 'content_copy'}</span>
                 </button>
               </div>
             </div>
@@ -398,6 +384,8 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
                 <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>open_in_new</span>
               </a>
             )}
+
+            <div className={styles.modalBottomSpacer} />
           </div>
         </div>
       )}
