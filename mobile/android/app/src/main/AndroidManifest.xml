@@ -5,7 +5,7 @@
          deja mais uniquement pour les besoins internes du hot reload). -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="inubil_verify_mobile"
+        android:label="INUBIL Verify"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
