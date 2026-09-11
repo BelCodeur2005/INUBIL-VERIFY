@@ -180,6 +180,25 @@ describe('DocumentsService', () => {
       expect(result.statut).toBe('brouillon');
     });
 
+    it('fixe url_verification explicitement à partir de PUBLIC_VERIFY_URL (pas de colonne générée en base)', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue(makeActeur());
+      prisma.etudiants.findFirst.mockResolvedValue({ universite_id: UNIV_ID });
+      prisma.types_document.findFirst.mockResolvedValue({ id: TYPE_ID });
+      prisma.documents.findFirst.mockResolvedValue(null);
+      prisma.documents.create.mockResolvedValue(makeDocument());
+
+      await service.creer(dto, ACTEUR_ID);
+
+      expect(config.get).toHaveBeenCalledWith(
+        'PUBLIC_VERIFY_URL',
+        'https://verify.inubil.com',
+      );
+      const appelCreate = prisma.documents.create.mock.calls[0][0];
+      expect(appelCreate.data.url_verification).toBe(
+        `https://verify.inubil.com/d/${appelCreate.data.numero_unique}`,
+      );
+    });
+
     it('un utilisateur sans université ET sans rôle super_admin est refusé, pas bypassé (pas de fail-open)', async () => {
       prisma.utilisateurs.findFirst.mockResolvedValue({
         universite_id: null,
