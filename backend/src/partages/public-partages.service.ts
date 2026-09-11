@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { StorageService } from '../storage/storage.service';
+import { ConfigurationsService } from '../configurations/configurations.service';
 import {
   PartagePublicResponseDto,
   DocumentPartageDto,
@@ -19,7 +21,16 @@ export class PublicPartagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsInApp: NotificationsService,
+    private readonly storage: StorageService,
+    private readonly configurations: ConfigurationsService,
   ) {}
+
+  /** Duree (en secondes) de validite des liens presignes S3/R2, pilotable via configurations. */
+  private async presignedUrlDureeSecondes(): Promise<number> {
+    const brut = await this.configurations.get('presigned_url_duree_min', '15');
+    const min = Number(brut);
+    return (Number.isFinite(min) && min > 0 ? min : 15) * 60;
+  }
 
   /**
    * Accès public à un document partagé via son token.
@@ -117,6 +128,19 @@ export class PublicPartagesService {
       }),
     );
 
+    let pdfUrl: string | null = null;
+    if (doc.pdf_url && doc.statut !== 'revoque') {
+      const expires = await this.presignedUrlDureeSecondes();
+      pdfUrl = await this.storage
+        .getPresignedUrl(doc.pdf_url, expires)
+        .catch((err: Error) => {
+          this.logger.error(
+            `URL presignee PDF echouee pour partage ${partage.id} : ${err.message}`,
+          );
+          return null;
+        });
+    }
+
     const documentDto: DocumentPartageDto = {
       numero_unique: doc.numero_unique,
       type_document: (doc as any).types_document.nom,
@@ -132,6 +156,7 @@ export class PublicPartagesService {
       universite: (doc as any).universites.nom,
       statut: doc.statut,
       url_verification: doc.url_verification ?? null,
+      pdf_url: pdfUrl,
     };
 
     return {

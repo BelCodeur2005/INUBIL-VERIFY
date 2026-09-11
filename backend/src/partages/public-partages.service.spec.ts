@@ -3,6 +3,8 @@ import { NotFoundException, GoneException } from '@nestjs/common';
 import { PublicPartagesService } from './public-partages.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { StorageService } from '../storage/storage.service';
+import { ConfigurationsService } from '../configurations/configurations.service';
 
 const TOKEN = 'a'.repeat(64);
 const PARTAGE_ID = 'par-0000-0000-0000-000000000001';
@@ -55,19 +57,33 @@ const makeNotificationsInApp = () => ({
   creer: jest.fn().mockResolvedValue(undefined),
 });
 
+const makeStorage = () => ({
+  getPresignedUrl: jest.fn().mockResolvedValue(null),
+});
+
+const makeConfigurations = () => ({
+  get: jest.fn().mockResolvedValue('15'),
+});
+
 describe('PublicPartagesService', () => {
   let service: PublicPartagesService;
   let prisma: ReturnType<typeof makePrisma>;
   let notificationsInApp: ReturnType<typeof makeNotificationsInApp>;
+  let storage: ReturnType<typeof makeStorage>;
+  let configurations: ReturnType<typeof makeConfigurations>;
 
   beforeEach(async () => {
     prisma = makePrisma();
     notificationsInApp = makeNotificationsInApp();
+    storage = makeStorage();
+    configurations = makeConfigurations();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PublicPartagesService,
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsService, useValue: notificationsInApp },
+        { provide: StorageService, useValue: storage },
+        { provide: ConfigurationsService, useValue: configurations },
       ],
     }).compile();
     service = module.get(PublicPartagesService);
@@ -226,5 +242,44 @@ describe('PublicPartagesService', () => {
 
     expect(result.document.matieres[0].nom_matiere).toBe('Algorithmique');
     expect(result.document.matieres[0].note).toBe(14);
+  });
+
+  // ── pdf_url ──────────────────────────────────────────────────────────────
+
+  it('inclut un lien presigne vers le PDF si le document en a un', async () => {
+    prisma.partages_document.findFirst.mockResolvedValue(
+      makePartage({ documents: makeDoc({ pdf_url: 'universites/x/documents/x.pdf' }) }),
+    );
+    storage.getPresignedUrl.mockResolvedValue('https://r2.example.com/signed-url');
+
+    const result = await service.accederParToken(TOKEN);
+
+    expect(storage.getPresignedUrl).toHaveBeenCalledWith(
+      'universites/x/documents/x.pdf',
+      900,
+    );
+    expect(result.document.pdf_url).toBe('https://r2.example.com/signed-url');
+  });
+
+  it("n'inclut pas de pdf_url si le document n'a pas de PDF associé", async () => {
+    prisma.partages_document.findFirst.mockResolvedValue(makePartage());
+
+    const result = await service.accederParToken(TOKEN);
+
+    expect(storage.getPresignedUrl).not.toHaveBeenCalled();
+    expect(result.document.pdf_url).toBeNull();
+  });
+
+  it("n'inclut pas de pdf_url pour un document révoqué (lien de partage encore actif)", async () => {
+    prisma.partages_document.findFirst.mockResolvedValue(
+      makePartage({
+        documents: makeDoc({ pdf_url: 'universites/x/documents/x.pdf', statut: 'revoque' }),
+      }),
+    );
+
+    const result = await service.accederParToken(TOKEN);
+
+    expect(storage.getPresignedUrl).not.toHaveBeenCalled();
+    expect(result.document.pdf_url).toBeNull();
   });
 });

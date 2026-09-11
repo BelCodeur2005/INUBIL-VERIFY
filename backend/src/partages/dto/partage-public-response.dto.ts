@@ -24,10 +24,15 @@ export class DocumentPartageDto {
   @ApiProperty({ example: 'Licence' })
   type_document: string;
 
-  @ApiProperty({ example: 'diplome', enum: ['diplome', 'releve_notes', 'attestation'] })
+  @ApiProperty({
+    example: 'diplome',
+    enum: ['diplome', 'releve_notes', 'attestation'],
+  })
   categorie: string;
 
-  @ApiPropertyOptional({ example: 'Licence en Informatique option Génie Logiciel' })
+  @ApiPropertyOptional({
+    example: 'Licence en Informatique option Génie Logiciel',
+  })
   filiere: string | null;
 
   @ApiPropertyOptional({ example: '2025-2026' })
@@ -54,8 +59,16 @@ export class DocumentPartageDto {
   @ApiProperty({ example: 'actif', enum: ['actif', 'revoque', 'expire'] })
   statut: string;
 
-  @ApiPropertyOptional({ example: 'https://verify.inubil.com/d/INUB-2026-0001' })
+  @ApiPropertyOptional({
+    example: 'https://verify.inubil.com/d/INUB-2026-0001',
+  })
   url_verification: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Lien presigne S3/R2 vers le PDF officiel du document, valide temporairement. Absent si aucun PDF associe.',
+  })
+  pdf_url: string | null;
 }
 
 class InfoPartageDto {
