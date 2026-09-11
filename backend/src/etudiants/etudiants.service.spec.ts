@@ -7,6 +7,7 @@ import {
 import { EtudiantsService } from './etudiants.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { ConfigService } from '@nestjs/config';
 import { ConfigurationsService } from '../configurations/configurations.service';
 import { StorageService } from '../storage/storage.service';
 
@@ -142,6 +143,10 @@ describe('EtudiantsService', () => {
         { provide: MailService, useValue: mail },
         { provide: ConfigurationsService, useValue: configurations },
         { provide: StorageService, useValue: storage },
+        {
+          provide: ConfigService,
+          useValue: { get: (_key: string, defaultValue?: string) => defaultValue },
+        },
       ],
     }).compile();
 

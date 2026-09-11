@@ -6,6 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { ConfigurationsService } from '../configurations/configurations.service';
@@ -37,6 +38,7 @@ export class EtudiantsService {
     private readonly mail: MailService,
     private readonly configurations: ConfigurationsService,
     private readonly storage: StorageService,
+    private readonly config: ConfigService,
   ) {}
 
   /**
@@ -231,7 +233,11 @@ export class EtudiantsService {
     // Notification email au destinataire externe (fire & forget)
     if (dto.email_destinataire) {
       const etudiant = await this.trouverEtudiantDuCompte(userId);
-      const urlPartage = `https://verify.inubil.com/partages/${tokenAcces}`;
+      const publicVerifyUrl = this.config.get<string>(
+        'PUBLIC_VERIFY_URL',
+        'https://verify.inubil.com',
+      );
+      const urlPartage = `${publicVerifyUrl}/partage/${tokenAcces}`;
       this.mail
         .sendPartageCreé(dto.email_destinataire, {
           prenomNomEtudiant: `${etudiant.prenom} ${etudiant.nom}`,
