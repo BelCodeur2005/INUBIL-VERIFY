@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/api/api_config.dart';
 import '../../theme/app_theme.dart';
 
 enum StatutPartage { actif, revoque, expire }
@@ -18,7 +19,7 @@ const _visuelsStatutPartage = {
 
 VisuelStatutPartage visuelPourPartage(StatutPartage statut) => _visuelsStatutPartage[statut]!;
 
-const String urlPartageBase = 'verify.inubil.com/partages/';
+const String urlPartageBase = '${ApiConfig.publicSiteBaseUrl}/partage/';
 
 /// Represente un lien de partage genere par l'etudiant pour un document.
 /// Champs alignes sur GET /etudiants/moi/partages (etudiants.api.js).

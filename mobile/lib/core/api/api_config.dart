@@ -9,4 +9,12 @@ class ApiConfig {
     'API_BASE_URL',
     defaultValue: 'http://localhost:3000',
   );
+
+  /// URL du site web public (page de vérification /d/:id, /partage/:token).
+  /// Distincte de [baseUrl] (l'API) — surchargable de la meme facon :
+  /// `flutter build apk --dart-define=PUBLIC_VERIFY_URL=https://mon-site.example.com`
+  static const publicSiteBaseUrl = String.fromEnvironment(
+    'PUBLIC_VERIFY_URL',
+    defaultValue: 'https://inubil-verify.onrender.com',
+  );
 }
