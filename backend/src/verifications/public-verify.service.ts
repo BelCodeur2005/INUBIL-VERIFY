@@ -166,6 +166,7 @@ export class PublicVerifyService {
             date_emission: doc.date_emission,
             hash_sha256: doc.hash_sha256 ?? undefined,
             transaction_hash: doc.transaction_hash ?? undefined,
+            url_verification: doc.url_verification ?? undefined,
           }
         : {}),
     };
