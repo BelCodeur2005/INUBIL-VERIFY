@@ -296,8 +296,18 @@ class _CarteDiplome extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(diplome.typeDocument, style: AppTypography.bodyMd.copyWith(fontWeight: FontWeight.w700)),
-                    Text(diplome.universite, style: AppTypography.bodySm),
+                    Text(
+                      diplome.typeDocument,
+                      style: AppTypography.bodyMd.copyWith(fontWeight: FontWeight.w700),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      diplome.universite,
+                      style: AppTypography.bodySm,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),

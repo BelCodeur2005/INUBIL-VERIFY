@@ -405,9 +405,19 @@ class _LigneSession extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('${session.appareil} · ${session.navigateur}', style: AppTypography.bodyMd.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                '${session.appareil} · ${session.navigateur}',
+                style: AppTypography.bodyMd.copyWith(fontWeight: FontWeight.w700),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               const SizedBox(height: 2),
-              Text('${session.ipAddress ?? 'IP inconnue'} — connecté le ${session.dateFormatee}', style: AppTypography.bodySm),
+              Text(
+                '${session.ipAddress ?? 'IP inconnue'}, connecté le ${session.dateFormatee}',
+                style: AppTypography.bodySm,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),

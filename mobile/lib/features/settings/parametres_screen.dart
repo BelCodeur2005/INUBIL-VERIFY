@@ -361,7 +361,14 @@ class _LigneInfoVerrouillee extends StatelessWidget {
             children: [
               Icon(icone, size: 18, color: AppColors.textMuted),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(child: Text(valeur, style: AppTypography.bodyMd.copyWith(color: AppColors.textSecondary))),
+              Expanded(
+                child: Text(
+                  valeur,
+                  style: AppTypography.bodyMd.copyWith(color: AppColors.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               const Icon(Icons.lock_outline_rounded, size: 15, color: AppColors.textMuted),
             ],
           ),
@@ -404,6 +411,8 @@ class _LigneInfo extends StatelessWidget {
                   color: attenue ? AppColors.textMuted : AppColors.textPrimary,
                   fontStyle: attenue ? FontStyle.italic : FontStyle.normal,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
