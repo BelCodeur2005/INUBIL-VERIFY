@@ -1,7 +1,27 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import PDFDocument = require('pdfkit');
 import { QrCodeService } from './qr-code.service';
+
+/**
+ * Resout le chemin du logo en testant plusieurs profondeurs relatives a
+ * __dirname : le build Nest compile parfois src/documents/*.ts vers
+ * dist/documents/*.js, parfois vers dist/src/documents/*.js selon la
+ * structure du projet (cf. Dockerfile/package.json start:prod, deja corrige
+ * une fois pour dist/main -> dist/src/main), alors que nest-cli.json copie
+ * toujours les assets statiques vers ./dist/assets (jamais ./dist/src/assets).
+ * Un seul chemin relatif fige est donc fragile — on teste les candidats
+ * plausibles plutot que de recasser silencieusement au prochain changement
+ * de structure de build.
+ */
+function resoudreLogoPath(): string | null {
+  const candidats = [
+    join(__dirname, '..', 'assets', 'inubil-logo.png'),
+    join(__dirname, '..', '..', 'assets', 'inubil-logo.png'),
+  ];
+  return candidats.find((p) => existsSync(p)) ?? null;
+}
 
 export interface RapportVerificationData {
   // Résultat
@@ -24,14 +44,16 @@ export interface RapportVerificationData {
   url_verification?: string;
 }
 
-// Palette INUBIL
-const NAVY = '#1a1a2e';
-const OR = '#c9a84c';
-const GRIS = '#555555';
+// Palette INUBIL — alignee sur les couleurs reellement utilisees par les
+// pages publiques du front (Valide.module.css / Revoque.module.css / kpiAmber
+// de DashboardEtablissement.module.css), pas une palette inventee.
+const NAVY = '#062362';
+const OR = '#0350bd';
+const GRIS = '#475569';
 const BLANC = '#ffffff';
-const VERT = '#2d7a3a';
-const ROUGE = '#b91c1c';
-const ORANGE = '#c2710c';
+const VERT = '#16a34a';
+const ROUGE = '#dc2626';
+const ORANGE = '#a5680f';
 
 const LABELS_TYPE: Record<string, string> = {
   lien_unique: 'Scan QR code / lien unique',
@@ -41,6 +63,8 @@ const LABELS_TYPE: Record<string, string> = {
 
 @Injectable()
 export class RapportVerificationPdfService {
+  private readonly logger = new Logger(RapportVerificationPdfService.name);
+
   constructor(private readonly qr: QrCodeService) {}
 
   async generateRapport(data: RapportVerificationData): Promise<Buffer> {
@@ -84,13 +108,17 @@ export class RapportVerificationPdfService {
     doc.rect(0, 0, width, headerHeight).fill(NAVY);
 
     // Logo INUBIL (512x269 RGBA - fond transparent)
-    const logoPath = join(__dirname, '..', 'assets', 'inubil-logo.png');
+    const logoPath = resoudreLogoPath();
     const logoH = 60;
     const logoW = Math.round(logoH * (512 / 269)); // ratio original ~113px
     const logoY = (headerHeight - logoH) / 2;
     try {
+      if (!logoPath) throw new Error('inubil-logo.png introuvable');
       doc.image(logoPath, marge, logoY, { height: logoH, width: logoW });
-    } catch {
+    } catch (err) {
+      this.logger.warn(
+        `Logo INUBIL non chargé dans le rapport PDF, repli sur le texte : ${(err as Error).message}`,
+      );
       // Fallback texte si le fichier est introuvable
       doc
         .fontSize(20)
