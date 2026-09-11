@@ -204,6 +204,19 @@ export default function PartageDocument() {
                 </div>
               )}
 
+              {doc.pdf_url && (
+                <a
+                  className={styles.downloadBtn}
+                  href={doc.pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ marginBottom: '10px', textDecoration: 'none', boxSizing: 'border-box' }}
+                >
+                  <span className="material-symbols-outlined">description</span>
+                  Télécharger le document original (PDF)
+                </a>
+              )}
+
               <button className={styles.downloadBtn} onClick={telecharger} disabled={telechargement}>
                 <span className="material-symbols-outlined">picture_as_pdf</span>
                 {telechargement ? 'Génération en cours…' : 'Télécharger le rapport de vérification (PDF)'}
