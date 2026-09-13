@@ -24,6 +24,19 @@
   gap: 24px;
 }
 
+@media (max-width: 640px) {
+  .main {
+    padding-top: 20px;
+  }
+
+  .mainContainer {
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-bottom: 40px;
+    gap: 16px;
+  }
+}
+
 /* ---------- Etat chargement / erreur ---------- */
 .centerBox {
   max-width: 480px;
@@ -74,6 +87,18 @@
 .banner .material-symbols-outlined {
   font-size: 32px;
   color: #0060ac;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .banner {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .banner .material-symbols-outlined {
+    font-size: 26px;
+  }
 }
 
 .bannerAlert {
@@ -142,6 +167,13 @@
 @media (min-width: 1024px) {
   .rightCard {
     grid-column: span 4 / span 4;
+  }
+}
+
+@media (max-width: 640px) {
+  .leftCard,
+  .rightCard {
+    padding: 20px;
   }
 }
 
@@ -221,6 +253,7 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 15px;
   color: #191c1d;
+  word-break: break-all;
 }
 
 .matiereRow {
