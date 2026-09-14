@@ -12,6 +12,7 @@
  *      agent_saisie, etudiant, autre_universite, employeur) + leurs permissions
  *   3. Compte admin  (admin@inubil.com / Admin123!)
  *   4. Universite    ISTAMA INUBIL (statut active)
+ *   4bis. Compte responsable_universite (responsable@inubil.com / Responsable123!)
  *   5. Type document Licence en Informatique (categorie diplome)
  *   6. Mention       Assez Bien (12-14/20)
  *   7. Etudiant      KAMGA Bertrand (ISTAMA-2023-0001)
@@ -30,6 +31,8 @@ const prisma = new PrismaClient();
 
 const DEFAULT_ADMIN_EMAIL = 'admin@inubil.com';
 const DEFAULT_ADMIN_PASSWORD = 'Admin123!';
+const DEFAULT_RESPONSABLE_EMAIL = 'responsable@inubil.com';
+const DEFAULT_RESPONSABLE_PASSWORD = 'Responsable123!';
 const DEFAULT_AGENT_EMAIL = 'agent@inubil.com';
 const DEFAULT_AGENT_PASSWORD = 'Agent123!';
 const DEFAULT_DIRECTEUR_EMAIL = 'directeur@inubil.com';
@@ -327,6 +330,42 @@ async function main(): Promise<void> {
     console.log(`Universite cree : ${universite.nom_court} (${universite.id})`);
   } else {
     console.log(`Universite deja presente : ${universite.nom_court} (${universite.id})`);
+  }
+
+  // ── 5bis. Compte responsable_universite de test (gestion complete de son etablissement) ──
+  const responsableEmail = DEFAULT_RESPONSABLE_EMAIL;
+  const responsablePassword = DEFAULT_RESPONSABLE_PASSWORD;
+  const roleResponsable = await prisma.roles.findFirst({
+    where: { nom: 'responsable_universite', universite_id: null },
+  });
+  if (!roleResponsable) {
+    throw new Error('Role "responsable_universite" introuvable — verifier ROLES_METIER.');
+  }
+
+  let responsable = await prisma.utilisateurs.findUnique({ where: { email: responsableEmail } });
+  if (responsable) {
+    await prisma.utilisateurs.update({
+      where: { email: responsableEmail },
+      data: { tentatives_connexion: 0, bloque_jusqu: null },
+    });
+    console.log(`Compte responsable universite deja present : ${responsableEmail} (deverrouille, mot de passe inchange).`);
+  } else {
+    const roundsResponsable = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12);
+    const motDePasseHacheResponsable = await bcrypt.hash(responsablePassword, roundsResponsable);
+    responsable = await prisma.utilisateurs.create({
+      data: {
+        nom: 'Responsable',
+        prenom: 'ISTAMA',
+        email: responsableEmail,
+        mot_de_passe: motDePasseHacheResponsable,
+        statut: 'actif',
+        email_verifie: true,
+        role_id: roleResponsable.id,
+        universite_id: universite.id,
+      },
+    });
+    console.log(`Compte responsable universite cree : ${responsableEmail}`);
+    console.log(`  mot de passe (defaut dev) : ${responsablePassword}`);
   }
 
   // ── 6. Types de document ────────────────────────────────────────────────────
@@ -789,6 +828,7 @@ async function main(): Promise<void> {
   // ── Résumé ──────────────────────────────────────────────────────────────────
   console.log('\n=== SEED TERMINE ===');
   console.log(`Admin     : ${adminEmail} / ${motDePasseFourniParEnv ? '(env)' : adminPassword}`);
+  console.log(`Responsable : ${responsableEmail} / ${responsablePassword}`);
   console.log(`Agent     : ${agentEmail} / ${agentPassword} (scolarite, tous departements)`);
   console.log(`Chef Meca : ${chefMecaEmail} / ${chefMecaPassword} (scope departement Mecanique)`);
   console.log(`Directeur : ${directeurEmail} / ${directeurPassword}`);
