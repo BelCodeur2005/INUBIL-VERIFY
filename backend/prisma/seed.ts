@@ -150,6 +150,7 @@ const ROLES_METIER: Array<{ nom: string; description: string; permissions: strin
     nom: 'responsable_universite',
     description: 'Gestion complete de son etablissement : staff, emission/validation/revocation de diplomes, integrations (cles API, webhooks, partenariats)',
     permissions: [
+      'univ:read', 'univ:edit',
       'user:read', 'user:edit', 'user:assign_role',
       'doc:create', 'doc:validate', 'doc:revoke', 'doc:read',
       'student:read',
