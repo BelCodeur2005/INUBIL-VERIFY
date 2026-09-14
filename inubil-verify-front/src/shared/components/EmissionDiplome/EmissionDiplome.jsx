@@ -193,6 +193,9 @@ export default function EmissionDiplome() {
   const [diplome, setDiplome] = useState(DIPLOME_VIDE);
   const typeSelectionne = typesDocument.find((t) => t.id === diplome.type_document_id);
   const aDesMatieres = Boolean(typeSelectionne?.a_matieres);
+  // Mention (Bien, Tres Bien...) n'a de sens que pour un diplome note — pas pour un
+  // certificat/attestation de scolarite, un releve, etc. (categorie_document, schema.prisma).
+  const aUneMention = typeSelectionne?.categorie === 'diplome';
 
   useEffect(() => {
     let annule = false;
@@ -886,14 +889,21 @@ export default function EmissionDiplome() {
                   <label>Type de diplôme</label>
                   <select
                     value={diplome.type_document_id}
-                    onChange={(e) => setDiplome({ ...diplome, type_document_id: e.target.value })}
+                    onChange={(e) => {
+                      const nouveauType = typesDocument.find((t) => t.id === e.target.value);
+                      setDiplome({
+                        ...diplome,
+                        type_document_id: e.target.value,
+                        mention_id: nouveauType?.categorie === 'diplome' ? diplome.mention_id : '',
+                      });
+                    }}
                     disabled={loadingReferentiels}
                   >
                     <option value="" disabled>{loadingReferentiels ? 'Chargement...' : 'Choisir...'}</option>
                     {typesDocument.map((t) => <option key={t.id} value={t.id}>{t.nom}</option>)}
                   </select>
                 </div>
-                <div className={`${styles.inputGroup} ${styles.colSpan2}`}>
+                <div className={`${styles.inputGroup} ${aUneMention ? styles.colSpan2 : styles.colSpan3}`}>
                   <label>Filière</label>
                   <select
                     value={diplome.filiere_id}
@@ -904,17 +914,19 @@ export default function EmissionDiplome() {
                     {filieres.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
                   </select>
                 </div>
-                <div className={styles.inputGroup}>
-                  <label>Mention</label>
-                  <select
-                    value={diplome.mention_id}
-                    onChange={(e) => setDiplome({ ...diplome, mention_id: e.target.value })}
-                    disabled={loadingReferentiels}
-                  >
-                    <option value="">{loadingReferentiels ? 'Chargement...' : 'Aucune'}</option>
-                    {mentions.map((m) => <option key={m.id} value={m.id}>{m.nom}</option>)}
-                  </select>
-                </div>
+                {aUneMention && (
+                  <div className={styles.inputGroup}>
+                    <label>Mention</label>
+                    <select
+                      value={diplome.mention_id}
+                      onChange={(e) => setDiplome({ ...diplome, mention_id: e.target.value })}
+                      disabled={loadingReferentiels}
+                    >
+                      <option value="">{loadingReferentiels ? 'Chargement...' : 'Aucune'}</option>
+                      {mentions.map((m) => <option key={m.id} value={m.id}>{m.nom}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div className={styles.inputGroup}>
                   <label>Date d'émission</label>
                   <input type="date" value={diplome.date_emission} onChange={(e) => majDateEmission(e.target.value)} />
