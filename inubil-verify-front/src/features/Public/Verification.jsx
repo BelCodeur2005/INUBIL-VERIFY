@@ -48,8 +48,8 @@ export default function Verification() {
   if (etat === 'chargement') {
     return (
       <Chrome>
-        <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#002c53' }}>hourglass_empty</span>
-        <h2 style={{ color: '#002c53', marginTop: '16px' }}>Vérification en cours…</h2>
+        <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--color-primary-dark)' }}>hourglass_empty</span>
+        <h2 style={{ color: 'var(--color-primary-dark)', marginTop: '16px' }}>Vérification en cours…</h2>
         <p style={{ color: '#42474f' }}>Interrogation du registre INUBIL pour « {identifiant} ».</p>
       </Chrome>
     );
@@ -59,7 +59,7 @@ export default function Verification() {
     return (
       <Chrome>
         <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#ba1a1a' }}>cloud_off</span>
-        <h2 style={{ color: '#002c53', marginTop: '16px' }}>Service de vérification indisponible</h2>
+        <h2 style={{ color: 'var(--color-primary-dark)', marginTop: '16px' }}>Service de vérification indisponible</h2>
         <p style={{ color: '#42474f', marginBottom: '20px' }}>
           Impossible de contacter le registre INUBIL pour le moment. Réessayez dans quelques instants.
         </p>

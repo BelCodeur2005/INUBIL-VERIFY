@@ -1,6 +1,6 @@
 :root {
   /* Aligne sur le langage visuel des pages /universite (ListeDocuments,
-     JournalAudit...) — bleu #2b56cb, pas la marine #002c53 d'origine. */
+     JournalAudit...) — bleu #2b56cb, pas la marine var(--color-primary-dark) d'origine. */
   --primary: #2b56cb;
   --primary-container: #1e429f;
   --secondary: #2b56cb;
@@ -35,7 +35,7 @@
 /* Sidebar */
 .sidebar {
   width: 16rem;
-  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   color: #ffffff;
   display: flex;
   flex-direction: column;

@@ -18,17 +18,21 @@
   padding-left: 24px;
   padding-right: 24px;
   height: 5.5rem;
+  gap: 12px;
 }
 
 .brandGroup {
   display: flex;
   align-items: center;
   text-decoration: none;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .logo {
   height: 80px;
   width: auto;
+  max-width: 100%;
   object-fit: contain;
 }
 
@@ -36,6 +40,7 @@
   display: flex;
   align-items: center;
   gap: 24px;
+  flex-shrink: 0;
 }
 
 .navLink {
@@ -51,8 +56,41 @@
   text-decoration: none;
   cursor: pointer;
   transition: color 0.2s;
+  white-space: nowrap;
 }
 
 .navLink:hover {
-  color: #0060ac;
+  color: var(--color-primary-hover);
+}
+
+@media (max-width: 640px) {
+  .headerContainer {
+    padding-left: 16px;
+    padding-right: 16px;
+    height: 3.75rem;
+    gap: 8px;
+  }
+
+  .logo {
+    height: 40px;
+  }
+
+  .navGroup {
+    gap: 14px;
+  }
+
+  .navLink {
+    font-size: 10px;
+    letter-spacing: 0.03em;
+  }
+}
+
+@media (max-width: 360px) {
+  .navGroup {
+    gap: 10px;
+  }
+
+  .navLink {
+    font-size: 9px;
+  }
 }

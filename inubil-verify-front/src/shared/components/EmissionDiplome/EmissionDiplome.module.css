@@ -68,16 +68,16 @@
 }
 
 .stepNode_active {
-  border-color: #0350bd;
-  color: #0350bd;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
   background: #eff6ff;
-  box-shadow: 0 0 0 4px rgba(3, 80, 189, 0.12);
+  box-shadow: 0 0 0 4px rgba(var(--color-primary-rgb), 0.12);
   transform: scale(1.08);
 }
 
 .stepNode_done {
-  border-color: #0350bd;
-  background: #0350bd;
+  border-color: var(--color-primary);
+  background: var(--color-primary);
   color: #ffffff;
   cursor: pointer;
 }
@@ -95,7 +95,7 @@
 }
 
 .stepLabelActive {
-  color: #0350bd;
+  color: var(--color-primary);
 }
 
 .stepTrack {
@@ -111,7 +111,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: #0350bd;
+  background: var(--color-primary);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.35s ease;
@@ -174,12 +174,12 @@
 }
 
 .modeBtn:hover {
-  color: #0350bd;
+  color: var(--color-primary);
 }
 
 .modeBtnActive {
   background: #ffffff;
-  color: #0350bd;
+  color: var(--color-primary);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
 }
 
@@ -217,8 +217,8 @@
 }
 
 .searchInput:focus {
-  border-color: #0350bd;
-  box-shadow: 0 0 0 3px rgba(3, 80, 189, 0.15);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.15);
 }
 
 .resultsList {
@@ -263,7 +263,7 @@
 
 .spinnerIcon {
   animation: spin 0.8s linear infinite;
-  color: #0350bd;
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -298,7 +298,7 @@
 }
 
 .resultCardSelected {
-  border-color: #0350bd;
+  border-color: var(--color-primary);
   background: #eff6ff;
 }
 
@@ -335,7 +335,7 @@
 }
 
 .resultCheck {
-  color: #0350bd;
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -375,8 +375,8 @@
 
 .inputGroup input:focus,
 .inputGroup select:focus {
-  border-color: #0350bd;
-  box-shadow: 0 0 0 3px rgba(3, 80, 189, 0.15);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.15);
 }
 
 .inputGroup input[aria-invalid="true"] {
@@ -588,6 +588,253 @@
 
 .moyenneBar strong { font-size: 1rem; }
 
+/* Étape 2 — file d'attente de diplômes pour l'étudiant sélectionné */
+.queueHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.queueTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0b192c;
+  margin: 0;
+}
+
+.queueCountBadge {
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+
+.queueList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.queueItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.queueItemIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.queueItemTexts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.queueItemTexts strong {
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.queueItemTexts span {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.queueItemMissingFile {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #b45309 !important;
+}
+
+.queueItemActions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.queueItemBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.queueItemBtn:hover {
+  background: #eef2f7;
+  color: #334155;
+}
+
+.queueItemBtnDanger:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.editingBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #eff4ff;
+  border: 1px solid #dbe6fd;
+  color: #1e3a8a;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.editingBanner span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editingBanner button {
+  background: none;
+  border: none;
+  color: #2b56cb;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.composerDivider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 -6px;
+}
+
+.composerDivider span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.composerDivider::before,
+.composerDivider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.addToQueueBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-primary);
+  color: #ffffff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.addToQueueBtn:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.addToQueueBtn:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
+/* Étape 3 — récapitulatif multi-diplômes */
+.recapDiplomeList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recapDiplomeCard {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recapDiplomeCard strong {
+  font-size: 0.88rem;
+  color: #0f172a;
+}
+
+/* Écran de succès — resultats par diplome */
+.resultatsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  margin: 8px 0 4px;
+}
+
+.resultatRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.resultatRow svg {
+  flex-shrink: 0;
+}
+
+.resultatRowOk {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.resultatRowError {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.successActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 /* Étape 3 — upload */
 .uploadArea {
   border: 2px dashed #cbd5e1;
@@ -602,12 +849,12 @@
 }
 
 .uploadAreaDragging {
-  border-color: #0350bd;
+  border-color: var(--color-primary);
   background: #eff6ff;
 }
 
 .uploadIcon {
-  color: #0350bd;
+  color: var(--color-primary);
   margin-bottom: 6px;
 }
 
@@ -625,7 +872,7 @@
 }
 
 .browseBtn {
-  background: #0350bd;
+  background: var(--color-primary);
   color: #ffffff;
   border: none;
   padding: 9px 18px;
@@ -636,7 +883,7 @@
 }
 
 .browseBtn:hover {
-  background: #023e96;
+  background: var(--color-primary-dark);
 }
 
 .fileCard {
@@ -653,7 +900,7 @@
   height: 38px;
   border-radius: 8px;
   background: #eff6ff;
-  color: #0350bd;
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -718,7 +965,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  color: #0350bd;
+  color: var(--color-primary);
   margin: 0 0 6px 0;
 }
 
@@ -772,7 +1019,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background-color: #0350bd;
+  background-color: var(--color-primary);
   color: #ffffff;
   border: none;
   padding: 10px 20px;
@@ -785,7 +1032,7 @@
 }
 
 .primaryBtn:hover:not(:disabled) {
-  background-color: #023e96;
+  background-color: var(--color-primary-dark);
 }
 
 .primaryBtn:disabled {
@@ -812,7 +1059,7 @@
   height: 56px;
   border-radius: 50%;
   background: #eff6ff;
-  color: #0350bd;
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;

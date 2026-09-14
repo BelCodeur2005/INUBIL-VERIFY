@@ -20,12 +20,12 @@
   gap: 10px;
   font-size: 20px;
   font-weight: 700;
-  color: #062362;
+  color: var(--color-primary-dark);
   margin: 0 0 4px 0;
 }
 
 .titleIcon {
-  color: #0350bd;
+  color: var(--color-primary);
 }
 
 .subtitle {
@@ -61,7 +61,7 @@
   flex-shrink: 0;
 }
 
-.blueIcon   { background-color: rgba(3, 80, 189, 0.1); color: #0350bd; }
+.blueIcon   { background-color: rgba(var(--color-primary-rgb), 0.1); color: var(--color-primary); }
 .greenIcon  { background-color: rgba(16, 185, 129, 0.1); color: #047857; }
 .purpleIcon { background-color: rgba(124, 58, 237, 0.1); color: #6d28d9; }
 
@@ -132,7 +132,7 @@
   height: 36px;
   border-radius: 8px;
   background-color: #f1f5f9;
-  color: #0350bd;
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -157,7 +157,7 @@
 .docTitle {
   font-size: 13px;
   font-weight: 700;
-  color: #062362;
+  color: var(--color-primary-dark);
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;

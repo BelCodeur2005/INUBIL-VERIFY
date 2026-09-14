@@ -9,6 +9,7 @@
 }
 
 .drawerPanel {
+  box-sizing: border-box;
   height: 100%;
   width: 460px;
   max-width: 92vw;

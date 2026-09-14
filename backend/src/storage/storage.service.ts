@@ -22,14 +22,14 @@ export class StorageService {
   private readonly useR2: boolean;
 
   constructor(private readonly config: ConfigService) {
-    const accessKeyId     = config.get<string>('AWS_ACCESS_KEY_ID', '');
+    const accessKeyId = config.get<string>('AWS_ACCESS_KEY_ID', '');
     const secretAccessKey = config.get<string>('AWS_SECRET_ACCESS_KEY', '');
-    const region          = config.get<string>('AWS_REGION', 'auto');
-    const accountId       = config.get<string>('CLOUDFLARE_ACCOUNT_ID', '');
-    this.bucket           = config.get<string>('AWS_S3_BUCKET', '');
+    const region = config.get<string>('AWS_REGION', 'auto');
+    const accountId = config.get<string>('CLOUDFLARE_ACCOUNT_ID', '');
+    this.bucket = config.get<string>('AWS_S3_BUCKET', '');
 
     this.configured = !!(accessKeyId && secretAccessKey && this.bucket);
-    this.useR2      = !!accountId;
+    this.useR2 = !!accountId;
 
     if (this.configured) {
       this.client = new S3Client({
@@ -70,10 +70,27 @@ export class StorageService {
    * Génère un lien pré-signé temporaire pour accéder à un fichier privé.
    * Par défaut valable 15 minutes.
    */
-  async getPresignedUrl(key: string, expiresInSeconds = 900): Promise<string | null> {
+  async getPresignedUrl(
+    key: string,
+    expiresInSeconds = 900,
+  ): Promise<string | null> {
     if (!this.configured || !this.client) return null;
     const command = new GetObjectCommand({ Bucket: this.bucket, Key: key });
     return getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+  }
+
+  /**
+   * Construit une URL publique permanente pour un fichier (logos d'etablissement,
+   * affiches en continu dans l'app — un lien pre-signe de 15 min serait inadapte).
+   * Necessite STORAGE_PUBLIC_BASE_URL, distinct du bucket prive des documents :
+   * URL de developpement R2 (pub-xxxx.r2.dev) ou domaine personnalise, avec acces
+   * public active sur le bucket cote Cloudflare/AWS. Retourne null si non configure
+   * (degradation gracieuse, meme logique que le reste de ce service).
+   */
+  getPublicUrl(key: string): string | null {
+    const base = this.config.get<string>('STORAGE_PUBLIC_BASE_URL', '');
+    if (!base) return null;
+    return `${base.replace(/\/+$/, '')}/${key}`;
   }
 
   /**
@@ -81,7 +98,9 @@ export class StorageService {
    */
   async deleteFile(key: string): Promise<void> {
     if (!this.configured || !this.client) return;
-    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    await this.client.send(
+      new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
   }
 
   private async doUpload(

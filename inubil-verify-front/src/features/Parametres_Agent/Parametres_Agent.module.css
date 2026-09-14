@@ -16,7 +16,7 @@
 .title {
   font-size: 24px;
   font-weight: 700;
-  color: #002c53;
+  color: var(--color-primary-dark);
   letter-spacing: -0.01em;
   margin: 0;
 }
@@ -57,13 +57,13 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  color: #002c53;
+  color: var(--color-primary-dark);
 }
 
 .sectionTitle {
   font-size: 16px;
   font-weight: 700;
-  color: #002c53;
+  color: var(--color-primary-dark);
   margin: 0;
 }
 
@@ -105,7 +105,7 @@
 }
 
 .segmentActive {
-  background-color: #002c53;
+  background-color: var(--color-primary-dark);
   color: #ffffff;
 }
 
@@ -194,7 +194,7 @@
 }
 
 .switch input:checked + .slider {
-  background-color: #002c53;
+  background-color: var(--color-primary-dark);
 }
 
 .switch input:checked + .slider::before {

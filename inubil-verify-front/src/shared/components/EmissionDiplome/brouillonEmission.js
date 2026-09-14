@@ -43,6 +43,7 @@ export function brouillonEstVide(brouillon) {
     && !brouillon.diplome?.type_document_id
     && !brouillon.diplome?.filiere_id
     && (brouillon.matieres ?? []).length === 0
+    && (brouillon.diplomesEnAttente ?? []).length === 0
   );
 }
 

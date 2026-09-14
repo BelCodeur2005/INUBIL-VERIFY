@@ -18,7 +18,7 @@
 .title {
   font-size: 24px;
   font-weight: 700;
-  color: #002c53;
+  color: var(--color-primary-dark);
   letter-spacing: -0.01em;
   margin: 0;
 }
@@ -82,12 +82,12 @@
 }
 
 .tabBtn:hover {
-  color: #0060ac;
+  color: var(--color-primary-hover);
 }
 
 .activeTab {
-  color: #002c53;
-  border-bottom-color: #002c53;
+  color: var(--color-primary-dark);
+  border-bottom-color: var(--color-primary-dark);
 }
 
 .alertSuccess {
@@ -123,7 +123,7 @@
 .sectionTitle {
   font-size: 16px;
   font-weight: 700;
-  color: #002c53;
+  color: var(--color-primary-dark);
   margin: 0;
 }
 
@@ -166,8 +166,8 @@
 }
 
 .formGroup input:focus {
-  border-color: #0060ac;
-  box-shadow: 0 0 0 3px rgba(0, 96, 172, 0.15);
+  border-color: var(--color-primary-hover);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-hover-rgb), 0.15);
 }
 
 .disabledInput {
@@ -212,7 +212,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #002c53;
+  background-color: var(--color-primary-dark);
   color: #ffffff;
   border: none;
   padding: 10px 20px;

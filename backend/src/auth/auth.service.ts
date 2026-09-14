@@ -33,6 +33,7 @@ import { PASSWORD_MIN_LENGTH_FLOOR } from '../common/constants/password.constant
 // sont absents ou invalides — voir gererEchec().
 const MAX_TENTATIVES_DEFAUT = 5;
 const DUREE_BLOCAGE_MIN_DEFAUT = 15;
+const SESSION_IDLE_MIN_DEFAUT = 30;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
 const EMAIL_VERIF_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -397,7 +398,13 @@ export class AuthService {
       include: {
         roles_utilisateurs_role_idToroles: { select: { id: true, nom: true } },
         universites_utilisateurs_universite_idTouniversites: {
-          select: { id: true, nom: true },
+          select: {
+            id: true,
+            nom: true,
+            nom_court: true,
+            logo_url: true,
+            config: true,
+          },
         },
         departements: { select: { id: true, nom: true } },
       },
@@ -405,6 +412,9 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('Utilisateur introuvable');
     }
+
+    const universite = user.universites_utilisateurs_universite_idTouniversites;
+    const config = (universite?.config ?? {}) as { couleur_primaire?: string };
 
     return {
       id: user.id,
@@ -415,8 +425,15 @@ export class AuthService {
       avatar_url: user.avatar_url,
       langue: user.langue,
       role: user.roles_utilisateurs_role_idToroles ?? null,
-      universite:
-        user.universites_utilisateurs_universite_idTouniversites ?? null,
+      universite: universite
+        ? {
+            id: universite.id,
+            nom: universite.nom,
+            nom_court: universite.nom_court,
+            logo_url: universite.logo_url,
+            couleur_primaire: config.couleur_primaire ?? null,
+          }
+        : null,
       departements: user.departements,
       created_at: user.created_at,
       preferences: (user.preferences ?? {}) as Record<string, boolean>,
@@ -742,7 +759,10 @@ export class AuthService {
 
     const accessDecoded = this.jwt.decode(access_token) as { exp: number };
 
-    const idleMinutes = Number(this.config.get<number>('SESSION_IDLE_MINUTES'));
+    const idleMinutes = await this.parametreNumerique(
+      'session_idle_min',
+      SESSION_IDLE_MIN_DEFAUT,
+    );
     const sessionExpiresAt = new Date(Date.now() + idleMinutes * 60 * 1000);
 
     await this.prisma.sessions.create({

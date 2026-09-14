@@ -18,7 +18,7 @@ export default function Support_Agent() {
             target="_blank" 
             rel="noopener noreferrer"
             style={{ 
-              background: 'linear-gradient(135deg, #0350bd 0%, #062362 100%)', 
+              background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
               color: 'white', 
               padding: '10px 16px', 
               borderRadius: '8px', 

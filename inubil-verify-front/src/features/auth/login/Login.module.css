@@ -47,7 +47,7 @@
 /* COLONNE GAUCHE */
 .leftPanel {
   flex: 1;
-  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   padding: 40px;
   display: flex;
   flex-direction: column;
@@ -156,7 +156,7 @@
 }
 
 .inactiveTab {
-  background:linear-gradient(135deg, #0350bd 0%, #062362 100%) ;
+  background:linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%) ;
   color: #ffffff;
   padding: 6px 14px;
   border-radius: 2px;
@@ -260,7 +260,7 @@
 
 /*.btnPrimary {
   width: 100%;
-  background-color: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  background-color: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   color: #ffffff;
   font-weight: 600;
   padding: 12px;
@@ -398,7 +398,7 @@
 
 /* Bouton principal interactif */
 .btnPrimary {
-  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   width: 100%;
   color: #ffffff;
   font-weight: 600;

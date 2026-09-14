@@ -4,13 +4,17 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { statut_universite } from '@prisma/client';
+import { Prisma, statut_universite } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 import { ApprouverUniversiteDto } from './dto/approuver-universite.dto';
 import { ChangerStatutDto } from './dto/changer-statut.dto';
 import { CreateUniversiteDto } from './dto/create-universite.dto';
-import { UniversiteListResponseDto, UniversiteResponseDto } from './dto/universite-response.dto';
+import {
+  UniversiteListResponseDto,
+  UniversiteResponseDto,
+} from './dto/universite-response.dto';
 import { UniversiteQueryDto } from './dto/universite-query.dto';
 import { UpdateUniversiteDto } from './dto/update-universite.dto';
 
@@ -19,6 +23,7 @@ export class UniversitesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly storage: StorageService,
   ) {}
 
   async lister(query: UniversiteQueryDto): Promise<UniversiteListResponseDto> {
@@ -62,10 +67,25 @@ export class UniversitesService {
       where: { id, deleted_at: null },
     });
     if (!universite) throw new NotFoundException('Université introuvable.');
-    return universite as UniversiteResponseDto;
+    return this.avecCouleurPrimaire(universite);
   }
 
-  async creer(dto: CreateUniversiteDto, acteurId: string, ip?: string): Promise<UniversiteResponseDto> {
+  /** Extrait couleur_primaire du JSON config pour l'exposer comme champ direct dans la reponse. */
+  private avecCouleurPrimaire(
+    universite: Record<string, unknown>,
+  ): UniversiteResponseDto {
+    const config = (universite.config ?? {}) as { couleur_primaire?: string };
+    return {
+      ...(universite as unknown as UniversiteResponseDto),
+      couleur_primaire: config.couleur_primaire ?? null,
+    };
+  }
+
+  async creer(
+    dto: CreateUniversiteDto,
+    acteurId: string,
+    ip?: string,
+  ): Promise<UniversiteResponseDto> {
     const universite = await this.prisma.universites.create({
       data: {
         nom: dto.nom,
@@ -102,7 +122,14 @@ export class UniversitesService {
     acteurId: string,
     ip?: string,
   ): Promise<UniversiteResponseDto> {
-    await this.findOne(id);
+    const actuelle = await this.findOne(id);
+
+    let config: Record<string, unknown> | undefined;
+    if (dto.couleur_primaire !== undefined) {
+      const configActuel = ((actuelle as { config?: unknown }).config ??
+        {}) as Record<string, unknown>;
+      config = { ...configActuel, couleur_primaire: dto.couleur_primaire };
+    }
 
     const universite = await this.prisma.universites.update({
       where: { id },
@@ -115,9 +142,14 @@ export class UniversitesService {
         ...(dto.type !== undefined && { type: dto.type }),
         ...(dto.logo_url !== undefined && { logo_url: dto.logo_url }),
         ...(dto.site_web !== undefined && { site_web: dto.site_web }),
-        ...(dto.email_contact !== undefined && { email_contact: dto.email_contact }),
+        ...(dto.email_contact !== undefined && {
+          email_contact: dto.email_contact,
+        }),
         ...(dto.telephone !== undefined && { telephone: dto.telephone }),
         ...(dto.description !== undefined && { description: dto.description }),
+        ...(config !== undefined && {
+          config: config as Prisma.InputJsonValue,
+        }),
         updated_at: new Date(),
       },
     });
@@ -131,7 +163,66 @@ export class UniversitesService {
       ip,
     });
 
-    return universite as UniversiteResponseDto;
+    return this.avecCouleurPrimaire(universite);
+  }
+
+  /**
+   * Upload le logo sur le stockage public (distinct du bucket prive des documents —
+   * un logo est affiche en continu, un lien pre-signe de 15 min le casserait) et
+   * enregistre l'URL publique resultante dans logo_url. Necessite STORAGE_PUBLIC_BASE_URL
+   * (voir StorageService.getPublicUrl).
+   */
+  async uploaderLogo(
+    id: string,
+    fichier: Express.Multer.File,
+    acteurId: string,
+    ip?: string,
+  ): Promise<UniversiteResponseDto> {
+    await this.findOne(id);
+
+    // Extension deduite du mimetype valide (deja filtre par le controller), jamais du
+    // nom de fichier fourni par le client — evite un nom de fichier trompeur/malicieux.
+    const extensionParMimetype: Record<string, string> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/webp': 'webp',
+    };
+    const extension = extensionParMimetype[fichier.mimetype] ?? 'png';
+    const cle = `logos/${id}-${Date.now()}.${extension}`;
+
+    const resultat = await this.storage.uploadFile(
+      fichier.buffer,
+      cle,
+      fichier.mimetype,
+    );
+    if (!resultat) {
+      throw new BadRequestException(
+        'Stockage non configuré (AWS_S3_BUCKET / identifiants) — le logo ne peut pas être téléversé.',
+      );
+    }
+
+    const urlPublique = this.storage.getPublicUrl(cle);
+    if (!urlPublique) {
+      throw new BadRequestException(
+        'URL publique non configurée (STORAGE_PUBLIC_BASE_URL) — le bucket doit être accessible publiquement pour héberger un logo affiché en continu.',
+      );
+    }
+
+    const universite = await this.prisma.universites.update({
+      where: { id },
+      data: { logo_url: urlPublique, updated_at: new Date() },
+    });
+
+    await this.audit.log({
+      utilisateurId: acteurId,
+      action: 'UNIVERSITE_LOGO_MODIFIE',
+      module: 'universites',
+      enregistrementId: id,
+      tableConcernee: 'universites',
+      ip,
+    });
+
+    return this.avecCouleurPrimaire(universite);
   }
 
   async supprimer(id: string, acteurId: string, ip?: string): Promise<void> {
@@ -139,7 +230,7 @@ export class UniversitesService {
 
     if (universite.statut === statut_universite.active) {
       throw new ConflictException(
-        'Impossible de supprimer une université active. Suspendez-la d\'abord.',
+        "Impossible de supprimer une université active. Suspendez-la d'abord.",
       );
     }
 
@@ -158,7 +249,11 @@ export class UniversitesService {
     });
   }
 
-  async approuver(id: string, acteurId: string, ip?: string): Promise<UniversiteResponseDto> {
+  async approuver(
+    id: string,
+    acteurId: string,
+    ip?: string,
+  ): Promise<UniversiteResponseDto> {
     const universite = await this.findOne(id);
 
     if (universite.statut !== statut_universite.en_attente) {
@@ -190,7 +285,11 @@ export class UniversitesService {
     return mise_a_jour as UniversiteResponseDto;
   }
 
-  async activer(id: string, acteurId: string, ip?: string): Promise<UniversiteResponseDto> {
+  async activer(
+    id: string,
+    acteurId: string,
+    ip?: string,
+  ): Promise<UniversiteResponseDto> {
     const universite = await this.findOne(id);
 
     if (universite.statut !== statut_universite.approuvee) {

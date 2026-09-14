@@ -3,6 +3,7 @@ import { AuthContext } from './auth-context';
 import { login as loginApi, logout as logoutApi, getProfil } from './auth.api';
 import { getAccessToken, clearTokens } from '../api/token-storage';
 import { redirectionParRole } from './role-redirect';
+import { applyColorTheme } from '../theme/applyColorTheme';
 
 export function AuthProvider({ children }) {
   const [utilisateur, setUtilisateur] = useState(null);
@@ -33,6 +34,11 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  // Applique la couleur de marque de l'universite (ou revient au bleu INUBIL par defaut).
+  useEffect(() => {
+    applyColorTheme(utilisateur?.universite?.couleur_primaire);
+  }, [utilisateur?.universite?.couleur_primaire]);
+
   const login = async (email, motDePasse) => {
     await loginApi(email, motDePasse);
     const profil = await getProfil();
@@ -46,6 +52,14 @@ export function AuthProvider({ children }) {
     window.location.href = '/login';
   };
 
+  // Recharge le profil sans re-authentifier — utilise apres une modification qui doit se refleter
+  // immediatement dans l'UI (ex : logo/nom de l'etablissement change depuis Parametres).
+  const rafraichirProfil = async () => {
+    if (!getAccessToken()) return;
+    const profil = await getProfil();
+    setUtilisateur(profil);
+  };
+
   const nomComplet = () => {
     if (!utilisateur) return '';
     return `${utilisateur.prenom} ${utilisateur.nom}`.trim();
@@ -56,6 +70,7 @@ export function AuthProvider({ children }) {
     loading,
     login,
     logout,
+    rafraichirProfil,
     nomComplet,
     estConnecte: !!utilisateur,
   };

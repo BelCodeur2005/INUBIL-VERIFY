@@ -1,7 +1,7 @@
 /* Container global avec le dégradé INUBIL */
 .landingContainer {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   color: #f8fafc;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   display: flex;
@@ -158,7 +158,7 @@
   height: 40%;
   z-index: 2;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(0, 96, 172, 0) 0%, rgba(0, 96, 172, 0.2) 50%, rgba(0, 96, 172, 0) 100%);
+  background: linear-gradient(180deg, rgba(var(--color-primary-hover-rgb), 0) 0%, rgba(var(--color-primary-hover-rgb), 0.2) 50%, rgba(var(--color-primary-hover-rgb), 0) 100%);
   animation: scanSweep 1.6s ease-out 0.3s 1;
 }
 

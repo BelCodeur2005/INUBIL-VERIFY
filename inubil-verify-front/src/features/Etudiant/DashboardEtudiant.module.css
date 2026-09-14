@@ -16,7 +16,7 @@
   top: 0;
   height: 100vh;
   width: 256px;
-  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   border-right: 1px solid rgba(194, 198, 209, 0.2);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   display: flex;
@@ -91,7 +91,7 @@
 
 .navBtnActive {
   background-color: #ffffff !important;
-  color: #002c53 !important;
+  color: var(--color-primary-dark) !important;
   font-weight: bold;
 }
 
@@ -196,13 +196,13 @@
 
 /* Bannière de Bienvenue */
 .welcomeBanner {
-  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   border-radius: 10px;
   padding: 12px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 12px rgba(3, 80, 189, 0.15);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.15);
 }
 
 .bannerContent {
@@ -226,7 +226,7 @@
 
 .shareProfileBtn {
   background-color: #ffffff;
-  color: #0350bd;
+  color: var(--color-primary);
   font-weight: 600;
   padding: 6px 14px;
   border-radius: 6px;
@@ -272,7 +272,7 @@
 }
 
 .iconCertified { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
-.iconPending { background-color: rgba(3, 80, 189, 0.1); color: #0350bd; }
+.iconPending { background-color: rgba(var(--color-primary-rgb), 0.1); color: var(--color-primary); }
 .iconViews { background-color: rgba(179, 143, 77, 0.15); color: #B38F4D; }
 
 .statLabel {
@@ -326,7 +326,7 @@
 }
 
 .seeAllLink {
-  color: #0350bd;
+  color: var(--color-primary);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -376,7 +376,7 @@
 
 .degreeName {
   font-size: 13px;
-  color: #062362;
+  color: var(--color-primary-dark);
   font-weight: 700;
   line-height: 1.2;
 }
@@ -456,7 +456,7 @@
 
 .viewDegreeBtn {
   flex: 1;
-  background: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   color: #ffffff;
   font-weight: 600;
   padding: 6px 0;

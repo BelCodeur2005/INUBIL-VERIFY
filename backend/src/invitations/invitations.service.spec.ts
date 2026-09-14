@@ -177,6 +177,29 @@ describe('InvitationsService', () => {
       ).resolves.toBeDefined();
     });
 
+    it('lève ForbiddenException si un non-super_admin invite pour le rôle super_admin (Fix SEC-4)', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: UNIV_ID }); // acteur admin_istama (a user:assign_role mais pas super_admin)
+      prisma.universites.findFirst.mockResolvedValue({ id: UNIV_ID });
+      prisma.roles.findFirst.mockResolvedValue({ id: ROLE_ID, nom: 'super_admin' });
+
+      await expect(
+        service.creer({ email: 'x@x.cm', role_id: ROLE_ID, universite_id: UNIV_ID }, ACTEUR_ID),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.invitations.create).not.toHaveBeenCalled();
+    });
+
+    it('un super_admin peut inviter un autre super_admin (Fix SEC-4)', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValueOnce({ universite_id: null, roles_utilisateurs_role_idToroles: { nom: 'super_admin' } }); // acteur super_admin
+      prisma.universites.findFirst.mockResolvedValue({ id: UNIV_ID });
+      prisma.roles.findFirst.mockResolvedValue({ id: ROLE_ID, nom: 'super_admin' });
+      prisma.invitations.findFirst.mockResolvedValue(null);
+      prisma.invitations.create.mockResolvedValue(makeInvitation());
+
+      await expect(
+        service.creer({ email: 'x@x.cm', role_id: ROLE_ID, universite_id: UNIV_ID }, ACTEUR_ID),
+      ).resolves.toBeDefined();
+    });
+
     it('un utilisateur sans université ET sans rôle super_admin est refusé, pas bypassé (pas de fail-open)', async () => {
       prisma.utilisateurs.findFirst.mockResolvedValueOnce({
         universite_id: null,
