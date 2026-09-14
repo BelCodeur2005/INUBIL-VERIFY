@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../core/auth/useAuth';
 import AccountMenu from '../../shared/components/AccountMenu/AccountMenu';
 import NotificationsBell from '../../shared/components/NotificationsBell/NotificationsBell';
@@ -12,7 +13,11 @@ import ParametresEtudiants from './Parametres-Etudiants/ParametresEtudiants.jsx'
 import AccueilEtudiant from './AccueilEtudiant.jsx';
 
 export default function DashboardEtudiant() {
-  const [activeMenu, setActiveMenu] = useState('dashboard');
+  // Lien de notification (?document=<id>) : capture au premier rendu, ouvre
+  // directement l'onglet Diplomes sur le detail vise (cf. MesDiplomes.jsx).
+  const [searchParams] = useSearchParams();
+  const [documentIdToOpen] = useState(() => searchParams.get('document'));
+  const [activeMenu, setActiveMenu] = useState(() => (documentIdToOpen ? 'diplomas' : 'dashboard'));
   const [searchTerm, setSearchTerm] = useState('');
   const { utilisateur, logout } = useAuth();
 
@@ -140,7 +145,9 @@ export default function DashboardEtudiant() {
             <AccueilEtudiant prenom={prenom} setActiveMenu={setActiveMenu} />
           )}
 
-          {activeMenu === 'diplomas' && <MesDiplomes searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />}
+          {activeMenu === 'diplomas' && (
+            <MesDiplomes searchTerm={searchTerm} onSearchTermChange={setSearchTerm} documentIdToOpen={documentIdToOpen} />
+          )}
 
           {activeMenu === 'partages' && <MesPartages />}
 

@@ -109,7 +109,7 @@ export class PublicPartagesService {
           type: 'partage_consulte',
           titre: 'Lien de partage consulté',
           message: `Le lien de partage de votre document ${doc.numero_unique} vient d'être consulté.`,
-          lien: '/dashboard-etudiant',
+          lien: `/dashboard-etudiant?document=${doc.id}`,
         })
         .catch((err) =>
           this.logger.error(

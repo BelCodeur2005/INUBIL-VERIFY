@@ -52,7 +52,7 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export default function MesDiplomes({ searchTerm: searchTermProp, onSearchTermChange } = {}) {
+export default function MesDiplomes({ searchTerm: searchTermProp, onSearchTermChange, documentIdToOpen } = {}) {
   const { utilisateur } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [chargement, setChargement] = useState(true);
@@ -85,6 +85,16 @@ export default function MesDiplomes({ searchTerm: searchTermProp, onSearchTermCh
       }
     })();
   }, []);
+
+  // Ouvre directement le detail du diplome vise par un lien de notification
+  // (?document=<id> depuis DashboardEtudiant) une fois la liste chargee.
+  useEffect(() => {
+    if (!documentIdToOpen || documents.length === 0) return;
+    const cible = documents.find((d) => d.id === documentIdToOpen);
+    if (!cible) return;
+    const timeout = setTimeout(() => setSelectedDiploma(cible), 0);
+    return () => clearTimeout(timeout);
+  }, [documentIdToOpen, documents]);
 
   const handleCopyHash = (id, hash, e) => {
     e.stopPropagation();
