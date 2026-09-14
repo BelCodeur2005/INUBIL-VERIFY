@@ -92,11 +92,13 @@ export function InviterUtilisateurModal({ onClose, onInvited, roles }) {
 
 // Drawer Modifier un Paramètre Système — PUT /configurations/:cle.
 export function ConfigEditDrawer({ config, onClose, onSaved }) {
-  const [valeur, setValeur] = useState(config.valeur);
+  const meta = metaConfig(config.cle);
+  // Un secret (ex. mot de passe SMTP) n'est jamais renvoyé en clair par l'API — le champ
+  // part vide et il faut saisir une nouvelle valeur pour la remplacer (required bloque un envoi vide).
+  const [valeur, setValeur] = useState(meta.secret ? '' : config.valeur);
   const [description, setDescription] = useState(config.description ?? '');
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState(null);
-  const meta = metaConfig(config.cle);
 
   const soumettre = async (e) => {
     e.preventDefault();
@@ -134,12 +136,19 @@ export function ConfigEditDrawer({ config, onClose, onSaved }) {
             <label style={{ fontSize: '0.75rem', color: '#666' }}>
               Valeur ({config.type})
               <input
-                type="text"
+                type={meta.secret ? 'password' : 'text'}
                 required
+                autoComplete="new-password"
+                placeholder={meta.secret ? 'Saisir une nouvelle valeur…' : undefined}
                 value={valeur}
                 onChange={(e) => setValeur(e.target.value)}
                 style={{ ...inputStyle, marginTop: '0.35rem' }}
               />
+              {meta.secret && (
+                <span style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.7rem', color: '#8a94a6' }}>
+                  Valeur actuelle masquée pour des raisons de sécurité. La saisie remplace entièrement le mot de passe.
+                </span>
+              )}
             </label>
             <label style={{ fontSize: '0.75rem', color: '#666' }}>
               Description

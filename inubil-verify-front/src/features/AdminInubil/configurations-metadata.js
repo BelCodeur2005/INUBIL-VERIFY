@@ -24,7 +24,7 @@ export const SECTIONS_CONFIG = [
   {
     id: 'email',
     titre: 'Email',
-    cles: ['app_nom', 'smtp_host', 'smtp_port', 'smtp_from_email'],
+    cles: ['app_nom', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from_email'],
   },
 ];
 
@@ -39,6 +39,8 @@ export const CONFIG_META = {
   app_nom:                   { label: "Nom de l'application",                 connecte: true },
   smtp_host:                 { label: 'Serveur SMTP sortant',                 connecte: true },
   smtp_port:                 { label: 'Port SMTP',                           connecte: true },
+  smtp_user:                 { label: 'Compte SMTP (authentification)',       connecte: true },
+  smtp_pass:                 { label: 'Mot de passe SMTP',                    connecte: true, secret: true },
   smtp_from_email:           { label: "Adresse d'expéditeur (From)",          connecte: true },
 };
 

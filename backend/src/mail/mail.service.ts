@@ -9,40 +9,50 @@ const NOM_APPLICATION_DEFAUT = 'INUBIL Verify';
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly user?: string;
-  private readonly pass?: string;
+  private readonly userParDefaut?: string;
+  private readonly passParDefaut?: string;
   private readonly hostParDefaut?: string;
   private readonly portParDefaut: number;
   private readonly fromEmailParDefaut: string;
-  private readonly configured: boolean;
 
   constructor(
     private readonly config: ConfigService,
     private readonly configurations: ConfigurationsService,
   ) {
-    this.user = config.get<string>('MAIL_USER');
-    this.pass = config.get<string>('MAIL_PASS');
+    this.userParDefaut = config.get<string>('MAIL_USER');
+    this.passParDefaut = config.get<string>('MAIL_PASS');
     this.hostParDefaut = config.get<string>('MAIL_HOST');
     this.portParDefaut = config.get<number>('MAIL_PORT') ?? 587;
     this.fromEmailParDefaut =
       config.get<string>('MAIL_FROM') ?? 'noreply@inubil.com';
-    this.configured = Boolean(
-      this.hostParDefaut &&
-      this.user &&
-      this.pass &&
-      this.user !== 'votre_email@gmail.com' &&
-      this.pass !== 'votre_mot_de_passe_application_gmail',
-    );
+  }
 
-    if (this.configured) {
-      this.logger.log(
-        `Service email initialisé — SMTP ${this.hostParDefaut} (${this.user})`,
-      );
-    } else {
-      this.logger.warn(
-        'Service email en mode simulation — configurer MAIL_USER et MAIL_PASS dans .env pour envoyer de vrais emails',
-      );
-    }
+  /**
+   * Résout host/port/user/pass en préférant les paramètres système ("smtp_host" etc.,
+   * modifiables depuis Paramètres > Email sans redéploiement), repli sur les variables
+   * d'environnement (.env / Render). C'est la même logique pour l'auth que pour host/port/from
+   * — avant ce changement, user/pass ne venaient QUE de l'env, ce qui rendait un mot de passe
+   * SMTP obsolète impossible à corriger depuis l'app (il fallait passer par Render + redéploiement).
+   */
+  private async resoudreSmtp(): Promise<{
+    host?: string;
+    port: number;
+    user?: string;
+    pass?: string;
+  }> {
+    const [host, portBrut, user, pass] = await Promise.all([
+      this.configurations.get('smtp_host', this.hostParDefaut),
+      this.configurations.get('smtp_port', String(this.portParDefaut)),
+      this.configurations.get('smtp_user', this.userParDefaut),
+      this.configurations.get('smtp_pass', this.passParDefaut),
+    ]);
+    const port = Number(portBrut);
+    return {
+      host: host || this.hostParDefaut,
+      port: Number.isFinite(port) && port > 0 ? port : this.portParDefaut,
+      user: user || this.userParDefaut,
+      pass: pass || this.passParDefaut,
+    };
   }
 
   /** Nom affiché dans l'en-tête/pied des emails — parametre systeme "app_nom", repli sur le nom par defaut. */
@@ -51,24 +61,6 @@ export class MailService {
       (await this.configurations.get('app_nom', NOM_APPLICATION_DEFAUT)) ??
       NOM_APPLICATION_DEFAUT
     );
-  }
-
-  /** Construit un transporteur SMTP à partir des parametres systeme "smtp_host"/"smtp_port", repli sur .env. */
-  private async creerTransporteur(): Promise<Transporter> {
-    const host =
-      (await this.configurations.get('smtp_host', this.hostParDefaut)) ??
-      this.hostParDefaut;
-    const portBrut = await this.configurations.get(
-      'smtp_port',
-      String(this.portParDefaut),
-    );
-    const port = Number(portBrut);
-    return nodemailer.createTransport({
-      host,
-      port: Number.isFinite(port) && port > 0 ? port : this.portParDefaut,
-      secure: false,
-      auth: { user: this.user, pass: this.pass },
-    });
   }
 
   /** Adresse "From" complete — parametre systeme "smtp_from_email" combine au nom d'application. */
@@ -100,15 +92,21 @@ export class MailService {
     subject: string,
     html: string,
   ): Promise<void> {
-    if (!this.configured) {
-      this.logger.warn(`[MAIL SIMULÉ] À: ${to} | Sujet: ${subject}`);
+    const { host, port, user, pass } = await this.resoudreSmtp();
+    if (!host || !user || !pass) {
+      this.logger.warn(
+        `[MAIL SIMULÉ] À: ${to} | Sujet: ${subject} — SMTP non configuré (Paramètres > Email)`,
+      );
       return;
     }
     try {
-      const [transporter, from] = await Promise.all([
-        this.creerTransporteur(),
-        this.adresseExpediteur(),
-      ]);
+      const transporter: Transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure: false,
+        auth: { user, pass },
+      });
+      const from = await this.adresseExpediteur();
       const info = await transporter.sendMail({ from, to, subject, html });
       this.logger.log(`Email envoyé à ${to} — messageId: ${info.messageId}`);
     } catch (err: unknown) {

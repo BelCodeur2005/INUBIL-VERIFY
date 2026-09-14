@@ -537,6 +537,16 @@ async function main(): Promise<void> {
       valeur: 'noreply@inubil.com',
       description: "Adresse email affichee comme expediteur (From) des emails sortants — combinee avec le nom de l'application.",
     },
+    {
+      cle: 'smtp_user',
+      valeur: process.env.MAIL_USER ?? '',
+      description: "Compte SMTP utilise pour l'authentification aupres du serveur sortant.",
+    },
+    {
+      cle: 'smtp_pass',
+      valeur: process.env.MAIL_PASS ?? '',
+      description: "Mot de passe applicatif SMTP (ex. mot de passe d'application Gmail). Jamais renvoye en clair par l'API.",
+    },
   ];
   for (const c of configurationsEmail) {
     await prisma.configurations.upsert({

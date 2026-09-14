@@ -4,6 +4,10 @@ import { AuditService } from '../audit/audit.service';
 import { UpsertConfigurationDto } from './dto/upsert-configuration.dto';
 import { ConfigurationResponseDto } from './dto/configuration-response.dto';
 
+/** Clés dont la valeur ne doit jamais être renvoyée en clair par l'API (secrets). */
+const CLES_SENSIBLES = new Set(['smtp_pass']);
+const VALEUR_MASQUEE = '••••••••';
+
 @Injectable()
 export class ConfigurationsService {
   constructor(
@@ -15,7 +19,7 @@ export class ConfigurationsService {
     return {
       id: c.id,
       cle: c.cle,
-      valeur: c.valeur,
+      valeur: CLES_SENSIBLES.has(c.cle) && c.valeur ? VALEUR_MASQUEE : c.valeur,
       type: c.type,
       description: c.description ?? null,
       modifiable_par: c.modifiable_par,
