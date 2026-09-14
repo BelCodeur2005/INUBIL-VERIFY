@@ -19,7 +19,9 @@ import {
 /** Champs Prisma a inclure systematiquement pour construire UtilisateurResponseDto. */
 const INCLUDE_BRIEF = {
   roles_utilisateurs_role_idToroles: { select: { id: true, nom: true } },
-  universites_utilisateurs_universite_idTouniversites: { select: { id: true, nom: true } },
+  universites_utilisateurs_universite_idTouniversites: {
+    select: { id: true, nom: true },
+  },
   departements: { select: { id: true, nom: true } },
 } as const;
 
@@ -36,7 +38,9 @@ export class UtilisateursService {
    * par nom de role, jamais devine depuis l'absence d'universite. Tout autre
    * utilisateur sans universite est refuse.
    */
-  private async getActeurUniversiteId(acteurId: string): Promise<string | null> {
+  private async getActeurUniversiteId(
+    acteurId: string,
+  ): Promise<string | null> {
     const u = await this.prisma.utilisateurs.findFirst({
       where: { id: acteurId },
       select: {
@@ -52,8 +56,24 @@ export class UtilisateursService {
     return u.universite_id;
   }
 
+  /**
+   * Distinct de getActeurUniversiteId : celui-ci traite super_admin ET
+   * admin_istama comme "global" (universite_id null), alors qu'ici on a besoin
+   * de distinguer precisement super_admin seul (cf. Fix SEC-5).
+   */
+  private async estSuperAdmin(acteurId: string): Promise<boolean> {
+    const u = await this.prisma.utilisateurs.findFirst({
+      where: { id: acteurId },
+      select: { roles_utilisateurs_role_idToroles: { select: { nom: true } } },
+    });
+    return u?.roles_utilisateurs_role_idToroles?.nom === 'super_admin';
+  }
+
   // ─── LISTE ──────────────────────────────────────────────────────────
-  async lister(query: UtilisateurQueryDto, acteurId: string): Promise<UtilisateurListResponseDto> {
+  async lister(
+    query: UtilisateurQueryDto,
+    acteurId: string,
+  ): Promise<UtilisateurListResponseDto> {
     const acteurUnivId = await this.getActeurUniversiteId(acteurId);
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
@@ -109,7 +129,9 @@ export class UtilisateursService {
     });
     if (!u) throw new NotFoundException('Utilisateur introuvable');
     if (acteurUnivId !== null && u.universite_id !== acteurUnivId) {
-      throw new ForbiddenException('Accès refusé : utilisateur d\'une autre université');
+      throw new ForbiddenException(
+        "Accès refusé : utilisateur d'une autre université",
+      );
     }
     return this.formater(u);
   }
@@ -133,7 +155,9 @@ export class UtilisateursService {
     });
     if (!u) throw new NotFoundException('Utilisateur introuvable');
     if (acteurUnivId !== null && u.universite_id !== acteurUnivId) {
-      throw new ForbiddenException('Accès refusé : utilisateur d\'une autre université');
+      throw new ForbiddenException(
+        "Accès refusé : utilisateur d'une autre université",
+      );
     }
 
     // Le statut en_attente_email est geré par le flux email - pas modifiable manuellement.
@@ -174,13 +198,27 @@ export class UtilisateursService {
     });
     if (!u) throw new NotFoundException('Utilisateur introuvable');
     if (acteurUnivId !== null && u.universite_id !== acteurUnivId) {
-      throw new ForbiddenException('Accès refusé : utilisateur d\'une autre université');
+      throw new ForbiddenException(
+        "Accès refusé : utilisateur d'une autre université",
+      );
     }
 
     const role = await this.prisma.roles.findFirst({
       where: { id: dto.role_id },
     });
     if (!role) throw new NotFoundException('Rôle introuvable');
+
+    // Fix SEC-5 : seul un super_admin peut assigner le role super_admin a un
+    // utilisateur existant. admin_istama et responsable_universite ont tous
+    // les deux la permission user:assign_role mais ne doivent pas pouvoir
+    // s'auto-promouvoir (ou promouvoir un tiers) a ce niveau via ce endpoint —
+    // meme faille que Fix SEC-4 sur invitations.service.ts, ici exploitable
+    // directement sur un compte deja existant, sans passer par une invitation.
+    if (role.nom === 'super_admin' && !(await this.estSuperAdmin(acteurId))) {
+      throw new ForbiddenException(
+        'Seul un super administrateur peut assigner le rôle super_admin',
+      );
+    }
 
     const updated = await this.prisma.utilisateurs.update({
       where: { id },
@@ -213,23 +251,32 @@ export class UtilisateursService {
     });
     if (!u) throw new NotFoundException('Utilisateur introuvable');
     if (acteurUnivId !== null && u.universite_id !== acteurUnivId) {
-      throw new ForbiddenException('Accès refusé : utilisateur d\'une autre université');
+      throw new ForbiddenException(
+        "Accès refusé : utilisateur d'une autre université",
+      );
     }
 
     if (dto.departement_ids.length > 0) {
       const count = await this.prisma.departements.count({
-        where: { id: { in: dto.departement_ids }, universite_id: u.universite_id ?? undefined },
+        where: {
+          id: { in: dto.departement_ids },
+          universite_id: u.universite_id ?? undefined,
+        },
       });
       if (count !== dto.departement_ids.length) {
         throw new BadRequestException(
-          'Un ou plusieurs départements sont introuvables ou n\'appartiennent pas à l\'université de cet utilisateur',
+          "Un ou plusieurs départements sont introuvables ou n'appartiennent pas à l'université de cet utilisateur",
         );
       }
     }
 
     const updated = await this.prisma.utilisateurs.update({
       where: { id },
-      data: { departements: { set: dto.departement_ids.map((depId) => ({ id: depId })) } },
+      data: {
+        departements: {
+          set: dto.departement_ids.map((depId) => ({ id: depId })),
+        },
+      },
       include: INCLUDE_BRIEF,
     });
 

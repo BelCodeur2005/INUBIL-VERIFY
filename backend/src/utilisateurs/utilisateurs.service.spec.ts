@@ -125,7 +125,9 @@ describe('UtilisateursService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             OR: expect.arrayContaining([
-              expect.objectContaining({ email: expect.objectContaining({ contains: 'dupont' }) }),
+              expect.objectContaining({
+                email: expect.objectContaining({ contains: 'dupont' }),
+              }),
             ]),
           }),
         }),
@@ -133,10 +135,7 @@ describe('UtilisateursService', () => {
     });
 
     it('calcule totalPages correctement', async () => {
-      prisma.$transaction.mockResolvedValue([
-        Array(20).fill(makeUser()),
-        45,
-      ]);
+      prisma.$transaction.mockResolvedValue([Array(20).fill(makeUser()), 45]);
 
       const result = await service.lister({ page: 1, limit: 20 }, ACTEUR_ID);
 
@@ -144,16 +143,20 @@ describe('UtilisateursService', () => {
       expect(result.totalPages).toBe(3);
     });
 
-    it('restreint a l\'universite de l\'acteur si celui-ci n\'est pas super_admin/admin_istama', async () => {
-      prisma.utilisateurs.findFirst.mockImplementation(async ({ where }: any) => {
-        if (where.id === ACTEUR_ID) {
-          return makeActeur({
-            universite_id: 'univ-acteur',
-            roles_utilisateurs_role_idToroles: { nom: 'responsable_universite' },
-          });
-        }
-        return targetUser;
-      });
+    it("restreint a l'universite de l'acteur si celui-ci n'est pas super_admin/admin_istama", async () => {
+      prisma.utilisateurs.findFirst.mockImplementation(
+        async ({ where }: any) => {
+          if (where.id === ACTEUR_ID) {
+            return makeActeur({
+              universite_id: 'univ-acteur',
+              roles_utilisateurs_role_idToroles: {
+                nom: 'responsable_universite',
+              },
+            });
+          }
+          return targetUser;
+        },
+      );
       prisma.$transaction.mockResolvedValue([[], 0]);
 
       await service.lister({ universite_id: 'autre-univ' as any }, ACTEUR_ID);
@@ -169,7 +172,7 @@ describe('UtilisateursService', () => {
   // ─── findOne ─────────────────────────────────────────────────────────────
 
   describe('findOne', () => {
-    it('retourne l\'utilisateur si trouvé', async () => {
+    it("retourne l'utilisateur si trouvé", async () => {
       targetUser = makeUser();
 
       const result = await service.findOne(USER_ID, ACTEUR_ID);
@@ -181,39 +184,55 @@ describe('UtilisateursService', () => {
     it('lève NotFoundException si introuvable', async () => {
       targetUser = null;
 
-      await expect(service.findOne(USER_ID, ACTEUR_ID)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.findOne(USER_ID, ACTEUR_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
 
-    it('lève ForbiddenException si l\'utilisateur cible est d\'une autre université', async () => {
-      prisma.utilisateurs.findFirst.mockImplementation(async ({ where }: any) => {
-        if (where.id === ACTEUR_ID) {
-          return makeActeur({
-            universite_id: 'univ-acteur',
-            roles_utilisateurs_role_idToroles: { nom: 'responsable_universite' },
-          });
-        }
-        return targetUser;
-      });
+    it("lève ForbiddenException si l'utilisateur cible est d'une autre université", async () => {
+      prisma.utilisateurs.findFirst.mockImplementation(
+        async ({ where }: any) => {
+          if (where.id === ACTEUR_ID) {
+            return makeActeur({
+              universite_id: 'univ-acteur',
+              roles_utilisateurs_role_idToroles: {
+                nom: 'responsable_universite',
+              },
+            });
+          }
+          return targetUser;
+        },
+      );
       targetUser = makeUser({ universite_id: 'autre-univ' });
 
-      await expect(service.findOne(USER_ID, ACTEUR_ID)).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(service.findOne(USER_ID, ACTEUR_ID)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
     });
   });
 
   // ─── changerStatut ────────────────────────────────────────────────────────
 
   describe('changerStatut', () => {
-    it('lève ForbiddenException si l\'acteur modifie son propre statut', async () => {
+    it("lève ForbiddenException si l'acteur modifie son propre statut", async () => {
       await expect(
-        service.changerStatut(ACTEUR_ID, { statut: StatutModifiable.SUSPENDU }, ACTEUR_ID),
+        service.changerStatut(
+          ACTEUR_ID,
+          { statut: StatutModifiable.SUSPENDU },
+          ACTEUR_ID,
+        ),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
-    it('lève NotFoundException si l\'utilisateur cible est introuvable', async () => {
+    it("lève NotFoundException si l'utilisateur cible est introuvable", async () => {
       targetUser = null;
 
       await expect(
-        service.changerStatut(USER_ID, { statut: StatutModifiable.INACTIF }, ACTEUR_ID),
+        service.changerStatut(
+          USER_ID,
+          { statut: StatutModifiable.INACTIF },
+          ACTEUR_ID,
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -221,13 +240,19 @@ describe('UtilisateursService', () => {
       targetUser = makeUser({ statut: 'en_attente_email' });
 
       await expect(
-        service.changerStatut(USER_ID, { statut: StatutModifiable.ACTIF }, ACTEUR_ID),
+        service.changerStatut(
+          USER_ID,
+          { statut: StatutModifiable.ACTIF },
+          ACTEUR_ID,
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('met à jour le statut et trace dans l\'audit', async () => {
+    it("met à jour le statut et trace dans l'audit", async () => {
       targetUser = makeUser({ statut: 'actif' });
-      prisma.utilisateurs.update.mockResolvedValue(makeUser({ statut: 'suspendu' }));
+      prisma.utilisateurs.update.mockResolvedValue(
+        makeUser({ statut: 'suspendu' }),
+      );
 
       const result = await service.changerStatut(
         USER_ID,
@@ -250,7 +275,7 @@ describe('UtilisateursService', () => {
   // ─── assignerRole ─────────────────────────────────────────────────────────
 
   describe('assignerRole', () => {
-    it('lève NotFoundException si l\'utilisateur est introuvable', async () => {
+    it("lève NotFoundException si l'utilisateur est introuvable", async () => {
       targetUser = null;
 
       await expect(
@@ -267,13 +292,19 @@ describe('UtilisateursService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('assigne le rôle et trace dans l\'audit', async () => {
+    it("assigne le rôle et trace dans l'audit", async () => {
       targetUser = makeUser();
-      prisma.roles.findFirst.mockResolvedValue({ id: ROLE_ID, nom: 'responsable' });
+      prisma.roles.findFirst.mockResolvedValue({
+        id: ROLE_ID,
+        nom: 'responsable',
+      });
       prisma.utilisateurs.update.mockResolvedValue(
         makeUser({
           role_id: ROLE_ID,
-          roles_utilisateurs_role_idToroles: { id: ROLE_ID, nom: 'responsable' },
+          roles_utilisateurs_role_idToroles: {
+            id: ROLE_ID,
+            nom: 'responsable',
+          },
         }),
       );
 
@@ -293,33 +324,91 @@ describe('UtilisateursService', () => {
       );
       expect(result.role?.id).toBe(ROLE_ID);
     });
+
+    it('lève ForbiddenException si un non-super_admin assigne le rôle super_admin (Fix SEC-5)', async () => {
+      prisma.utilisateurs.findFirst.mockImplementation(
+        async ({ where }: any) => {
+          if (where.id === ACTEUR_ID) {
+            return makeActeur({
+              universite_id: null,
+              roles_utilisateurs_role_idToroles: { nom: 'admin_istama' },
+            });
+          }
+          return targetUser;
+        },
+      );
+      targetUser = makeUser();
+      prisma.roles.findFirst.mockResolvedValue({
+        id: ROLE_ID,
+        nom: 'super_admin',
+      });
+
+      await expect(
+        service.assignerRole(USER_ID, { role_id: ROLE_ID }, ACTEUR_ID),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.utilisateurs.update).not.toHaveBeenCalled();
+    });
+
+    it('un super_admin peut assigner le rôle super_admin (Fix SEC-5)', async () => {
+      targetUser = makeUser();
+      prisma.roles.findFirst.mockResolvedValue({
+        id: ROLE_ID,
+        nom: 'super_admin',
+      });
+      prisma.utilisateurs.update.mockResolvedValue(
+        makeUser({
+          role_id: ROLE_ID,
+          roles_utilisateurs_role_idToroles: {
+            id: ROLE_ID,
+            nom: 'super_admin',
+          },
+        }),
+      );
+
+      await expect(
+        service.assignerRole(USER_ID, { role_id: ROLE_ID }, ACTEUR_ID),
+      ).resolves.toBeDefined();
+    });
   });
 
   // ─── assignerDepartements ───────────────────────────────────────────────────
 
   describe('assignerDepartements', () => {
-    it('lève NotFoundException si l\'utilisateur est introuvable', async () => {
+    it("lève NotFoundException si l'utilisateur est introuvable", async () => {
       targetUser = null;
 
       await expect(
-        service.assignerDepartements(USER_ID, { departement_ids: [] }, ACTEUR_ID),
+        service.assignerDepartements(
+          USER_ID,
+          { departement_ids: [] },
+          ACTEUR_ID,
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('lève BadRequestException si un departement n\'appartient pas a l\'universite de la cible', async () => {
+    it("lève BadRequestException si un departement n'appartient pas a l'universite de la cible", async () => {
       targetUser = makeUser({ universite_id: 'univ-1' });
       prisma.departements.count.mockResolvedValue(0);
 
       await expect(
-        service.assignerDepartements(USER_ID, { departement_ids: ['dep-1'] }, ACTEUR_ID),
+        service.assignerDepartements(
+          USER_ID,
+          { departement_ids: ['dep-1'] },
+          ACTEUR_ID,
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('remplace les departements et trace dans l\'audit', async () => {
+    it("remplace les departements et trace dans l'audit", async () => {
       targetUser = makeUser({ universite_id: 'univ-1' });
       prisma.departements.count.mockResolvedValue(2);
       prisma.utilisateurs.update.mockResolvedValue(
-        makeUser({ departements: [{ id: 'dep-1', nom: 'GI' }, { id: 'dep-2', nom: 'Meca' }] }),
+        makeUser({
+          departements: [
+            { id: 'dep-1', nom: 'GI' },
+            { id: 'dep-2', nom: 'Meca' },
+          ],
+        }),
       );
 
       const result = await service.assignerDepartements(
@@ -334,7 +423,9 @@ describe('UtilisateursService', () => {
         }),
       );
       expect(audit.log).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'UTILISATEUR_DEPARTEMENTS_ASSIGNES' }),
+        expect.objectContaining({
+          action: 'UTILISATEUR_DEPARTEMENTS_ASSIGNES',
+        }),
       );
       expect(result.departements).toHaveLength(2);
     });
