@@ -990,11 +990,9 @@ export default function EmissionDiplome() {
                       <AlertTriangle size={14} /> {importErreur}
                     </p>
                   )}
-                  {matieres.length === 0 && (
-                    <button type="button" className={styles.modeleLink} onClick={handleTelechargerModele}>
-                      <Download size={12} /> Télécharger un modèle de fichier (CSV)
-                    </button>
-                  )}
+                  <button type="button" className={styles.modeleLink} onClick={handleTelechargerModele}>
+                    <Download size={12} /> Télécharger le modèle de fichier à respecter (CSV)
+                  </button>
 
                   {matieres.length === 0 ? (
                     <div className={styles.matieresEmpty}>
