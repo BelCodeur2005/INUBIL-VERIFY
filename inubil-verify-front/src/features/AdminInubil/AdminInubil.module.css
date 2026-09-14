@@ -700,6 +700,10 @@
   text-align: right;
 }
 
+.tableActionsCell button + button {
+  margin-left: 0.5rem;
+}
+
 .roleBadge {
   background-color: rgba(43, 86, 203, 0.1);
   color: #2b56cb;

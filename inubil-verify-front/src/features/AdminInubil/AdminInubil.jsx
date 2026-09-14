@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   LineChart, FileText, Bell, Users, ClipboardCheck, Settings, Building2,
   ShieldCheck, GraduationCap, Share2, UserPlus, Search, DatabaseBackup, ChevronDown,
-  Shield, AlertTriangle, Mail,
+  Shield, AlertTriangle, Mail, Send, Ban,
 } from 'lucide-react';
 import { SECTIONS_CONFIG, metaConfig } from './configurations-metadata';
 import { useAuth } from '../../core/auth/useAuth';
@@ -32,6 +32,7 @@ import {
   declencherBackup,
 } from '../../core/admin/admin.api';
 import { assignerRole } from '../../core/utilisateurs/utilisateurs.api';
+import { listerInvitations, renvoyerInvitation, annulerInvitation } from '../../core/invitations/invitations.api';
 import { ApiError } from '../../core/api/client';
 
 // Statuts reels d'un compte utilisateur (enum statut_utilisateur, backend) —
@@ -42,6 +43,12 @@ const LABELS_STATUT_COMPTE = {
   suspendu:         { label: 'Suspendu',            classe: 'statusSuspended' },
   en_attente_email: { label: "En attente d'email",  classe: 'statusPending' },
 };
+
+// Pseudo-statut cote frontend uniquement (pas un statut_utilisateur backend) : selectionner
+// cette option dans le filtre "Statut" bascule le tableau vers les invitations en attente
+// (table `invitations`, pas encore de compte utilisateur cree) — meme page, memes filtres,
+// plutot qu'un onglet separe.
+const FILTRE_INVITATIONS = '__invitations_en_attente__';
 
 const ROLE_LABELS = {
   super_admin: 'Super Administrateur',
@@ -213,6 +220,7 @@ export default function AdminInubil() {
   const [actionEnCours, setActionEnCours] = useState(null);
 
   const chargerUtilisateurs = async () => {
+    if (usersFiltreStatut === FILTRE_INVITATIONS) return; // bascule geree par l'effet invitations ci-dessous
     setUsersLoading(true);
     setUsersError(null);
     try {
@@ -265,6 +273,59 @@ export default function AdminInubil() {
       setToast({ type: 'error', message: err instanceof ApiError ? err.message : 'Impossible de changer le rôle.' });
     } finally {
       setActionEnCours(null);
+    }
+  };
+
+  // ── Invitations en attente (visibilite + renvoyer/annuler) ─────────────────
+  const [invitationsState, setInvitationsState] = useState({ data: [], total: 0 });
+  const [invitationsLoading, setInvitationsLoading] = useState(true);
+  const [invitationsError, setInvitationsError] = useState(null);
+  const [invitationActionEnCours, setInvitationActionEnCours] = useState(null);
+
+  const chargerInvitations = async () => {
+    setInvitationsLoading(true);
+    setInvitationsError(null);
+    try {
+      const res = await listerInvitations({ statut: 'en_attente', limit: 50 });
+      setInvitationsState(res);
+    } catch (err) {
+      setInvitationsError(err instanceof ApiError ? err.message : 'Impossible de charger les invitations.');
+    } finally {
+      setInvitationsLoading(false);
+    }
+  };
+
+  const modeInvitations = activeTab === 'users' && usersFiltreStatut === FILTRE_INVITATIONS;
+
+  useEffect(() => {
+    if (!modeInvitations) return;
+    const timeout = setTimeout(() => { chargerInvitations(); }, 0);
+    return () => clearTimeout(timeout);
+  }, [modeInvitations]);
+
+  const renvoyerInvitationAction = async (inv) => {
+    setInvitationActionEnCours(inv.id);
+    try {
+      await renvoyerInvitation(inv.id);
+      setToast({ type: 'success', message: `Invitation renvoyée à ${inv.email}.` });
+      await chargerInvitations();
+    } catch (err) {
+      setToast({ type: 'error', message: err instanceof ApiError ? err.message : 'Impossible de renvoyer cette invitation.' });
+    } finally {
+      setInvitationActionEnCours(null);
+    }
+  };
+
+  const annulerInvitationAction = async (inv) => {
+    setInvitationActionEnCours(inv.id);
+    try {
+      await annulerInvitation(inv.id);
+      setToast({ type: 'success', message: `Invitation à ${inv.email} annulée.` });
+      await chargerInvitations();
+    } catch (err) {
+      setToast({ type: 'error', message: err instanceof ApiError ? err.message : "Impossible d'annuler cette invitation." });
+    } finally {
+      setInvitationActionEnCours(null);
     }
   };
 
@@ -511,7 +572,11 @@ export default function AdminInubil() {
               <div className={styles.tableHeader}>
                 <div>
                   <h3 className={styles.viewTitle}>Gestion des Utilisateurs</h3>
-                  <p className={styles.viewSubtitle}>{usersState.total} compte{usersState.total > 1 ? 's' : ''} sur la plateforme.</p>
+                  <p className={styles.viewSubtitle}>
+                    {modeInvitations
+                      ? `${invitationsState.total} invitation${invitationsState.total > 1 ? 's' : ''} non acceptée${invitationsState.total > 1 ? 's' : ''}.`
+                      : `${usersState.total} compte${usersState.total > 1 ? 's' : ''} sur la plateforme.`}
+                  </p>
                 </div>
                 <button className={styles.btnPrimary} onClick={() => setIsUserModalOpen(true)}>
                   <UserPlus size={16} /> Inviter un Collaborateur
@@ -529,6 +594,7 @@ export default function AdminInubil() {
                       value={usersSearch}
                       onChange={(e) => { setUsersPage(1); setUsersSearch(e.target.value); }}
                       className={styles.filterInput}
+                      disabled={modeInvitations}
                     />
                   </div>
                 </div>
@@ -543,6 +609,7 @@ export default function AdminInubil() {
                     {Object.entries(LABELS_STATUT_COMPTE).map(([val, info]) => (
                       <option key={val} value={val}>{info.label}</option>
                     ))}
+                    <option value={FILTRE_INVITATIONS}>Invitations en attente</option>
                   </select>
                 </div>
                 <div className={styles.filterGroup}>
@@ -551,6 +618,7 @@ export default function AdminInubil() {
                     value={usersFiltreRole}
                     onChange={(e) => { setUsersPage(1); setUsersFiltreRole(e.target.value); }}
                     className={styles.filterSelect}
+                    disabled={modeInvitations}
                   >
                     <option value="">Tous les rôles</option>
                     {roles.map((r) => <option key={r.id} value={r.id}>{ROLE_LABELS[r.nom] ?? r.nom}</option>)}
@@ -558,84 +626,141 @@ export default function AdminInubil() {
                 </div>
               </div>
 
-              {usersError && <p className={styles.errorText}>{usersError}</p>}
-
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Utilisateur</th>
-                    <th>Rôle</th>
-                    <th>Établissement</th>
-                    <th>Dernière connexion</th>
-                    <th>Statut</th>
-                    <th className={styles.tableActionsHead}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usersLoading && (
-                    <tr><td colSpan={6} className={styles.tableEmptyCell}>Chargement…</td></tr>
-                  )}
-                  {!usersLoading && usersState.data.length === 0 && (
-                    <tr><td colSpan={6} className={styles.tableEmptyCell}>Aucun utilisateur ne correspond à ces filtres.</td></tr>
-                  )}
-                  {!usersLoading && usersState.data.map((usr) => {
-                    const statutInfo = LABELS_STATUT_COMPTE[usr.statut];
-                    const initiales = `${usr.prenom?.charAt(0) ?? ''}${usr.nom?.charAt(0) ?? ''}`.toUpperCase() || '··';
-                    return (
-                      <tr key={usr.id}>
-                        <td>
-                          <div className={styles.userCell}>
-                            <span className={styles.userAvatar}>{initiales}</span>
-                            <div className={styles.userCellTexts}>
-                              <strong>{usr.prenom} {usr.nom}</strong>
-                              <span className={styles.userEmail}>{usr.email}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <select
-                            value={usr.role?.id ?? ''}
-                            onChange={(e) => changerRoleUtilisateur(usr, e.target.value)}
-                            disabled={actionEnCours === usr.id || rolesLoading}
-                            className={styles.roleSelect}
-                          >
-                            <option value="" disabled>Sans rôle</option>
-                            {roles.map((r) => <option key={r.id} value={r.id}>{ROLE_LABELS[r.nom] ?? r.nom}</option>)}
-                          </select>
-                        </td>
-                        <td className={styles.universiteCell}>{usr.universite?.nom ?? '—'}</td>
-                        <td className={styles.dateCell}>
-                          {usr.derniere_connexion ? new Date(usr.derniere_connexion).toLocaleString('fr-FR') : 'Jamais'}
-                        </td>
-                        <td>
-                          <span className={styles[statutInfo?.classe] ?? styles.statusInactive}>
-                            {statutInfo?.label ?? usr.statut}
-                          </span>
-                        </td>
-                        <td className={styles.tableActionsCell}>
-                          <button
-                            className={styles.btnSecondary}
-                            onClick={() => toggleActivationUtilisateur(usr)}
-                            disabled={actionEnCours === usr.id}
-                          >
-                            {actionEnCours === usr.id ? '…' : (usr.statut === 'actif' ? 'Désactiver' : 'Activer')}
-                          </button>
-                        </td>
+              {modeInvitations ? (
+                <>
+                  {invitationsError && <p className={styles.errorText}>{invitationsError}</p>}
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Email</th>
+                        <th>Rôle proposé</th>
+                        <th>Expire le</th>
+                        <th>Relances</th>
+                        <th className={styles.tableActionsHead}>Actions</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {invitationsLoading && (
+                        <tr><td colSpan={5} className={styles.tableEmptyCell}>Chargement…</td></tr>
+                      )}
+                      {!invitationsLoading && invitationsState.data.length === 0 && (
+                        <tr><td colSpan={5} className={styles.tableEmptyCell}>Aucune invitation en attente.</td></tr>
+                      )}
+                      {!invitationsLoading && invitationsState.data.map((inv) => {
+                        const role = roles.find((r) => r.id === inv.role_id);
+                        return (
+                          <tr key={inv.id}>
+                            <td>{inv.email}</td>
+                            <td>{role ? (ROLE_LABELS[role.nom] ?? role.nom) : '—'}</td>
+                            <td className={styles.dateCell}>
+                              {new Date(inv.expires_at).toLocaleString('fr-FR')}
+                            </td>
+                            <td>{inv.nb_relances}</td>
+                            <td className={styles.tableActionsCell}>
+                              <button
+                                className={styles.btnSecondary}
+                                onClick={() => renvoyerInvitationAction(inv)}
+                                disabled={invitationActionEnCours === inv.id}
+                                title="Régénère le lien (72h) et renvoie l'email"
+                              >
+                                {invitationActionEnCours === inv.id ? '…' : <><Send size={13} /> Renvoyer</>}
+                              </button>
+                              <button
+                                className={styles.btnSecondary}
+                                onClick={() => annulerInvitationAction(inv)}
+                                disabled={invitationActionEnCours === inv.id}
+                              >
+                                <Ban size={13} /> Annuler
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </>
+              ) : (
+                <>
+                  {usersError && <p className={styles.errorText}>{usersError}</p>}
 
-              <div className={styles.paginationWrap}>
-                <Pagination
-                  page={usersState.page}
-                  totalPages={usersState.totalPages}
-                  total={usersState.total}
-                  onChange={setUsersPage}
-                  itemLabel="compte"
-                />
-              </div>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Utilisateur</th>
+                        <th>Rôle</th>
+                        <th>Établissement</th>
+                        <th>Dernière connexion</th>
+                        <th>Statut</th>
+                        <th className={styles.tableActionsHead}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usersLoading && (
+                        <tr><td colSpan={6} className={styles.tableEmptyCell}>Chargement…</td></tr>
+                      )}
+                      {!usersLoading && usersState.data.length === 0 && (
+                        <tr><td colSpan={6} className={styles.tableEmptyCell}>Aucun utilisateur ne correspond à ces filtres.</td></tr>
+                      )}
+                      {!usersLoading && usersState.data.map((usr) => {
+                        const statutInfo = LABELS_STATUT_COMPTE[usr.statut];
+                        const initiales = `${usr.prenom?.charAt(0) ?? ''}${usr.nom?.charAt(0) ?? ''}`.toUpperCase() || '··';
+                        return (
+                          <tr key={usr.id}>
+                            <td>
+                              <div className={styles.userCell}>
+                                <span className={styles.userAvatar}>{initiales}</span>
+                                <div className={styles.userCellTexts}>
+                                  <strong>{usr.prenom} {usr.nom}</strong>
+                                  <span className={styles.userEmail}>{usr.email}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <select
+                                value={usr.role?.id ?? ''}
+                                onChange={(e) => changerRoleUtilisateur(usr, e.target.value)}
+                                disabled={actionEnCours === usr.id || rolesLoading}
+                                className={styles.roleSelect}
+                              >
+                                <option value="" disabled>Sans rôle</option>
+                                {roles.map((r) => <option key={r.id} value={r.id}>{ROLE_LABELS[r.nom] ?? r.nom}</option>)}
+                              </select>
+                            </td>
+                            <td className={styles.universiteCell}>{usr.universite?.nom ?? '—'}</td>
+                            <td className={styles.dateCell}>
+                              {usr.derniere_connexion ? new Date(usr.derniere_connexion).toLocaleString('fr-FR') : 'Jamais'}
+                            </td>
+                            <td>
+                              <span className={styles[statutInfo?.classe] ?? styles.statusInactive}>
+                                {statutInfo?.label ?? usr.statut}
+                              </span>
+                            </td>
+                            <td className={styles.tableActionsCell}>
+                              <button
+                                className={styles.btnSecondary}
+                                onClick={() => toggleActivationUtilisateur(usr)}
+                                disabled={actionEnCours === usr.id}
+                              >
+                                {actionEnCours === usr.id ? '…' : (usr.statut === 'actif' ? 'Désactiver' : 'Activer')}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+
+                  <div className={styles.paginationWrap}>
+                    <Pagination
+                      page={usersState.page}
+                      totalPages={usersState.totalPages}
+                      total={usersState.total}
+                      onChange={setUsersPage}
+                      itemLabel="compte"
+                    />
+                  </div>
+                </>
+              )}
             </section>
           )}
 
