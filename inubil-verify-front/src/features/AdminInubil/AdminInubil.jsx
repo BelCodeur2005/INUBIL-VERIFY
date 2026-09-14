@@ -23,6 +23,7 @@ import RepartitionDocuments from '../../shared/components/RepartitionDocuments/R
 import JournalAudit from '../../shared/components/JournalAudit/JournalAudit';
 import Pagination from '../../shared/components/Pagination/Pagination';
 import { listerRoles } from '../../core/roles/roles.api';
+import { listerUniversites } from '../../core/universites/universites.api';
 import {
   listerUtilisateursAdmin,
   activerUtilisateurAdmin,
@@ -209,6 +210,20 @@ export default function AdminInubil() {
     return () => { annule = true; };
   }, []);
 
+  // ── Universités (pour afficher l'établissement des invitations en attente) ──
+  const [universitesById, setUniversitesById] = useState({});
+
+  useEffect(() => {
+    let annule = false;
+    listerUniversites({ limit: 100 })
+      .then((res) => {
+        if (annule) return;
+        setUniversitesById(Object.fromEntries((res.data ?? []).map((u) => [u.id, u.nom])));
+      })
+      .catch(() => {});
+    return () => { annule = true; };
+  }, []);
+
   // ── Utilisateurs (GET /admin/utilisateurs) ──
   const [usersState, setUsersState] = useState({ data: [], total: 0, page: 1, totalPages: 1 });
   const [usersLoading, setUsersLoading] = useState(true);
@@ -296,12 +311,18 @@ export default function AdminInubil() {
   };
 
   const modeInvitations = activeTab === 'users' && usersFiltreStatut === FILTRE_INVITATIONS;
+  // "Tous les statuts" doit aussi montrer les invitations en attente (pas encore un compte
+  // utilisateur, donc absentes de GET /utilisateurs) — fusionnees en tete de la 1ere page
+  // seulement, pour ne pas les repeter sur chaque page de la pagination des vrais comptes.
+  const afficherInvitationsFusionnees =
+    activeTab === 'users' && usersFiltreStatut === '' && usersPage === 1;
+  const doitChargerInvitations = modeInvitations || afficherInvitationsFusionnees;
 
   useEffect(() => {
-    if (!modeInvitations) return;
+    if (!doitChargerInvitations) return;
     const timeout = setTimeout(() => { chargerInvitations(); }, 0);
     return () => clearTimeout(timeout);
-  }, [modeInvitations]);
+  }, [doitChargerInvitations]);
 
   const renvoyerInvitationAction = async (inv) => {
     setInvitationActionEnCours(inv.id);
@@ -695,10 +716,52 @@ export default function AdminInubil() {
                       </tr>
                     </thead>
                     <tbody>
+                      {afficherInvitationsFusionnees && !invitationsLoading && invitationsState.data.map((inv) => {
+                        const role = roles.find((r) => r.id === inv.role_id);
+                        return (
+                          <tr key={`inv-${inv.id}`}>
+                            <td>
+                              <div className={styles.userCell}>
+                                <span className={styles.userAvatar}>✉</span>
+                                <div className={styles.userCellTexts}>
+                                  <strong>{inv.email}</strong>
+                                  <span className={styles.userEmail}>Invitation envoyée</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td>{role ? (ROLE_LABELS[role.nom] ?? role.nom) : '—'}</td>
+                            <td className={styles.universiteCell}>{universitesById[inv.universite_id] ?? '—'}</td>
+                            <td className={styles.dateCell}>
+                              Expire le {new Date(inv.expires_at).toLocaleDateString('fr-FR')}
+                            </td>
+                            <td>
+                              <span className={styles.statusPending}>En attente d'activation</span>
+                            </td>
+                            <td className={styles.tableActionsCell}>
+                              <button
+                                className={styles.btnSecondary}
+                                onClick={() => renvoyerInvitationAction(inv)}
+                                disabled={invitationActionEnCours === inv.id}
+                                title="Régénère le lien (72h) et renvoie l'email"
+                              >
+                                {invitationActionEnCours === inv.id ? '…' : <><Send size={13} /> Renvoyer</>}
+                              </button>
+                              <button
+                                className={styles.btnSecondary}
+                                onClick={() => annulerInvitationAction(inv)}
+                                disabled={invitationActionEnCours === inv.id}
+                              >
+                                <Ban size={13} /> Annuler
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                       {usersLoading && (
                         <tr><td colSpan={6} className={styles.tableEmptyCell}>Chargement…</td></tr>
                       )}
-                      {!usersLoading && usersState.data.length === 0 && (
+                      {!usersLoading && usersState.data.length === 0
+                        && !(afficherInvitationsFusionnees && invitationsState.data.length > 0) && (
                         <tr><td colSpan={6} className={styles.tableEmptyCell}>Aucun utilisateur ne correspond à ces filtres.</td></tr>
                       )}
                       {!usersLoading && usersState.data.map((usr) => {
