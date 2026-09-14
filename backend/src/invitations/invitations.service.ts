@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -25,6 +26,8 @@ const INVITATION_TTL_MS = 72 * 60 * 60 * 1000; // 72h
 
 @Injectable()
 export class InvitationsService {
+  private readonly logger = new Logger(InvitationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
@@ -99,8 +102,18 @@ export class InvitationsService {
       },
     });
 
+    // Fire & forget : le SMTP peut etre lent/bloque (ex. port sortant filtre par
+    // l'hebergeur) — ne jamais faire attendre l'appelant, sur le meme principe que
+    // l'ancrage blockchain (documents.service.ts). L'invitation existe deja en base ;
+    // un envoi rate se rattrape via POST /invitations/:id/renvoyer.
     const activerUrl = `${this.config.get<string>('FRONTEND_URL')}/invitations/activer?token=${tokenBrut}`;
-    await this.mail.sendInvitation(email, activerUrl);
+    this.mail
+      .sendInvitation(email, activerUrl)
+      .catch((err) =>
+        this.logger.error(
+          `Envoi email invitation echoue pour ${email} : ${err.message}`,
+        ),
+      );
 
     await this.audit.log({
       utilisateurId: acteurId,
@@ -217,8 +230,15 @@ export class InvitationsService {
       },
     });
 
+    // Fire & forget — voir le commentaire equivalent dans creer() ci-dessus.
     const activerUrl = `${this.config.get<string>('FRONTEND_URL')}/invitations/activer?token=${tokenBrut}`;
-    await this.mail.sendInvitation(invitation.email, activerUrl);
+    this.mail
+      .sendInvitation(invitation.email, activerUrl)
+      .catch((err) =>
+        this.logger.error(
+          `Envoi email invitation (relance) echoue pour ${invitation.email} : ${err.message}`,
+        ),
+      );
 
     await this.audit.log({
       utilisateurId: acteurId,
