@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Building2,
   MapPin,
@@ -9,11 +9,22 @@ import {
   AlertTriangle,
   CheckCircle2,
   Globe,
+  UploadCloud,
+  Link2,
 } from 'lucide-react';
 import { useAuth } from '../../../core/auth/useAuth';
-import { getUniversite, modifierUniversite } from '../../../core/universites/universites.api';
+import { getUniversite, modifierUniversite, televerserLogoUniversite } from '../../../core/universites/universites.api';
 import { ApiError } from '../../../core/api/client';
 import styles from './ParametresEtablissement.module.css';
+
+const LOGO_MAX_MO = 2;
+const LOGO_TYPES_ACCEPTES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+
+function validerFichierLogo(file) {
+  if (!LOGO_TYPES_ACCEPTES.includes(file.type)) return 'Formats acceptés : PNG, JPEG, WEBP, SVG.';
+  if (file.size > LOGO_MAX_MO * 1024 * 1024) return `Ce fichier dépasse la limite de ${LOGO_MAX_MO} Mo.`;
+  return null;
+}
 
 const TYPES_UNIVERSITE = [
   { valeur: 'publique', label: 'Publique' },
@@ -62,6 +73,37 @@ export default function ParametresEtablissement() {
   const [enregistrement, setEnregistrement] = useState(false);
   const [erreurEnvoi, setErreurEnvoi] = useState(null);
   const [enregistre, setEnregistre] = useState(false);
+
+  // ── Logo : upload direct (action independante, pas liee au bouton "Enregistrer" du
+  // reste du formulaire) ou saisie manuelle d'une URL deja hebergee en secours. ──
+  const [modeLogo, setModeLogo] = useState('upload');
+  const [logoEnvoi, setLogoEnvoi] = useState(false);
+  const [logoEnvoiErreur, setLogoEnvoiErreur] = useState(null);
+  const [logoEnvoye, setLogoEnvoye] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const logoInputRef = useRef(null);
+
+  const televerser = async (fichier) => {
+    if (!fichier || !universiteId) return;
+    const erreur = validerFichierLogo(fichier);
+    if (erreur) { setLogoEnvoiErreur(erreur); return; }
+    setLogoEnvoiErreur(null);
+    setLogoEnvoi(true);
+    try {
+      const maj_ = await televerserLogoUniversite(universiteId, fichier);
+      const f = versFormulaire(maj_);
+      setOriginal(f);
+      setForm(f);
+      setLogoErreur(false);
+      setLogoEnvoye(true);
+      await rafraichirProfil?.();
+      setTimeout(() => setLogoEnvoye(false), 2500);
+    } catch (err) {
+      setLogoEnvoiErreur(err instanceof ApiError ? err.message : "Le logo n'a pas pu être téléversé.");
+    } finally {
+      setLogoEnvoi(false);
+    }
+  };
 
   useEffect(() => {
     if (!universiteId) return;
@@ -160,18 +202,59 @@ export default function ParametresEtablissement() {
             </div>
 
             <div className={styles.identityFields}>
-              <div className={styles.inputGroup}>
-                <label>URL du logo</label>
-                <input
-                  type="url"
-                  value={form.logo_url}
-                  onChange={(e) => { setLogoErreur(false); maj('logo_url')(e); }}
-                  placeholder="https://…/logo.png"
-                />
-                <span className={styles.fieldHint}>
-                  Hébergez l'image (site de l'établissement, service d'hébergement d'images) puis collez son lien ici.
-                </span>
+              <div className={styles.logoModeToggle}>
+                <button type="button" className={`${styles.logoModeBtn} ${modeLogo === 'upload' ? styles.logoModeBtnActive : ''}`} onClick={() => setModeLogo('upload')}>
+                  <UploadCloud size={14} /> Téléverser un fichier
+                </button>
+                <button type="button" className={`${styles.logoModeBtn} ${modeLogo === 'url' ? styles.logoModeBtnActive : ''}`} onClick={() => setModeLogo('url')}>
+                  <Link2 size={14} /> Coller une URL
+                </button>
               </div>
+
+              {modeLogo === 'upload' ? (
+                <div>
+                  <input
+                    type="file"
+                    ref={logoInputRef}
+                    accept={LOGO_TYPES_ACCEPTES.join(',')}
+                    style={{ display: 'none' }}
+                    onChange={(e) => { televerser(e.target.files[0]); e.target.value = ''; }}
+                  />
+                  <div
+                    className={`${styles.logoDropzone} ${isDragging ? styles.logoDropzoneDragging : ''}`}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); televerser(e.dataTransfer.files[0]); }}
+                    onClick={() => !logoEnvoi && logoInputRef.current?.click()}
+                  >
+                    {logoEnvoi ? (
+                      <Loader2 size={20} className={styles.spin} />
+                    ) : (
+                      <UploadCloud size={20} />
+                    )}
+                    <span>
+                      {logoEnvoi ? 'Téléversement…' : 'Glissez une image ici ou cliquez pour choisir un fichier'}
+                    </span>
+                    <span className={styles.fieldHint}>PNG, JPEG, WEBP ou SVG — {LOGO_MAX_MO} Mo maximum</span>
+                  </div>
+                  {logoEnvoye && <p className={styles.logoSavedTag}><CheckCircle2 size={14} /> Logo mis à jour</p>}
+                  {logoEnvoiErreur && <p className={styles.errorBanner}><AlertTriangle size={14} /> {logoEnvoiErreur}</p>}
+                </div>
+              ) : (
+                <div className={styles.inputGroup}>
+                  <label>URL du logo</label>
+                  <input
+                    type="url"
+                    value={form.logo_url}
+                    onChange={(e) => { setLogoErreur(false); maj('logo_url')(e); }}
+                    placeholder="https://…/logo.png"
+                  />
+                  <span className={styles.fieldHint}>
+                    Collez le lien d'une image déjà hébergée ailleurs, puis « Enregistrer les modifications » plus bas.
+                  </span>
+                </div>
+              )}
+
               <div className={styles.formGrid}>
                 <div className={styles.inputGroup}>
                   <label>Nom complet</label>

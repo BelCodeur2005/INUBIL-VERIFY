@@ -39,7 +39,10 @@ class UniversiteBriefDto {
   @ApiProperty({ example: 'ISTAMA', nullable: true })
   nom_court: string | null;
 
-  @ApiProperty({ nullable: true, description: "URL du logo de l'etablissement." })
+  @ApiProperty({
+    nullable: true,
+    description: "URL du logo de l'etablissement.",
+  })
   logo_url: string | null;
 }
 

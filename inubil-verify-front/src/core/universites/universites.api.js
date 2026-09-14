@@ -1,4 +1,4 @@
-import { api } from '../api/client';
+import { api, apiRequest } from '../api/client';
 
 /** GET /universites — liste paginee (filtres: statut, type, pays, search). */
 export function listerUniversites({ page = 1, limit = 20, statut, type, pays, search } = {}) {
@@ -23,6 +23,13 @@ export function creerUniversite(donnees) {
 /** PATCH /universites/:id (UpdateUniversiteDto). */
 export function modifierUniversite(id, donnees) {
   return api.patch(`/universites/${id}`, donnees);
+}
+
+/** POST /universites/:id/logo — upload multipart (champ "fichier"), retourne l'universite a jour. */
+export function televerserLogoUniversite(id, fichier) {
+  const formData = new FormData();
+  formData.append('fichier', fichier);
+  return apiRequest(`/universites/${id}/logo`, { method: 'POST', body: formData });
 }
 
 /** DELETE /universites/:id — soft delete, bloque (409) si l'universite est active. */

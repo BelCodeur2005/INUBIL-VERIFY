@@ -8,3 +8,10 @@
  * DocumentsService.uploadPdf() et PublicVerifyService.verifierParUpload().
  */
 export const PDF_HARD_LIMIT_BYTES = 20 * 1024 * 1024; // 20 Mo
+
+/**
+ * Plafond dur pour l'upload du logo d'un etablissement (universites.service.ts,
+ * uploaderLogo) — une image de marque, pas un document, une limite modeste suffit
+ * et evite qu'un fichier volumineux ralentisse chaque chargement de page.
+ */
+export const LOGO_MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 Mo

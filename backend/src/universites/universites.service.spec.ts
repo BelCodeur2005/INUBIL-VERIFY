@@ -1,8 +1,13 @@
-import { ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { statut_universite, type_universite } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 import { UniversitesService } from './universites.service';
 
 const ACTEUR_ID = 'user-uuid-1';
@@ -51,12 +56,19 @@ describe('UniversitesService', () => {
       $transaction: jest.fn(),
     };
     audit = { log: jest.fn().mockResolvedValue(undefined) };
+    const storage = {
+      uploadFile: jest.fn(),
+      getPublicUrl: jest.fn(),
+      getPresignedUrl: jest.fn(),
+      deleteFile: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UniversitesService,
         { provide: PrismaService, useValue: prisma },
         { provide: AuditService, useValue: audit },
+        { provide: StorageService, useValue: storage },
       ],
     }).compile();
 
@@ -75,12 +87,18 @@ describe('UniversitesService', () => {
     it('applique le filtre statut dans le where', async () => {
       prisma.universites.findMany.mockResolvedValue([makeUniversite()]);
       prisma.universites.count.mockResolvedValue(1);
-      prisma.$transaction.mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops));
+      prisma.$transaction.mockImplementation((ops: Promise<unknown>[]) =>
+        Promise.all(ops),
+      );
 
       await service.lister({ statut: statut_universite.en_attente });
 
       expect(prisma.universites.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ statut: statut_universite.en_attente }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({
+            statut: statut_universite.en_attente,
+          }),
+        }),
       );
     });
   });
@@ -104,7 +122,9 @@ describe('UniversitesService', () => {
         }),
       );
       expect(result.id).toBe(UNIV_ID);
-      expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'UNIVERSITE_CREEE' }));
+      expect(audit.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'UNIVERSITE_CREEE' }),
+      );
     });
   });
 
@@ -112,7 +132,10 @@ describe('UniversitesService', () => {
     it('passe en_attente → approuvee', async () => {
       const univ = makeUniversite({ statut: statut_universite.en_attente });
       prisma.universites.findFirst.mockResolvedValue(univ);
-      prisma.universites.update.mockResolvedValue({ ...univ, statut: statut_universite.approuvee });
+      prisma.universites.update.mockResolvedValue({
+        ...univ,
+        statut: statut_universite.approuvee,
+      });
 
       const result = await service.approuver(UNIV_ID, ACTEUR_ID);
 
@@ -128,23 +151,38 @@ describe('UniversitesService', () => {
     });
 
     it('lève ConflictException si déjà active', async () => {
-      prisma.universites.findFirst.mockResolvedValue(makeUniversite({ statut: statut_universite.active }));
-      await expect(service.approuver(UNIV_ID, ACTEUR_ID)).rejects.toBeInstanceOf(ConflictException);
+      prisma.universites.findFirst.mockResolvedValue(
+        makeUniversite({ statut: statut_universite.active }),
+      );
+      await expect(
+        service.approuver(UNIV_ID, ACTEUR_ID),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 
   describe('rejeter', () => {
     it('lève BadRequestException si raison_rejet absente', async () => {
-      prisma.universites.findFirst.mockResolvedValue(makeUniversite({ statut: statut_universite.en_attente }));
-      await expect(service.rejeter(UNIV_ID, {}, ACTEUR_ID)).rejects.toBeInstanceOf(BadRequestException);
+      prisma.universites.findFirst.mockResolvedValue(
+        makeUniversite({ statut: statut_universite.en_attente }),
+      );
+      await expect(
+        service.rejeter(UNIV_ID, {}, ACTEUR_ID),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('passe en_attente → rejetee avec la raison', async () => {
       const univ = makeUniversite({ statut: statut_universite.en_attente });
       prisma.universites.findFirst.mockResolvedValue(univ);
-      prisma.universites.update.mockResolvedValue({ ...univ, statut: statut_universite.rejetee });
+      prisma.universites.update.mockResolvedValue({
+        ...univ,
+        statut: statut_universite.rejetee,
+      });
 
-      await service.rejeter(UNIV_ID, { raison_rejet: 'Documents incomplets pour le dossier.' }, ACTEUR_ID);
+      await service.rejeter(
+        UNIV_ID,
+        { raison_rejet: 'Documents incomplets pour le dossier.' },
+        ACTEUR_ID,
+      );
 
       expect(prisma.universites.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -156,26 +194,36 @@ describe('UniversitesService', () => {
 
   describe('supprimer', () => {
     it('applique un soft delete (deleted_at)', async () => {
-      prisma.universites.findFirst.mockResolvedValue(makeUniversite({ statut: statut_universite.en_attente }));
+      prisma.universites.findFirst.mockResolvedValue(
+        makeUniversite({ statut: statut_universite.en_attente }),
+      );
       prisma.universites.update.mockResolvedValue({});
 
       await service.supprimer(UNIV_ID, ACTEUR_ID);
 
       expect(prisma.universites.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ deleted_at: expect.any(Date) }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ deleted_at: expect.any(Date) }),
+        }),
       );
     });
 
     it('lève ConflictException pour une université active', async () => {
-      prisma.universites.findFirst.mockResolvedValue(makeUniversite({ statut: statut_universite.active }));
-      await expect(service.supprimer(UNIV_ID, ACTEUR_ID)).rejects.toBeInstanceOf(ConflictException);
+      prisma.universites.findFirst.mockResolvedValue(
+        makeUniversite({ statut: statut_universite.active }),
+      );
+      await expect(
+        service.supprimer(UNIV_ID, ACTEUR_ID),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 
   describe('findOne', () => {
     it('lève NotFoundException si deleted_at est renseigné', async () => {
       prisma.universites.findFirst.mockResolvedValue(null);
-      await expect(service.findOne(UNIV_ID)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.findOne(UNIV_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 });

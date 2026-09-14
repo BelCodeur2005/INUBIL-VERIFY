@@ -144,6 +144,75 @@
   color: #94a3b8;
 }
 
+.logoModeToggle {
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  background: #f8fafc;
+  border-radius: 10px;
+  width: fit-content;
+}
+
+.logoModeBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.logoModeBtn:hover {
+  color: #0350bd;
+}
+
+.logoModeBtnActive {
+  background: #ffffff;
+  color: #0350bd;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+}
+
+.logoDropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  color: #0350bd;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.logoDropzone span:first-of-type {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.logoDropzoneDragging {
+  border-color: #0350bd;
+  background: #eff6ff;
+}
+
+.logoSavedTag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #166534;
+  margin: 8px 0 0;
+}
+
 /* ── Champs partagés ── */
 .formGrid {
   display: grid;
