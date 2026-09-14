@@ -267,6 +267,72 @@
   color: var(--luxury-gold);
 }
 
+/* Scanner QR (camera) */
+.scannerBox {
+  border: 2px dashed #cbd5e1;
+  background-color: #0f172a;
+  border-radius: 0.875rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.scannerViewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0f172a;
+}
+
+.scannerVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scannerFrame {
+  position: relative;
+  width: 60%;
+  aspect-ratio: 1;
+  border: 3px solid var(--luxury-gold);
+  border-radius: 1rem;
+  box-shadow: 0 0 0 999px rgba(15, 23, 42, 0.45);
+}
+
+.scannerHint {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.75);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.scannerErreur {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3rem 2rem;
+  color: #f8fafc;
+  text-align: center;
+}
+
+.scannerErreur p {
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  margin: 0;
+}
+
 .dropTextMain {
   font-size: 1rem;
   font-weight: 600;

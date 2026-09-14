@@ -1,14 +1,21 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './VerificationPublique.module.css';
 import PublicHeader from './PublicHeader';
+import QrScanner from './QrScanner';
 import { verifierParUpload, verifierParHash } from '../../core/verify/verify.api';
 import Valide from './Valide';
 import Revoque from './Revoque';
 
 const REGEX_HASH = /^[0-9a-f]{64}$/;
+// Un QR de diplôme encode l'URL publique (…/d/INUB-2026-0001) — on extrait
+// l'identifiant peu importe le domaine (prod, preview, localhost) pour rester
+// sur l'origine courante plutôt que de rediriger l'utilisateur ailleurs.
+const REGEX_IDENTIFIANT_DEPUIS_URL = /\/d\/([^/?#\s]+)/i;
 
 export default function VerificationPublique() {
-  const [mode, setMode] = useState('upload'); // 'upload' | 'hash'
+  const navigate = useNavigate();
+  const [mode, setMode] = useState('upload'); // 'upload' | 'hash' | 'scan'
   const [isDragActive, setIsDragActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [fileName, setFileName] = useState('');
@@ -17,6 +24,12 @@ export default function VerificationPublique() {
   const [erreur, setErreur] = useState(null);
   const [resultat, setResultat] = useState(null);
   const fileInputRef = useRef(null);
+
+  const gererQrDecode = (texte) => {
+    const identifiant = REGEX_IDENTIFIANT_DEPUIS_URL.exec(texte)?.[1] ?? texte.trim();
+    if (!identifiant) return;
+    navigate(`/d/${encodeURIComponent(identifiant)}`);
+  };
 
   const reinitialiser = () => {
     setResultat(null);
@@ -149,6 +162,13 @@ export default function VerificationPublique() {
             >
               Coller un hash SHA-256
             </button>
+            <button
+              type="button"
+              className={mode === 'scan' ? styles.modeBtnActive : styles.modeBtn}
+              onClick={() => { setMode('scan'); setErreur(null); }}
+            >
+              Scanner un QR code
+            </button>
           </div>
 
           {erreur && <div className={styles.errorBanner}>
@@ -156,7 +176,9 @@ export default function VerificationPublique() {
             {erreur}
           </div>}
 
-          {mode === 'upload' ? (
+          {mode === 'scan' ? (
+            <QrScanner onDecode={gererQrDecode} />
+          ) : mode === 'upload' ? (
             <div
               className={`${styles.dropzone} ${isDragActive ? styles.dropzoneActive : ''}`}
               onClick={handleDropzoneClick}
