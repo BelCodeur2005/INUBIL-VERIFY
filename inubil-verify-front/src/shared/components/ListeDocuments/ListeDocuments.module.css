@@ -459,6 +459,53 @@
   gap: 22px;
 }
 
+.rejectionBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #991b1b;
+}
+
+.rejectionBannerText {
+  flex: 1;
+}
+
+.rejectionBannerText strong {
+  display: block;
+  font-size: 0.78rem;
+  margin-bottom: 2px;
+}
+
+.rejectionBannerText p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.correctBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  background: #b91c1c;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.correctBtn:hover {
+  background: #991b1b;
+}
+
 .modalBody h4 {
   font-size: 0.72rem;
   font-weight: 700;

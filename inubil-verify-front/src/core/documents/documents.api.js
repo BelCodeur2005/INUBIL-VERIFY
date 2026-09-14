@@ -34,6 +34,11 @@ export function creerDocument(donnees) {
   return api.post('/documents', donnees);
 }
 
+/** PATCH /documents/:id — modifie un document brouillon ou rejete (UpdateDocumentDto). */
+export function modifierDocument(documentId, donnees) {
+  return api.patch(`/documents/${documentId}`, donnees);
+}
+
 /** POST /documents/:id/pdf — upload multipart du PDF (champ "fichier"). Calcule le hash SHA-256 cote serveur. */
 export function uploaderPdf(documentId, fichier) {
   const formData = new FormData();

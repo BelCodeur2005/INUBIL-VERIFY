@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, Eye, Download, X, Loader2, AlertTriangle, FileX, FileText, FileDown } from 'lucide-react';
+import { Search, Eye, Download, X, Loader2, AlertTriangle, FileX, FileText, FileDown, Wrench } from 'lucide-react';
 import { listerDocuments, getUrlPdfPresignee, exporterDocumentsCsv } from '../../../core/documents/documents.api';
+import CorrigerDocumentDrawer from './CorrigerDocumentDrawer';
 import { listerDocumentsAdmin } from '../../../core/admin/admin.api';
 import { listerTypesDocument } from '../../../core/types-document/types-document.api';
 import { listerMentions } from '../../../core/mentions/mentions.api';
@@ -78,6 +79,8 @@ export default function ListeDocuments({ admin = false }) {
 
   const [documentDetail, setDocumentDetail] = useState(null);
   const [telechargement, setTelechargement] = useState(null);
+  const [correctionOuverte, setCorrectionOuverte] = useState(null);
+  const [refreshTick, setRefreshTick] = useState(0);
   const rechercheWrapperRef = useRef(null);
 
   useEffect(() => {
@@ -177,7 +180,13 @@ export default function ListeDocuments({ admin = false }) {
     })();
     return () => { annule = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statutFiltre, typeFiltre, etudiantFiltre, dateDebut, dateFin, page]);
+  }, [statutFiltre, typeFiltre, etudiantFiltre, dateDebut, dateFin, page, refreshTick]);
+
+  const handleResoumis = () => {
+    setCorrectionOuverte(null);
+    setDocumentDetail(null);
+    setRefreshTick((t) => t + 1);
+  };
 
   const reinitialiserFiltres = () => {
     setStatutFiltre('');
@@ -356,6 +365,11 @@ export default function ListeDocuments({ admin = false }) {
                       <button type="button" className={styles.iconBtn} title="Voir le détail" onClick={() => setDocumentDetail(doc)}>
                         <Eye size={16} />
                       </button>
+                      {!admin && doc.statut === 'rejete' && (
+                        <button type="button" className={styles.iconBtn} title="Corriger et resoumettre" onClick={() => setCorrectionOuverte(doc)}>
+                          <Wrench size={16} />
+                        </button>
+                      )}
                       {doc.pdf_url && (
                         <button
                           type="button"
@@ -394,6 +408,25 @@ export default function ListeDocuments({ admin = false }) {
             </div>
 
             <div className={styles.modalBody}>
+              {documentDetail.statut === 'rejete' && (
+                <div className={styles.rejectionBanner}>
+                  <AlertTriangle size={16} />
+                  <div className={styles.rejectionBannerText}>
+                    <strong>Motif du rejet</strong>
+                    <p>{documentDetail.motif_rejet || 'Aucun motif renseigné.'}</p>
+                  </div>
+                  {!admin && (
+                    <button
+                      type="button"
+                      className={styles.correctBtn}
+                      onClick={() => { setCorrectionOuverte(documentDetail); setDocumentDetail(null); }}
+                    >
+                      <Wrench size={14} /> Corriger et resoumettre
+                    </button>
+                  )}
+                </div>
+              )}
+
               <section>
                 <h4>Étudiant</h4>
                 <div className={styles.champsGrid}>
@@ -476,6 +509,17 @@ export default function ListeDocuments({ admin = false }) {
             )}
           </div>
         </div>
+      )}
+
+      {correctionOuverte && (
+        <CorrigerDocumentDrawer
+          doc={correctionOuverte}
+          typeDocument={typesDocument.find((t) => t.id === correctionOuverte.type_document_id)}
+          mentions={mentions}
+          filieres={filieres}
+          onClose={() => setCorrectionOuverte(null)}
+          onResoumis={handleResoumis}
+        />
       )}
     </div>
   );
