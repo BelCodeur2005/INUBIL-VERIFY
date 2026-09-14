@@ -46,6 +46,14 @@ export function AuthProvider({ children }) {
     window.location.href = '/login';
   };
 
+  // Recharge le profil sans re-authentifier — utilise apres une modification qui doit se refleter
+  // immediatement dans l'UI (ex : logo/nom de l'etablissement change depuis Parametres).
+  const rafraichirProfil = async () => {
+    if (!getAccessToken()) return;
+    const profil = await getProfil();
+    setUtilisateur(profil);
+  };
+
   const nomComplet = () => {
     if (!utilisateur) return '';
     return `${utilisateur.prenom} ${utilisateur.nom}`.trim();
@@ -56,6 +64,7 @@ export function AuthProvider({ children }) {
     loading,
     login,
     logout,
+    rafraichirProfil,
     nomComplet,
     estConnecte: !!utilisateur,
   };

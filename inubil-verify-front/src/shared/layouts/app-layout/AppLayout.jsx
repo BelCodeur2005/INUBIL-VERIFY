@@ -120,8 +120,8 @@ const bottomNavItems = [
     ),
   },
   {
-    path: '/universite/parametres',
-    label: 'Paramètres',
+    path: '/universite/etablissement',
+    label: 'Établissement',
     roles: [ROLES.RESPONSABLE],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -221,12 +221,14 @@ export default function AppLayout() {
 
       {/* ── SIDEBAR ── */}
       <aside className={styles.sidebar}>
-        {/* Logo */}
+        {/* Logo — celui de l'etablissement du compte connecte, ou le logo INUBIL Verify par defaut
+            si l'etablissement n'en a pas encore renseigne un (Etablissement > logo_url). */}
         <div className={styles.logoBox}>
-          <img 
-            src={Logo_Inubil} 
-            alt="INUBIL Verify" 
-            style={{ height: '100px', width: 'auto', objectFit: 'contain' }} 
+          <img
+            src={utilisateur?.universite?.logo_url || Logo_Inubil}
+            alt={utilisateur?.universite?.nom_court || utilisateur?.universite?.nom || 'INUBIL Verify'}
+            style={{ height: '100px', width: 'auto', objectFit: 'contain' }}
+            onError={(e) => { e.currentTarget.src = Logo_Inubil; }}
           />
         </div>
 

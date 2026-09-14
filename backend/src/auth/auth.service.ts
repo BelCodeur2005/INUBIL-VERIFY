@@ -397,7 +397,7 @@ export class AuthService {
       include: {
         roles_utilisateurs_role_idToroles: { select: { id: true, nom: true } },
         universites_utilisateurs_universite_idTouniversites: {
-          select: { id: true, nom: true },
+          select: { id: true, nom: true, nom_court: true, logo_url: true },
         },
         departements: { select: { id: true, nom: true } },
       },
