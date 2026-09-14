@@ -34,13 +34,23 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // CORS : autorise le frontend declare + Swagger UI en dev (cahier §9.1)
+  // CORS : autorise le frontend declare + Swagger UI, en dev comme en prod (cahier §9.1)
   const nodeEnv = config.get<string>('NODE_ENV', 'development');
-  const frontendUrl = config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+  const frontendUrl =
+    config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+  // Swagger UI est servi sur le meme host que l'API (/api/docs) : en local c'est
+  // localhost:3000, en production l'URL publique Render elle-meme — sans ca, un fetch
+  // "Try it out" depuis le navigateur envoie un header Origin egal au domaine de l'API,
+  // rejete par le whitelist ci-dessous puisqu'il ne contenait que le cas local.
+  const apiUrl =
+    config.get<string>('RENDER_EXTERNAL_URL') ??
+    config.get<string>('API_URL') ??
+    'https://inubil-verify-api.onrender.com';
   const allowedOrigins = [
     frontendUrl,
-    'http://localhost:3000', // Swagger UI (même hôte que l'API)
+    'http://localhost:3000', // Swagger UI (même hôte que l'API, en local)
     'http://127.0.0.1:3000',
+    apiUrl, // Swagger UI (même hôte que l'API, en production)
   ];
   // Vite prend le port suivant (5174, 5175...) si 5173 est deja occupe sur la
   // machine du dev — tolere toute la plage usuelle en dev pour eviter de
@@ -51,7 +61,8 @@ async function bootstrap(): Promise<void> {
       // Requêtes sans Origin (curl, Postman, mobile) → autorisées
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
-      if (nodeEnv !== 'production' && portViteDev.test(origin)) return callback(null, true);
+      if (nodeEnv !== 'production' && portViteDev.test(origin))
+        return callback(null, true);
       callback(new Error(`CORS: origine non autorisée — ${origin}`));
     },
     credentials: true,
