@@ -18,10 +18,10 @@ import { ApiError } from '../../../core/api/client';
 import styles from './ParametresEtablissement.module.css';
 
 const LOGO_MAX_MO = 2;
-const LOGO_TYPES_ACCEPTES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+const LOGO_TYPES_ACCEPTES = ['image/png', 'image/jpeg', 'image/webp'];
 
 function validerFichierLogo(file) {
-  if (!LOGO_TYPES_ACCEPTES.includes(file.type)) return 'Formats acceptés : PNG, JPEG, WEBP, SVG.';
+  if (!LOGO_TYPES_ACCEPTES.includes(file.type)) return 'Formats acceptés : PNG, JPEG, WEBP.';
   if (file.size > LOGO_MAX_MO * 1024 * 1024) return `Ce fichier dépasse la limite de ${LOGO_MAX_MO} Mo.`;
   return null;
 }
@@ -235,7 +235,7 @@ export default function ParametresEtablissement() {
                     <span>
                       {logoEnvoi ? 'Téléversement…' : 'Glissez une image ici ou cliquez pour choisir un fichier'}
                     </span>
-                    <span className={styles.fieldHint}>PNG, JPEG, WEBP ou SVG — {LOGO_MAX_MO} Mo maximum</span>
+                    <span className={styles.fieldHint}>PNG, JPEG ou WEBP — {LOGO_MAX_MO} Mo maximum</span>
                   </div>
                   {logoEnvoye && <p className={styles.logoSavedTag}><CheckCircle2 size={14} /> Logo mis à jour</p>}
                   {logoEnvoiErreur && <p className={styles.errorBanner}><AlertTriangle size={14} /> {logoEnvoiErreur}</p>}

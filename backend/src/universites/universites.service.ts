@@ -159,9 +159,14 @@ export class UniversitesService {
   ): Promise<UniversiteResponseDto> {
     await this.findOne(id);
 
-    const extension = (
-      fichier.originalname.split('.').pop() ?? 'png'
-    ).toLowerCase();
+    // Extension deduite du mimetype valide (deja filtre par le controller), jamais du
+    // nom de fichier fourni par le client — evite un nom de fichier trompeur/malicieux.
+    const extensionParMimetype: Record<string, string> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/webp': 'webp',
+    };
+    const extension = extensionParMimetype[fichier.mimetype] ?? 'png';
     const cle = `logos/${id}-${Date.now()}.${extension}`;
 
     const resultat = await this.storage.uploadFile(

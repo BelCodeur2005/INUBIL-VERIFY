@@ -118,13 +118,12 @@ export class UniversitesController {
       storage: memoryStorage(),
       limits: { fileSize: LOGO_MAX_SIZE_BYTES },
       fileFilter: (_req, file, cb) => {
-        if (
-          !['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'].includes(
-            file.mimetype,
-          )
-        ) {
+        // SVG volontairement exclu : un SVG peut embarquer du JavaScript executable
+        // (XSS stocke si le fichier est ensuite servi/ouvert directement) — un logo
+        // n'a pas besoin de ce format, PNG/JPEG/WEBP suffisent.
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.mimetype)) {
           return cb(
-            new BadRequestException('Formats acceptés : PNG, JPEG, WEBP, SVG'),
+            new BadRequestException('Formats acceptés : PNG, JPEG, WEBP'),
             false,
           );
         }
@@ -134,7 +133,7 @@ export class UniversitesController {
   )
   @ApiOperation({
     summary:
-      "Téléverser le logo d'une université (PNG/JPEG/WEBP/SVG, 2 Mo max)",
+      "Téléverser le logo d'une université (PNG/JPEG/WEBP, 2 Mo max)",
     description:
       "Nécessite STORAGE_PUBLIC_BASE_URL configuré côté serveur (bucket accessible publiquement) : un logo est affiché en continu dans l'application, contrairement aux documents dont l'accès est temporaire et pré-signé.",
   })
