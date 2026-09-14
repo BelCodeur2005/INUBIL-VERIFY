@@ -645,7 +645,7 @@ export class DocumentsService {
           type: 'document_emis',
           titre: 'Diplôme certifié',
           message: `Votre document ${updated.numero_unique} a été validé et ancré sur la blockchain.`,
-          lien: '/dashboard-etudiant',
+          lien: `/dashboard-etudiant?document=${updated.id}`,
         })
         .catch((err) =>
           this.logger.error(
@@ -721,7 +721,7 @@ export class DocumentsService {
           type: 'document_revoque',
           titre: 'Diplôme révoqué',
           message: `Votre document ${updated.numero_unique} a été révoqué par votre établissement.`,
-          lien: '/dashboard-etudiant',
+          lien: `/dashboard-etudiant?document=${updated.id}`,
         })
         .catch((err) =>
           this.logger.error(

@@ -309,7 +309,7 @@ export class PublicVerifyService {
           type: 'document_verifie',
           titre: 'Diplôme vérifié',
           message: `Votre document ${doc.numero_unique} vient d'être vérifié publiquement.`,
-          lien: '/dashboard-etudiant',
+          lien: `/dashboard-etudiant?document=${doc.id}`,
         })
         .catch((err) =>
           this.logger.error(
