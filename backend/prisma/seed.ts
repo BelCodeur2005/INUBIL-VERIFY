@@ -459,6 +459,12 @@ async function main(): Promise<void> {
       description:
         'Longueur minimale exigee pour un mot de passe. Ne peut pas descendre sous 8 caracteres (plancher non configurable).',
     },
+    {
+      cle: 'session_idle_min',
+      valeur: '30',
+      description:
+        "Fenetre d'inactivite (en minutes) : une session sans refresh au-dela de ce delai expire.",
+    },
   ];
   for (const c of configurationsSysteme) {
     await prisma.configurations.upsert({

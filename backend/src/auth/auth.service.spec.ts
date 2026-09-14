@@ -96,7 +96,6 @@ describe('AuthService', () => {
           JWT_REFRESH_SECRET: 'test-refresh-secret',
           JWT_EXPIRES_IN: '15m',
           JWT_REFRESH_EXPIRES_IN: '7d',
-          SESSION_IDLE_MINUTES: 30,
         };
         return cfg[key];
       }),

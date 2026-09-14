@@ -9,7 +9,12 @@ export const SECTIONS_CONFIG = [
   {
     id: 'securite',
     titre: 'Sécurité',
-    cles: ['max_tentatives_connexion', 'duree_blocage_min', 'mot_de_passe_longueur_min'],
+    cles: [
+      'max_tentatives_connexion',
+      'duree_blocage_min',
+      'mot_de_passe_longueur_min',
+      'session_idle_min',
+    ],
   },
   {
     id: 'documents',
@@ -27,6 +32,7 @@ export const CONFIG_META = {
   max_tentatives_connexion:  { label: 'Tentatives de connexion max.',          connecte: true },
   duree_blocage_min:         { label: 'Durée de blocage après échecs',         connecte: true },
   mot_de_passe_longueur_min: { label: 'Longueur minimale du mot de passe',     connecte: true },
+  session_idle_min:          { label: "Fenêtre d'inactivité de session",       connecte: true },
   pdf_max_taille_mo:         { label: "Taille max. d'un PDF",                  connecte: true },
   presigned_url_duree_min:   { label: 'Durée des liens de téléchargement',     connecte: true },
   partage_duree_jours:       { label: "Durée par défaut d'un partage",         connecte: true },

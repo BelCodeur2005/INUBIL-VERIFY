@@ -33,6 +33,7 @@ import { PASSWORD_MIN_LENGTH_FLOOR } from '../common/constants/password.constant
 // sont absents ou invalides — voir gererEchec().
 const MAX_TENTATIVES_DEFAUT = 5;
 const DUREE_BLOCAGE_MIN_DEFAUT = 15;
+const SESSION_IDLE_MIN_DEFAUT = 30;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
 const EMAIL_VERIF_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -742,7 +743,10 @@ export class AuthService {
 
     const accessDecoded = this.jwt.decode(access_token) as { exp: number };
 
-    const idleMinutes = Number(this.config.get<number>('SESSION_IDLE_MINUTES'));
+    const idleMinutes = await this.parametreNumerique(
+      'session_idle_min',
+      SESSION_IDLE_MIN_DEFAUT,
+    );
     const sessionExpiresAt = new Date(Date.now() + idleMinutes * 60 * 1000);
 
     await this.prisma.sessions.create({

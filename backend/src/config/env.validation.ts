@@ -32,9 +32,6 @@ export const envValidationSchema = Joi.object({
 
   // ─── Securite (cahier §9.1 / §9.2) ─────────────────────────────
   BCRYPT_SALT_ROUNDS: Joi.number().min(12).default(12),
-  // Fenetre d'inactivite (minutes) : une session sans refresh au-dela
-  // de ce delai expire (deconnexion automatique apres inactivite).
-  SESSION_IDLE_MINUTES: Joi.number().min(1).default(30),
   ENCRYPTION_MASTER_KEY: Joi.string().length(64).required(), // 32 octets en hex
 
   // ─── Email - optionnel jusqu'a #25 ─────────────────────────────
