@@ -7,7 +7,7 @@ export default function AuthLayout() {
       style={{ 
         minHeight: '100vh', 
         width: '100vw', 
-        background: 'linear-gradient(135deg, #0350bd 0%, #062362 100%)', 
+        background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
         display: 'flex', 
         flexDirection: 'column', 
         margin: 0, 

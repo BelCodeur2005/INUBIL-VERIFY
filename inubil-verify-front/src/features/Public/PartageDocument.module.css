@@ -51,7 +51,7 @@
 .centerTitle {
   font-size: 22px;
   font-weight: 700;
-  color: #002c53;
+  color: var(--color-primary-dark);
   margin: 0;
 }
 
@@ -63,7 +63,7 @@
 
 .centerLink {
   margin-top: 12px;
-  color: #002c53;
+  color: var(--color-primary-dark);
   font-weight: 700;
   text-decoration: none;
 }
@@ -75,18 +75,18 @@
 /* ---------- Banniere ---------- */
 .banner {
   background-color: #E3F2FD;
-  border: 1px solid #0060ac;
+  border: 1px solid var(--color-primary-hover);
   padding: 24px;
   border-radius: 8px;
   display: flex;
   align-items: start;
   gap: 24px;
-  color: #002c53;
+  color: var(--color-primary-dark);
 }
 
 .banner .material-symbols-outlined {
   font-size: 32px;
-  color: #0060ac;
+  color: var(--color-primary-hover);
   flex-shrink: 0;
 }
 
@@ -190,7 +190,7 @@
   gap: 8px;
   font-size: 20px;
   font-weight: 600;
-  color: #002c53;
+  color: var(--color-primary-dark);
   margin: 0;
 }
 
@@ -246,7 +246,7 @@
 .valueAccent {
   font-size: 16px;
   font-weight: 600;
-  color: #0060ac;
+  color: var(--color-primary-hover);
 }
 
 .valueCode {
@@ -272,7 +272,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background-color: #002c53;
+  background-color: var(--color-primary-dark);
   color: #ffffff;
   padding: 12px 24px;
   border-radius: 4px;
@@ -309,8 +309,8 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid #002c53;
-  color: #002c53;
+  border: 1px solid var(--color-primary-dark);
+  color: var(--color-primary-dark);
   padding: 12px 20px;
   border-radius: 4px;
   font-size: 13px;
@@ -320,6 +320,6 @@
 }
 
 .verifyLink:hover {
-  background-color: #002c53;
+  background-color: var(--color-primary-dark);
   color: #ffffff;
 }

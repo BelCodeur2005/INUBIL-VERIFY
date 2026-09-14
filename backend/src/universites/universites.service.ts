@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { statut_universite } from '@prisma/client';
+import { Prisma, statut_universite } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -67,7 +67,18 @@ export class UniversitesService {
       where: { id, deleted_at: null },
     });
     if (!universite) throw new NotFoundException('Université introuvable.');
-    return universite as UniversiteResponseDto;
+    return this.avecCouleurPrimaire(universite);
+  }
+
+  /** Extrait couleur_primaire du JSON config pour l'exposer comme champ direct dans la reponse. */
+  private avecCouleurPrimaire(
+    universite: Record<string, unknown>,
+  ): UniversiteResponseDto {
+    const config = (universite.config ?? {}) as { couleur_primaire?: string };
+    return {
+      ...(universite as unknown as UniversiteResponseDto),
+      couleur_primaire: config.couleur_primaire ?? null,
+    };
   }
 
   async creer(
@@ -111,7 +122,14 @@ export class UniversitesService {
     acteurId: string,
     ip?: string,
   ): Promise<UniversiteResponseDto> {
-    await this.findOne(id);
+    const actuelle = await this.findOne(id);
+
+    let config: Record<string, unknown> | undefined;
+    if (dto.couleur_primaire !== undefined) {
+      const configActuel = ((actuelle as { config?: unknown }).config ??
+        {}) as Record<string, unknown>;
+      config = { ...configActuel, couleur_primaire: dto.couleur_primaire };
+    }
 
     const universite = await this.prisma.universites.update({
       where: { id },
@@ -129,6 +147,9 @@ export class UniversitesService {
         }),
         ...(dto.telephone !== undefined && { telephone: dto.telephone }),
         ...(dto.description !== undefined && { description: dto.description }),
+        ...(config !== undefined && {
+          config: config as Prisma.InputJsonValue,
+        }),
         updated_at: new Date(),
       },
     });
@@ -142,7 +163,7 @@ export class UniversitesService {
       ip,
     });
 
-    return universite as UniversiteResponseDto;
+    return this.avecCouleurPrimaire(universite);
   }
 
   /**
@@ -201,7 +222,7 @@ export class UniversitesService {
       ip,
     });
 
-    return universite as UniversiteResponseDto;
+    return this.avecCouleurPrimaire(universite);
   }
 
   async supprimer(id: string, acteurId: string, ip?: string): Promise<void> {

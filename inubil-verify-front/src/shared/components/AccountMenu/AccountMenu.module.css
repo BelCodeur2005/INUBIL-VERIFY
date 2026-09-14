@@ -17,7 +17,7 @@
 }
 
 .trigger:hover .userName {
-  color: #0350bd;
+  color: var(--color-primary);
 }
 
 .userTexts {
@@ -115,5 +115,5 @@
 
 .menuItem:hover {
   background-color: #f1f5f9;
-  color: #0350bd;
+  color: var(--color-primary);
 }

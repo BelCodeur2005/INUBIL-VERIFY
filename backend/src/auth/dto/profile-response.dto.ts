@@ -44,6 +44,14 @@ class UniversiteBriefDto {
     description: "URL du logo de l'etablissement.",
   })
   logo_url: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    example: '#0350bd',
+    description:
+      "Couleur de marque personnalisee de l'etablissement (hex), appliquee a l'interface. Absente/null = bleu INUBIL par defaut.",
+  })
+  couleur_primaire: string | null;
 }
 
 class DepartementBriefDto {

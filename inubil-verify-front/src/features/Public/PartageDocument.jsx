@@ -73,7 +73,7 @@ export default function PartageDocument() {
         <PublicHeader />
         <main className={styles.main}>
           <div className={styles.centerBox}>
-            <span className="material-symbols-outlined" style={{ fontSize: '40px', color: '#002c53' }}>hourglass_empty</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '40px', color: 'var(--color-primary-dark)' }}>hourglass_empty</span>
             <p className={styles.centerText}>Ouverture du document partagé…</p>
           </div>
         </main>

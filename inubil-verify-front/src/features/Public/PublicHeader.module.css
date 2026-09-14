@@ -60,7 +60,7 @@
 }
 
 .navLink:hover {
-  color: #0060ac;
+  color: var(--color-primary-hover);
 }
 
 @media (max-width: 640px) {

@@ -123,9 +123,9 @@
 }
 
 /* Couleurs de série — validées via dataviz/validate_palette.js (CVD + contraste) */
-.seriesDocumentsStroke { stroke: #0350bd; }
-.seriesDocumentsFill   { fill: #0350bd; opacity: 0.12; }
+.seriesDocumentsStroke { stroke: var(--color-primary); }
+.seriesDocumentsFill   { fill: var(--color-primary); opacity: 0.12; }
 .seriesVerificationsStroke { stroke: #c8871a; }
 .seriesVerificationsFill   { fill: #c8871a; opacity: 0.12; }
-.dotDocuments      { background-color: #0350bd; }
+.dotDocuments      { background-color: var(--color-primary); }
 .dotVerifications  { background-color: #c8871a; }

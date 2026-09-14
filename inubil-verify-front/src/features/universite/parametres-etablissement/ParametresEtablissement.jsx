@@ -11,11 +11,16 @@ import {
   Globe,
   UploadCloud,
   Link2,
+  Palette,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '../../../core/auth/useAuth';
 import { getUniversite, modifierUniversite, televerserLogoUniversite } from '../../../core/universites/universites.api';
 import { ApiError } from '../../../core/api/client';
+import { applyColorTheme } from '../../../core/theme/applyColorTheme';
 import styles from './ParametresEtablissement.module.css';
+
+const COULEUR_DEFAUT = '#0350bd';
 
 const LOGO_MAX_MO = 2;
 const LOGO_TYPES_ACCEPTES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -33,6 +38,7 @@ const TYPES_UNIVERSITE = [
 
 const CHAMPS_VIDES = {
   nom: '', nom_court: '', type: 'privee', logo_url: '',
+  couleur_primaire: COULEUR_DEFAUT,
   pays: '', ville: '', adresse: '',
   site_web: '', email_contact: '', telephone: '',
   description: '',
@@ -127,6 +133,13 @@ export default function ParametresEtablissement() {
     setForm((f) => ({ ...f, [champ]: e.target.value }));
     setEnregistre(false);
   };
+
+  // Previsualisation immediate de la couleur choisie (avant meme "Enregistrer") ; revient a la
+  // couleur reellement enregistree (celle du profil) si on quitte la page sans sauvegarder.
+  useEffect(() => {
+    applyColorTheme(form.couleur_primaire);
+    return () => applyColorTheme(utilisateur?.universite?.couleur_primaire);
+  }, [form.couleur_primaire, utilisateur?.universite?.couleur_primaire]);
 
   const modifie = JSON.stringify(form) !== JSON.stringify(original);
 
@@ -272,6 +285,45 @@ export default function ParametresEtablissement() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ── Couleur de marque ── */}
+        <section className={styles.card}>
+          <h2 className={styles.sectionTitle}><Palette size={17} /> Couleur de marque</h2>
+          <p className={styles.sectionHint}>
+            Appliquée à la barre latérale, aux boutons et aux accents de l'interface pour votre établissement.
+          </p>
+          <div className={styles.colorRow}>
+            <label className={styles.colorSwatch}>
+              <input
+                type="color"
+                value={form.couleur_primaire}
+                onChange={maj('couleur_primaire')}
+                aria-label="Choisir la couleur de marque"
+              />
+            </label>
+            <input
+              type="text"
+              className={styles.colorHexInput}
+              value={form.couleur_primaire}
+              onChange={(e) => {
+                const v = e.target.value;
+                setForm((f) => ({ ...f, couleur_primaire: v }));
+                setEnregistre(false);
+              }}
+              placeholder="#0350bd"
+              maxLength={7}
+            />
+            {form.couleur_primaire.toLowerCase() !== COULEUR_DEFAUT && (
+              <button
+                type="button"
+                className={styles.resetColorBtn}
+                onClick={() => { setForm((f) => ({ ...f, couleur_primaire: COULEUR_DEFAUT })); setEnregistre(false); }}
+              >
+                <RotateCcw size={13} /> Bleu INUBIL par défaut
+              </button>
+            )}
           </div>
         </section>
 

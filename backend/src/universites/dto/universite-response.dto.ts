@@ -14,6 +14,12 @@ export class UniversiteResponseDto {
   @ApiPropertyOptional() email_contact?: string | null;
   @ApiPropertyOptional() telephone?: string | null;
   @ApiPropertyOptional() description?: string | null;
+  @ApiPropertyOptional({
+    example: '#0350bd',
+    description:
+      "Couleur de marque personnalisee (hex). null = bleu INUBIL par defaut.",
+  })
+  couleur_primaire?: string | null;
   @ApiProperty({ enum: statut_universite }) statut: statut_universite;
   @ApiPropertyOptional() approuvee_par?: string | null;
   @ApiPropertyOptional() approuvee_le?: Date | null;

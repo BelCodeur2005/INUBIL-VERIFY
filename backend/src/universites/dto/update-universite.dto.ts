@@ -5,8 +5,10 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  Matches,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { type_universite } from '@prisma/client';
 
@@ -74,4 +76,17 @@ export class UpdateUniversiteDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({
+    example: '#0350bd',
+    nullable: true,
+    description:
+      "Couleur de marque personnalisee (hex #RRGGBB). null reinitialise au bleu INUBIL par defaut.",
+  })
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== null)
+  @Matches(/^#[0-9a-fA-F]{6}$/, {
+    message: 'La couleur doit être un code hexadécimal du type #RRGGBB',
+  })
+  couleur_primaire?: string | null;
 }

@@ -1,10 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  --gradient-brand: linear-gradient(135deg, #0350bd 0%, #062362 100%);
+  --gradient-brand: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   --luxury-gold: #B38F4D;
-  --primary-blue: #0350bd;
-  --dark-navy: #062362;
+  --primary-blue: var(--color-primary);
+  --dark-navy: var(--color-primary-dark);
 }
 
 .page {
@@ -26,7 +26,7 @@
   left: -10%;
   width: 700px;
   height: 700px;
-  background-color: rgba(3, 80, 189, 0.08);
+  background-color: rgba(var(--color-primary-rgb), 0.08);
   border-radius: 50%;
   filter: blur(130px);
   pointer-events: none;
@@ -172,7 +172,7 @@
 
 .hashInput:focus {
   border-color: var(--primary-blue);
-  box-shadow: 0 0 0 3px rgba(3, 80, 189, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
 }
 
 .hashSubmitBtn {
@@ -373,7 +373,7 @@
 
 .stepCard:hover {
   transform: translateY(-2px);
-  border-color: rgba(3, 80, 189, 0.3);
+  border-color: rgba(var(--color-primary-rgb), 0.3);
 }
 
 .stepNumber {

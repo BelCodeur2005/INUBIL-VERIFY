@@ -52,12 +52,12 @@
 }
 
 .tabBtn:hover {
-  color: #0350bd;
+  color: var(--color-primary);
 }
 
 .activeTab {
-  color: #0350bd;
-  border-bottom-color: #0350bd;
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
 }
 
 .alertSuccess {
@@ -122,8 +122,8 @@
 }
 
 .formGroup input:focus {
-  border-color: #0350bd;
-  box-shadow: 0 0 0 3px rgba(3, 80, 189, 0.15);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.15);
 }
 
 .disabledInput {
@@ -168,7 +168,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #0350bd;
+  background-color: var(--color-primary);
   color: #ffffff;
   border: none;
   padding: 10px 20px;
@@ -180,7 +180,7 @@
 }
 
 .saveBtn:hover {
-  background-color: #023e96;
+  background-color: var(--color-primary-dark);
 }
 
 /* Sessions */
@@ -218,7 +218,7 @@
 }
 
 .sessionIcon {
-  color: #0350bd;
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -311,7 +311,7 @@
 }
 
 input:checked + .slider {
-  background-color: #0350bd;
+  background-color: var(--color-primary);
 }
 
 input:checked + .slider:before {

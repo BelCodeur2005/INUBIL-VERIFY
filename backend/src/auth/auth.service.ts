@@ -398,7 +398,13 @@ export class AuthService {
       include: {
         roles_utilisateurs_role_idToroles: { select: { id: true, nom: true } },
         universites_utilisateurs_universite_idTouniversites: {
-          select: { id: true, nom: true, nom_court: true, logo_url: true },
+          select: {
+            id: true,
+            nom: true,
+            nom_court: true,
+            logo_url: true,
+            config: true,
+          },
         },
         departements: { select: { id: true, nom: true } },
       },
@@ -406,6 +412,9 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('Utilisateur introuvable');
     }
+
+    const universite = user.universites_utilisateurs_universite_idTouniversites;
+    const config = (universite?.config ?? {}) as { couleur_primaire?: string };
 
     return {
       id: user.id,
@@ -416,8 +425,15 @@ export class AuthService {
       avatar_url: user.avatar_url,
       langue: user.langue,
       role: user.roles_utilisateurs_role_idToroles ?? null,
-      universite:
-        user.universites_utilisateurs_universite_idTouniversites ?? null,
+      universite: universite
+        ? {
+            id: universite.id,
+            nom: universite.nom,
+            nom_court: universite.nom_court,
+            logo_url: universite.logo_url,
+            couleur_primaire: config.couleur_primaire ?? null,
+          }
+        : null,
       departements: user.departements,
       created_at: user.created_at,
       preferences: (user.preferences ?? {}) as Record<string, boolean>,

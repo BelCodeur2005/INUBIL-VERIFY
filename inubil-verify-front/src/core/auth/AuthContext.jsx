@@ -3,6 +3,7 @@ import { AuthContext } from './auth-context';
 import { login as loginApi, logout as logoutApi, getProfil } from './auth.api';
 import { getAccessToken, clearTokens } from '../api/token-storage';
 import { redirectionParRole } from './role-redirect';
+import { applyColorTheme } from '../theme/applyColorTheme';
 
 export function AuthProvider({ children }) {
   const [utilisateur, setUtilisateur] = useState(null);
@@ -32,6 +33,11 @@ export function AuthProvider({ children }) {
       annule = true;
     };
   }, []);
+
+  // Applique la couleur de marque de l'universite (ou revient au bleu INUBIL par defaut).
+  useEffect(() => {
+    applyColorTheme(utilisateur?.universite?.couleur_primaire);
+  }, [utilisateur?.universite?.couleur_primaire]);
 
   const login = async (email, motDePasse) => {
     await loginApi(email, motDePasse);

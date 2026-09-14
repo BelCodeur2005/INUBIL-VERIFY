@@ -135,7 +135,7 @@ export default function TendanceChart({ points, titre = 'Activité — 30 dernie
                   y1={CHART_PAD.top} y2={CHART_H - CHART_PAD.bottom}
                   stroke="#c3c2b7" strokeWidth="1" strokeDasharray="3 3"
                 />
-                <circle cx={xAt(hoverIdx)} cy={yAt(point.documents_emis)} r="3.5" fill="#0350bd" stroke="#fff" strokeWidth="1.5" />
+                <circle cx={xAt(hoverIdx)} cy={yAt(point.documents_emis)} r="3.5" style={{ fill: 'var(--color-primary)' }} stroke="#fff" strokeWidth="1.5" />
                 <circle cx={xAt(hoverIdx)} cy={yAt(point.verifications)} r="3.5" fill="#c8871a" stroke="#fff" strokeWidth="1.5" />
                 <foreignObject
                   x={tooltipAGauche ? xAt(hoverIdx) - 138 : xAt(hoverIdx) + 8}

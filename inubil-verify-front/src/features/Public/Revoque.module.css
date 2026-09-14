@@ -318,7 +318,7 @@
   gap: 10px;
   font-size: 16px;
   font-weight: 700;
-  color: #062362;
+  color: var(--color-primary-dark);
   margin: 0 0 20px;
 }
 

@@ -1,0 +1,13 @@
+/*
+ * Jetons de couleur de marque — valeurs par defaut INUBIL. Surchargeables a
+ * l'execution (voir applyColorTheme dans core/theme/applyColorTheme.js) selon
+ * la couleur choisie par l'universite dans Parametres > Etablissement.
+ */
+:root {
+  --color-primary: #0350bd;
+  --color-primary-rgb: 3, 80, 189;
+  --color-primary-dark: #002c53;
+  --color-primary-dark-rgb: 0, 44, 83;
+  --color-primary-hover: #0060ac;
+  --color-primary-hover-rgb: 0, 96, 172;
+}
