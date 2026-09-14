@@ -292,6 +292,20 @@ export default function EmissionDiplome() {
   };
   const moyenneCalculee = calculerMoyenne(matieres);
 
+  // Total des credits (ECTS) — informatif uniquement, aucun champ equivalent cote document
+  // en base (contrairement a moyenne_generale) : distinct du coefficient, qui lui pondere
+  // la moyenne. "Valides" = matieres au resultat "valide" ou "dispense" (un ajourne/absent
+  // ne rapporte pas ses credits).
+  const calculerCredits = (listeMatieres) => {
+    const avecCredits = listeMatieres.filter((m) => m.credits !== '' && Number(m.credits) > 0);
+    const total = avecCredits.reduce((acc, m) => acc + Number(m.credits), 0);
+    const valides = avecCredits
+      .filter((m) => m.resultat === 'valide' || m.resultat === 'dispense')
+      .reduce((acc, m) => acc + Number(m.credits), 0);
+    return { total, valides };
+  };
+  const creditsCalcules = calculerCredits(matieres);
+
   // ── Document du composeur ──
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileError, setFileError] = useState(null);
@@ -1025,8 +1039,16 @@ export default function EmissionDiplome() {
                       </div>
 
                       <div className={styles.moyenneBar}>
-                        <span>Moyenne générale calculée</span>
-                        <strong>{moyenneCalculee !== null ? `${moyenneCalculee}/20` : '—'}</strong>
+                        <div className={styles.moyenneBarStat}>
+                          <span>Moyenne générale calculée</span>
+                          <strong>{moyenneCalculee !== null ? `${moyenneCalculee}/20` : '—'}</strong>
+                        </div>
+                        {creditsCalcules.total > 0 && (
+                          <div className={styles.moyenneBarStat}>
+                            <span>Crédits validés</span>
+                            <strong>{creditsCalcules.valides}/{creditsCalcules.total}</strong>
+                          </div>
+                        )}
                       </div>
                     </>
                   )}

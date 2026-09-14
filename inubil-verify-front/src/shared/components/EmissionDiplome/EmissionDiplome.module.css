@@ -588,6 +588,12 @@
 
 .moyenneBar strong { font-size: 1rem; }
 
+.moyenneBarStat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 /* Étape 2 — file d'attente de diplômes pour l'étudiant sélectionné */
 .queueHeader {
   display: flex;
