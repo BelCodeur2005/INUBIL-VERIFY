@@ -817,7 +817,7 @@ export default function AdminInubil() {
         <InviterUtilisateurModal
           onClose={() => setIsUserModalOpen(false)}
           onInvited={chargerUtilisateurs}
-          roles={roles}
+          roles={roleNom === 'super_admin' ? roles : roles.filter((r) => r.nom !== 'super_admin')}
         />
       )}
       {configEnEdition && (

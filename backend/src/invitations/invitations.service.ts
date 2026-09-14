@@ -56,6 +56,16 @@ export class InvitationsService {
     const role = await this.prisma.roles.findFirst({ where: { id: dto.role_id } });
     if (!role) throw new NotFoundException('Rôle introuvable');
 
+    // Fix SEC-4 : seul un super_admin peut inviter un futur super_admin — sinon
+    // un admin_istama (a la permission user:assign_role mais est cense n'avoir
+    // aucun droit technique de super_admin) pourrait s'octroyer ce niveau via
+    // une simple invitation.
+    if (role.nom === 'super_admin' && acteurUniversiteId !== null) {
+      throw new ForbiddenException(
+        'Seul un super administrateur peut inviter un autre super administrateur',
+      );
+    }
+
     const email = dto.email.toLowerCase();
 
     const dejaEnAttente = await this.prisma.invitations.findFirst({
