@@ -350,6 +350,10 @@
   grid-column: span 2;
 }
 
+.colSpan3 {
+  grid-column: span 3;
+}
+
 .inputGroup {
   display: flex;
   flex-direction: column;
