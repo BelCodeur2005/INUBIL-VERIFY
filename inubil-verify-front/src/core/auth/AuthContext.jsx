@@ -39,11 +39,18 @@ export function AuthProvider({ children }) {
     applyColorTheme(utilisateur?.universite?.couleur_primaire);
   }, [utilisateur?.universite?.couleur_primaire]);
 
-  const login = async (email, motDePasse) => {
-    await loginApi(email, motDePasse);
+  // Charge le profil du compte dont les jetons viennent d'etre poses (login classique,
+  // ou activation d'invitation qui renvoie deja des jetons valides) et retourne la route
+  // de redirection adaptee au role.
+  const connecterSession = async () => {
     const profil = await getProfil();
     setUtilisateur(profil);
     return redirectionParRole(profil.role?.nom);
+  };
+
+  const login = async (email, motDePasse) => {
+    await loginApi(email, motDePasse);
+    return connecterSession();
   };
 
   const logout = async () => {
@@ -71,6 +78,7 @@ export function AuthProvider({ children }) {
     login,
     logout,
     rafraichirProfil,
+    connecterSession,
     nomComplet,
     estConnecte: !!utilisateur,
   };
