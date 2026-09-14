@@ -874,30 +874,17 @@ export default function AdminInubil() {
           {/* VUE 6 : PARAMÈTRES SYSTÈME */}
           {activeTab === 'settings' && (() => {
             const configsByCle = Object.fromEntries(configs.map((c) => [c.cle, c]));
-            const clesGroupees = new Set(SECTIONS_CONFIG.flatMap((s) => s.cles));
-            const configsAutres = configs.filter((c) => !clesGroupees.has(c.cle));
 
-            const onglets = [
-              ...SECTIONS_CONFIG.map((s) => ({
-                id: s.id,
-                titre: s.titre,
-                icone: s.id === 'securite'
-                  ? <Shield size={15} />
-                  : s.id === 'email'
-                    ? <Mail size={15} />
-                    : <FileText size={15} />,
-                items: s.cles.map((cle) => configsByCle[cle]).filter(Boolean),
-              })),
-              ...(configsAutres.length > 0
-                ? [{
-                    id: 'autres',
-                    titre: 'Autres',
-                    icone: <AlertTriangle size={15} />,
-                    warn: true,
-                    items: configsAutres,
-                  }]
-                : []),
-            ].filter((o) => o.items.length > 0);
+            const onglets = SECTIONS_CONFIG.map((s) => ({
+              id: s.id,
+              titre: s.titre,
+              icone: s.id === 'securite'
+                ? <Shield size={15} />
+                : s.id === 'email'
+                  ? <Mail size={15} />
+                  : <FileText size={15} />,
+              items: s.cles.map((cle) => configsByCle[cle]).filter(Boolean),
+            })).filter((o) => o.items.length > 0);
 
             const ongletActif = onglets.find((o) => o.id === settingsSection) ?? onglets[0];
 
@@ -946,7 +933,7 @@ export default function AdminInubil() {
                           type="button"
                           role="tab"
                           aria-selected={ongletActif?.id === o.id}
-                          className={`${styles.settingsTab} ${ongletActif?.id === o.id ? styles.settingsTabActive : ''} ${o.warn ? styles.settingsTabWarn : ''}`}
+                          className={`${styles.settingsTab} ${ongletActif?.id === o.id ? styles.settingsTabActive : ''}`}
                           onClick={() => setSettingsSection(o.id)}
                         >
                           {o.icone}
@@ -954,12 +941,6 @@ export default function AdminInubil() {
                         </button>
                       ))}
                     </div>
-
-                    {ongletActif?.warn && (
-                      <p className={styles.settingsTabWarnNote}>
-                        <AlertTriangle size={13} /> Présents en base mais non lus par le backend actuel : les modifier n'a aucun effet réel.
-                      </p>
-                    )}
 
                     <div className={styles.settingsCard}>
                       <div className={styles.settingsList}>
