@@ -12,6 +12,7 @@ import { getUniversite } from '../../../core/universites/universites.api';
 import { ApiError } from '../../../core/api/client';
 import { lirePreferences } from '../../../core/preferences/preferences';
 import Pagination from '../Pagination/Pagination';
+import SearchableSelect from '../SearchableSelect/SearchableSelect';
 import styles from './ListeDocuments.module.css';
 
 // Liste reelle des documents (docs/ROLES_ET_PAGES.md §D item 18, GET /documents).
@@ -265,10 +266,12 @@ export default function ListeDocuments({ admin = false }) {
           </div>
           <div className={styles.filterGroup}>
             <label>Type de diplôme</label>
-            <select value={typeFiltre} onChange={(e) => { setTypeFiltre(e.target.value); setPage(1); }}>
-              <option value="">Tous</option>
-              {typesDocument.map((t) => <option key={t.id} value={t.id}>{t.nom}</option>)}
-            </select>
+            <SearchableSelect
+              value={typeFiltre}
+              onChange={(val) => { setTypeFiltre(val); setPage(1); }}
+              options={[{ value: '', label: 'Tous' }, ...typesDocument.map((t) => ({ value: t.id, label: t.nom }))]}
+              placeholder="Tous"
+            />
           </div>
           <div className={styles.filterGroup}>
             <label>Du</label>
