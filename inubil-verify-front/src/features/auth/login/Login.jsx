@@ -162,6 +162,9 @@ export default function Login() {
               <Link to="/forgot-password" className={styles.authLink}>
                 Mot de passe oublié ?
               </Link>
+              <Link to="/renvoyer-verification" className={styles.authLink}>
+                Email de vérification non reçu ?
+              </Link>
             </div>
           </form>
         </div>
