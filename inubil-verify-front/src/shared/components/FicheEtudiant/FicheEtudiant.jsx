@@ -556,12 +556,14 @@ export default function FicheEtudiant() {
             {mode === 'creation' && (
               <>
                 <div className={styles.detailHeader}>
-                  <span className={styles.avatarLg} style={{ background: '#94a3b8' }}>+</span>
-                  <div className={styles.detailHeaderInfo}>
-                    <h2>Nouvel étudiant</h2>
-                    <span className={styles.mono}>Fiche à compléter</span>
+                  <div className={styles.detailHeaderTop}>
+                    <span className={styles.avatarLg} style={{ background: '#94a3b8' }}>+</span>
+                    <div className={styles.detailHeaderInfo}>
+                      <h2>Nouvel étudiant</h2>
+                      <span className={styles.mono}>Fiche à compléter</span>
+                    </div>
+                    <button type="button" className={styles.closeBtn} onClick={fermerDrawer}><X size={18} /></button>
                   </div>
-                  <button type="button" className={styles.closeBtn} onClick={fermerDrawer}><X size={18} /></button>
                 </div>
                 {formulaire}
               </>
@@ -570,12 +572,15 @@ export default function FicheEtudiant() {
             {(mode === 'vue' || mode === 'edition') && selectionne && (
               <>
                 <div className={styles.detailHeader}>
-                  <span className={styles.avatarLg} style={{ background: couleurAvatar(selectionne.id) }}>
-                    {initiales(selectionne.prenom, selectionne.nom)}
-                  </span>
-                  <div className={styles.detailHeaderInfo}>
-                    <h2>{selectionne.prenom} {selectionne.nom}</h2>
-                    <span className={styles.mono}>{selectionne.numero_etudiant}</span>
+                  <div className={styles.detailHeaderTop}>
+                    <span className={styles.avatarLg} style={{ background: couleurAvatar(selectionne.id) }}>
+                      {initiales(selectionne.prenom, selectionne.nom)}
+                    </span>
+                    <div className={styles.detailHeaderInfo}>
+                      <h2>{selectionne.prenom} {selectionne.nom}</h2>
+                      <span className={styles.mono}>{selectionne.numero_etudiant}</span>
+                    </div>
+                    <button type="button" className={styles.closeBtn} onClick={fermerDrawer}><X size={18} /></button>
                   </div>
                   {mode === 'vue' && (
                     <div className={styles.detailHeaderActions}>
@@ -597,7 +602,6 @@ export default function FicheEtudiant() {
                       )}
                     </div>
                   )}
-                  <button type="button" className={styles.closeBtn} onClick={fermerDrawer}><X size={18} /></button>
                 </div>
 
                 {mode === 'vue' && (
