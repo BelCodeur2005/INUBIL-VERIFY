@@ -119,6 +119,22 @@ export class MailService {
         return;
       }
 
+      if (host.includes('sendgrid')) {
+        // Meme raison que Resend ci-dessus (contournement du blocage SMTP de
+        // Render) — utilise en plus le fait que SendGrid supporte la "Single
+        // Sender Verification" (un seul expediteur verifie par email, sans
+        // domaine), utile tant qu'aucun domaine propre n'est disponible.
+        const messageId = await this.envoyerViaSendgridApi(
+          pass,
+          from,
+          to,
+          subject,
+          html,
+        );
+        this.logger.log(`Email envoyé à ${to} — messageId: ${messageId}`);
+        return;
+      }
+
       // Render (et d'autres PaaS) n'ont pas de route IPv6 sortante. La
       // resolution DNS interne de nodemailer (shared.resolveHostname) tire
       // une adresse AU HASARD parmi les IPv4 et IPv6 trouvees pour l'hote —
@@ -176,6 +192,41 @@ export class MailService {
     }
     const donnees = (await reponse.json()) as { id: string };
     return donnees.id;
+  }
+
+  /** Decoupe une adresse "Nom <email>" (ou "email" seul) en ses deux parties. */
+  private decouperExpediteur(from: string): { name?: string; email: string } {
+    const correspondance = from.match(/^(.*)<(.+)>$/);
+    if (!correspondance) return { email: from.trim() };
+    return { name: correspondance[1].trim(), email: correspondance[2].trim() };
+  }
+
+  /** Envoie via l'API HTTP de SendGrid (https://docs.sendgrid.com/api-reference/mail-send/mail-send). */
+  private async envoyerViaSendgridApi(
+    apiKey: string,
+    from: string,
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<string> {
+    const reponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: this.decouperExpediteur(from),
+        subject,
+        content: [{ type: 'text/html', value: html }],
+      }),
+    });
+    if (!reponse.ok) {
+      const corps = await reponse.text().catch(() => '');
+      throw new Error(`SendGrid API ${reponse.status} : ${corps}`);
+    }
+    return reponse.headers.get('x-message-id') ?? 'ok';
   }
 
   async sendPasswordReset(
