@@ -46,6 +46,7 @@ export enum Permission {
 
   // ── Étudiants ─────────────────────────────────────────────────────────────
   STUDENT_READ = 'student:read',
+  STUDENT_DELETE = 'student:delete',
 
   // ── Départements ──────────────────────────────────────────────────────────
   DEPT_READ = 'dept:read',

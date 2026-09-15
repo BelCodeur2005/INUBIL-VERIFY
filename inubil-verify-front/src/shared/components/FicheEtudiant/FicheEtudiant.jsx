@@ -565,9 +565,11 @@ export default function FicheEtudiant() {
                       <button type="button" className={styles.iconBtn} title="Modifier" onClick={demarrerEdition}>
                         <Pencil size={16} />
                       </button>
-                      <button type="button" className={styles.iconBtnDanger} title="Supprimer" onClick={() => { setErreurSuppression(null); setConfirmSuppression(true); }}>
-                        <Trash2 size={16} />
-                      </button>
+                      {!(utilisateur?.role?.nom === 'agent_saisie' && selectionne.a_compte) && (
+                        <button type="button" className={styles.iconBtnDanger} title="Supprimer" onClick={() => { setErreurSuppression(null); setConfirmSuppression(true); }}>
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   )}
                   <button type="button" className={styles.closeBtn} onClick={fermerDrawer}><X size={18} /></button>

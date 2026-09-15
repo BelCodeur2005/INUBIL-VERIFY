@@ -277,5 +277,46 @@ describe('EtudiantsAdminService', () => {
         NotFoundException,
       );
     });
+
+    it('leve ForbiddenException si un agent_saisie tente de supprimer un etudiant avec un compte de connexion actif', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue({
+        universite_id: UNIV_ID,
+        departements: [],
+        roles_utilisateurs_role_idToroles: { nom: 'agent_saisie' },
+      });
+      prisma.etudiants.findFirst.mockResolvedValueOnce(
+        makeEtudiant({ _count: { documents: 0 }, utilisateur_id: 'user-1' }),
+      );
+      await expect(service.supprimer(ETU_ID, ADMIN_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.etudiants.update).not.toHaveBeenCalled();
+    });
+
+    it('autorise un agent_saisie a supprimer un etudiant sans compte de connexion', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue({
+        universite_id: UNIV_ID,
+        departements: [],
+        roles_utilisateurs_role_idToroles: { nom: 'agent_saisie' },
+      });
+      prisma.etudiants.findFirst.mockResolvedValueOnce(
+        makeEtudiant({ _count: { documents: 0 }, utilisateur_id: null }),
+      );
+      await service.supprimer(ETU_ID, ADMIN_ID);
+      expect(prisma.etudiants.update).toHaveBeenCalled();
+    });
+
+    it('autorise un directeur_pedagogique a supprimer un etudiant meme avec un compte de connexion actif', async () => {
+      prisma.utilisateurs.findFirst.mockResolvedValue({
+        universite_id: UNIV_ID,
+        departements: [],
+        roles_utilisateurs_role_idToroles: { nom: 'directeur_pedagogique' },
+      });
+      prisma.etudiants.findFirst.mockResolvedValueOnce(
+        makeEtudiant({ _count: { documents: 0 }, utilisateur_id: 'user-1' }),
+      );
+      await service.supprimer(ETU_ID, ADMIN_ID);
+      expect(prisma.etudiants.update).toHaveBeenCalled();
+    });
   });
 });

@@ -60,6 +60,17 @@ export class EtudiantsAdminService {
     return u?.departements.map((d) => d.id) ?? [];
   }
 
+  /** Nom du role de l'acteur — utilise pour la restriction supplementaire de supprimer() ci-dessous. */
+  private async getActeurRoleNom(acteurId: string): Promise<string | null> {
+    const u = await this.prisma.utilisateurs.findFirst({
+      where: { id: acteurId },
+      select: {
+        roles_utilisateurs_role_idToroles: { select: { nom: true } },
+      },
+    });
+    return u?.roles_utilisateurs_role_idToroles?.nom ?? null;
+  }
+
   private toDto(e: any): EtudiantAdminResponseDto {
     return {
       id: e.id,
@@ -454,6 +465,16 @@ export class EtudiantsAdminService {
     if (etudiant._count.documents > 0) {
       throw new ConflictException(
         `Impossible de supprimer : cet étudiant possède ${etudiant._count.documents} document(s) émis`,
+      );
+    }
+
+    // Un agent de saisie peut annuler une fiche qu'il vient de commencer (erreur de
+    // saisie), mais pas supprimer un etudiant qui a deja active son compte — a ce
+    // stade seuls directeur_pedagogique/responsable_universite peuvent le faire.
+    const roleNom = await this.getActeurRoleNom(acteurId);
+    if (roleNom === 'agent_saisie' && etudiant.utilisateur_id !== null) {
+      throw new ForbiddenException(
+        'Un agent de saisie ne peut supprimer que les fiches sans compte de connexion actif — contactez un directeur pédagogique ou le responsable de votre établissement.',
       );
     }
 
