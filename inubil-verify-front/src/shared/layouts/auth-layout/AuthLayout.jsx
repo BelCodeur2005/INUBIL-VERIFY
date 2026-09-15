@@ -17,10 +17,12 @@ export default function AuthLayout() {
       
       {/* Navbar supérieure toujours affichée */}
       <nav style={{ backgroundColor: 'white', height: '60px', display: 'flex', alignItems: 'center', padding: '0 24px', width: '100%', boxSizing: 'border-box' }}>
-        <img 
-          src={Logo_Inubil} 
-          alt="INUBIL Verify Logo" 
-          style={{ height: '80px', width: 'auto', objectFit: 'contain' }} 
+        <img
+          src={Logo_Inubil}
+          alt="INUBIL Verify Logo"
+          width={480}
+          height={320}
+          style={{ height: '80px', width: 'auto', aspectRatio: '3 / 2', objectFit: 'contain' }}
         />
       </nav>
       
