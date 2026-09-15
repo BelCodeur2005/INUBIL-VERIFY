@@ -331,7 +331,7 @@ export class MailService {
     <h2>Vous avez été invité à rejoindre INUBIL Verify</h2>
     <p>Un administrateur vous a invité à rejoindre la plateforme INUBIL Verify en tant que collaborateur.</p>
     <div class="info">
-      <strong>INUBIL Verify</strong> est la plateforme officielle de certification et de vérification blockchain des diplômes au Cameroun.
+      <strong>INUBIL Verify</strong> est la plateforme de certification et de vérification blockchain des diplômes de votre établissement.
     </div>
     <p>Cliquez ci-dessous pour créer votre compte et accéder à la plateforme :</p>
     <a href="${url}" class="btn">Activer mon compte</a>
