@@ -20,7 +20,7 @@ export default function PublicHeader({ onNouvelleVerification, verifyLabel = 'No
           >
             {verifyLabel}
           </button>
-          <button type="button" className={styles.navLink} onClick={() => navigate('/login')}>
+          <button type="button" className={styles.connexionBtn} onClick={() => navigate('/login')}>
             Connexion
           </button>
         </nav>
