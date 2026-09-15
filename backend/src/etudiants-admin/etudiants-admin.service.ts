@@ -78,6 +78,7 @@ export class EtudiantsAdminService {
       departement_id: e.departement_id ?? null,
       departement_nom: e.departements?.nom ?? null,
       nb_documents: e._count?.documents ?? 0,
+      a_compte: Boolean(e.utilisateur_id),
       created_at: e.created_at,
       updated_at: e.updated_at,
     };
@@ -104,7 +105,27 @@ export class EtudiantsAdminService {
     // Chef de departement (un ou plusieurs) : restreint a ceux-ci, meme si un
     // autre filtre est demande. Scolarite / aucun departement associe : pas de restriction.
     if (acteurDeptIds.length > 0) {
-      where.departement_id = { in: acteurDeptIds };
+      where.departement_id = query.departement_id
+        ? // Le departement demande doit faire partie de ceux de l'acteur,
+          // sinon aucun resultat (jamais elargir sa portee via le filtre).
+          acteurDeptIds.includes(query.departement_id)
+          ? query.departement_id
+          : '__aucun__'
+        : { in: acteurDeptIds };
+    } else if (query.departement_id) {
+      where.departement_id = query.departement_id;
+    }
+
+    if (query.annee_entree !== undefined) {
+      where.annee_entree = query.annee_entree;
+    }
+
+    if (query.a_compte !== undefined) {
+      where.utilisateur_id = query.a_compte ? { not: null } : null;
+    }
+
+    if (query.a_documents !== undefined) {
+      where.documents = query.a_documents ? { some: {} } : { none: {} };
     }
 
     if (query.search) {
@@ -151,6 +172,8 @@ export class EtudiantsAdminService {
       { header: 'Email', value: (e) => e.email },
       { header: 'Université', value: (e) => e.universite_nom },
       { header: 'Département', value: (e) => e.departement_nom },
+      { header: "Année d'entrée", value: (e) => e.annee_entree },
+      { header: 'Compte activé', value: (e) => (e.a_compte ? 'Oui' : 'Non') },
       { header: 'Nb. documents', value: (e) => e.nb_documents },
       {
         header: 'Date de naissance',

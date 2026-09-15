@@ -40,14 +40,26 @@ export class EtudiantAdminResponseDto {
   @ApiProperty({ example: 'ISTAMA INUBIL' })
   universite_nom: string;
 
-  @ApiPropertyOptional({ format: 'uuid', example: 'dept-0000-0000-0000-000000000001' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    example: 'dept-0000-0000-0000-000000000001',
+  })
   departement_id: string | null;
 
   @ApiPropertyOptional({ example: 'Génie Informatique' })
   departement_nom: string | null;
 
-  @ApiProperty({ example: 3, description: 'Nombre de documents émis pour cet étudiant' })
+  @ApiProperty({
+    example: 3,
+    description: 'Nombre de documents émis pour cet étudiant',
+  })
   nb_documents: number;
+
+  @ApiProperty({
+    example: true,
+    description: 'True si un compte de connexion existe pour cet étudiant',
+  })
+  a_compte: boolean;
 
   @ApiProperty({ example: '2023-09-01T08:00:00.000Z' })
   created_at: Date;

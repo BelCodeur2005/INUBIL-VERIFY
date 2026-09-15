@@ -44,17 +44,30 @@ export function revoquerPartage(id) {
   return api.delete(`/etudiants/moi/partages/${id}`);
 }
 
-/** GET /admin/etudiants — recherche libre (nom/prenom/matricule), scope auto sur l'universite de l'acteur. */
-export function rechercherEtudiants(search, { page = 1, limit = 20 } = {}) {
+/**
+ * GET /admin/etudiants — recherche libre (nom/prenom/matricule) + filtres (scope auto
+ * sur l'universite de l'acteur). a_compte/a_documents : true|false|undefined (omis = tous).
+ */
+export function rechercherEtudiants(search, {
+  page = 1, limit = 20, departementId, anneeEntree, aCompte, aDocuments,
+} = {}) {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (search) params.set('search', search);
+  if (departementId) params.set('departement_id', departementId);
+  if (anneeEntree) params.set('annee_entree', String(anneeEntree));
+  if (aCompte !== undefined) params.set('a_compte', String(aCompte));
+  if (aDocuments !== undefined) params.set('a_documents', String(aDocuments));
   return api.get(`/admin/etudiants?${params.toString()}`);
 }
 
-/** GET /admin/etudiants/export — telecharge les etudiants visibles en CSV (meme filtre de recherche). */
-export function exporterEtudiantsCsv(search) {
+/** GET /admin/etudiants/export — telecharge les etudiants visibles en CSV (memes filtres que rechercherEtudiants). */
+export function exporterEtudiantsCsv(search, { departementId, anneeEntree, aCompte, aDocuments } = {}) {
   const params = new URLSearchParams();
   if (search) params.set('search', search);
+  if (departementId) params.set('departement_id', departementId);
+  if (anneeEntree) params.set('annee_entree', String(anneeEntree));
+  if (aCompte !== undefined) params.set('a_compte', String(aCompte));
+  if (aDocuments !== undefined) params.set('a_documents', String(aDocuments));
   const qs = params.toString();
   return telechargerFichier(`/admin/etudiants/export${qs ? `?${qs}` : ''}`, 'etudiants.csv');
 }
