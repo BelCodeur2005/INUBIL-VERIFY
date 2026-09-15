@@ -100,7 +100,25 @@ export class MailService {
       );
       return;
     }
+    const from = await this.adresseExpediteur();
     try {
+      if (host.includes('resend.com')) {
+        // Render bloque (ou filtre silencieusement) les connexions SMTP
+        // sortantes (port 587/465), aussi bien vers Gmail que vers le relais
+        // SMTP de Resend — meme avec la resolution IPv4 forcee ci-dessous,
+        // on obtient un "Connection timeout" identique. L'API HTTP de Resend
+        // (HTTPS, port 443) contourne totalement ce blocage reseau.
+        const messageId = await this.envoyerViaResendApi(
+          pass,
+          from,
+          to,
+          subject,
+          html,
+        );
+        this.logger.log(`Email envoyé à ${to} — messageId: ${messageId}`);
+        return;
+      }
+
       // Render (et d'autres PaaS) n'ont pas de route IPv6 sortante. La
       // resolution DNS interne de nodemailer (shared.resolveHostname) tire
       // une adresse AU HASARD parmi les IPv4 et IPv6 trouvees pour l'hote —
@@ -128,13 +146,36 @@ export class MailService {
         auth: { user, pass },
         ...(servername ? { tls: { servername } } : {}),
       });
-      const from = await this.adresseExpediteur();
       const info = await transporter.sendMail({ from, to, subject, html });
       this.logger.log(`Email envoyé à ${to} — messageId: ${info.messageId}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`Échec envoi email à ${to} : ${msg}`);
     }
+  }
+
+  /** Envoie via l'API HTTP de Resend (https://resend.com/docs/api-reference/emails/send-email). */
+  private async envoyerViaResendApi(
+    apiKey: string,
+    from: string,
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<string> {
+    const reponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ from, to, subject, html }),
+    });
+    if (!reponse.ok) {
+      const corps = await reponse.text().catch(() => '');
+      throw new Error(`Resend API ${reponse.status} : ${corps}`);
+    }
+    const donnees = (await reponse.json()) as { id: string };
+    return donnees.id;
   }
 
   async sendPasswordReset(
