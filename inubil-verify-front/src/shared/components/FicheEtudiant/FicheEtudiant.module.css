@@ -326,11 +326,16 @@
 .detailHeader {
   position: relative;
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 28px 52px 24px 24px;
+  flex-direction: column;
+  padding: 28px 52px 20px 24px;
   background: linear-gradient(180deg, rgba(var(--color-primary-rgb), 0.06) 0%, rgba(var(--color-primary-rgb), 0) 100%);
   border-bottom: 1px solid #e2e8f0;
+}
+
+.detailHeaderTop {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .avatarLg {
@@ -366,10 +371,11 @@
 .detailHeaderActions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  flex-shrink: 0;
-  padding-left: 12px;
-  border-left: 1px solid #e2e8f0;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .secondaryBtn {
