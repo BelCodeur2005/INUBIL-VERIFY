@@ -109,6 +109,15 @@ export async function apiRequest(path, { method = 'GET', body, auth = true, ...r
   const corps = await parseCorpsReponse(response);
 
   if (!response.ok) {
+    // Un 401 qui persiste apres tentative de rafraichissement (ou sans refresh token
+    // disponible) signifie que la session est reellement terminee (expiree par inactivite,
+    // revoquee...) — jamais un probleme de permission (ca, c'est un 403). Plutot que de
+    // laisser chaque liste/page afficher silencieusement un message "non autorise", on
+    // nettoie les jetons et on renvoie vers la connexion.
+    if (response.status === 401 && auth && typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+      clearTokens();
+      window.location.href = '/login';
+    }
     throw new ApiError(response.status, extraireMessage(corps, response.status), corps);
   }
 
