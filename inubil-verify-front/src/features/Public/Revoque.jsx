@@ -57,7 +57,7 @@ export default function Revoque({ resultat, message, hashSoumis, blockchain, ver
             <div className={styles.bannerIconContainer}>
               <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>warning</span>
             </div>
-            <div>
+            <div className={styles.bannerText}>
               <div className={styles.bannerTitle}>{TITRES_RESULTAT[resultat] ?? 'DOCUMENT NON AUTHENTIQUE'}</div>
               <div className={styles.bannerDesc}>{message}</div>
             </div>
