@@ -44,6 +44,11 @@
   overflow-y: auto;
 }
 
+.paginationWrap {
+  border-top: 1px solid #f1f5f9;
+  padding: 4px 20px;
+}
+
 .etatVide {
   display: flex;
   flex-direction: column;

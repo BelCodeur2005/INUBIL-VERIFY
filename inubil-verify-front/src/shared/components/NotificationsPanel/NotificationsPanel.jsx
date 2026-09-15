@@ -6,7 +6,10 @@ import {
   marquerToutesNotificationsLues,
   archiverNotification,
 } from '../../../core/notifications/notifications.api';
+import Pagination from '../Pagination/Pagination';
 import styles from './NotificationsPanel.module.css';
+
+const LIMIT = 20;
 
 const ICONE_PAR_TYPE = {
   document_emis:    CheckCircle2,
@@ -33,6 +36,8 @@ function tempsEcoule(iso) {
 export default function NotificationsPanel() {
   const [nonLues, setNonLues] = useState(0);
   const [notifications, setNotifications] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(null);
 
@@ -42,9 +47,10 @@ export default function NotificationsPanel() {
       setChargement(true);
       setErreur(null);
       try {
-        const reponse = await listerMesNotifications({ limit: 50 });
+        const reponse = await listerMesNotifications({ page, limit: LIMIT });
         if (annule) return;
         setNotifications(reponse.data);
+        setTotal(reponse.total);
         setNonLues(reponse.non_lues);
       } catch {
         if (!annule) setErreur('Impossible de charger vos notifications.');
@@ -53,7 +59,9 @@ export default function NotificationsPanel() {
       }
     })();
     return () => { annule = true; };
-  }, []);
+  }, [page]);
+
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
   const handleClicNotification = async (notif) => {
     if (notif.statut === 'non_lue') {
@@ -78,6 +86,7 @@ export default function NotificationsPanel() {
     try {
       await archiverNotification(id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setTotal((n) => Math.max(0, n - 1));
       if (etaitNonLue) setNonLues((n) => Math.max(0, n - 1));
     } catch {
       setErreur('Impossible de supprimer cette notification.');
@@ -98,7 +107,7 @@ export default function NotificationsPanel() {
     <div className={styles.panel}>
       <div className={styles.toolbar}>
         <span className={styles.total}>
-          {chargement ? '…' : `${notifications.length} notification${notifications.length > 1 ? 's' : ''}`}
+          {chargement ? '…' : `${total} notification${total > 1 ? 's' : ''}`}
         </span>
         {nonLues > 0 && (
           <button type="button" className={styles.toutLireBtn} onClick={handleToutMarquerLu}>
@@ -146,6 +155,12 @@ export default function NotificationsPanel() {
           );
         })}
       </div>
+
+      {!chargement && !erreur && (
+        <div className={styles.paginationWrap}>
+          <Pagination page={page} totalPages={totalPages} total={total} onChange={setPage} itemLabel="notification" />
+        </div>
+      )}
     </div>
   );
 }
