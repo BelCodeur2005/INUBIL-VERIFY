@@ -42,7 +42,9 @@ export default function Landing() {
                 <img
                   src={Logo_Inubil}
                   alt="INUBIL Verify"
-                  style={{ height: '80px', width: 'auto', objectFit: 'contain' }}
+                  width={480}
+                  height={320}
+                  style={{ height: '80px', width: 'auto', aspectRatio: '3 / 2', objectFit: 'contain' }}
                 />
           </div>
 

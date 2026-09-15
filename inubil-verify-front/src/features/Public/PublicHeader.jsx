@@ -10,7 +10,7 @@ export default function PublicHeader({ onNouvelleVerification, verifyLabel = 'No
     <header className={styles.header}>
       <div className={styles.headerContainer}>
         <Link to="/" className={styles.brandGroup}>
-          <img alt="INUBIL Verify" className={styles.logo} src={Logo_Inubil} />
+          <img alt="INUBIL Verify" className={styles.logo} src={Logo_Inubil} width={480} height={320} />
         </Link>
         <nav className={styles.navGroup}>
           <button

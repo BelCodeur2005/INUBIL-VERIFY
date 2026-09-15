@@ -21,14 +21,14 @@
 
 .headerContainer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   max-width: 1280px;
   margin-left: auto;
   margin-right: auto;
-  padding-left: 24px;
-  padding-right: 24px;
-  height: 5.5rem;
+  padding: 12px 24px;
+  min-height: 5.5rem;
   gap: 12px;
 }
 
@@ -37,21 +37,22 @@
   align-items: center;
   text-decoration: none;
   min-width: 0;
-  flex-shrink: 0;
 }
 
 .logo {
   height: 80px;
   width: auto;
   max-width: 100%;
+  aspect-ratio: 3 / 2;
   object-fit: contain;
 }
 
 .navGroup {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 24px;
-  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 12px 24px;
 }
 
 .navLink {
@@ -99,9 +100,8 @@
 
 @media (max-width: 640px) {
   .headerContainer {
-    padding-left: 16px;
-    padding-right: 16px;
-    height: 3.75rem;
+    padding: 10px 16px;
+    min-height: 3.75rem;
     gap: 8px;
   }
 
@@ -110,7 +110,7 @@
   }
 
   .navGroup {
-    gap: 14px;
+    gap: 8px 14px;
   }
 
   .navLink {
