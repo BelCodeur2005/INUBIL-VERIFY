@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Search, Plus, Pencil, Trash2, X, Loader2, AlertTriangle, UserX,
+  Search, Plus, Eye, Pencil, Trash2, X, Loader2, AlertTriangle, UserX,
   FileText, Save, Cake, MapPin, Flag, Mail, Phone, GraduationCap, FileDown,
 } from 'lucide-react';
 import {
@@ -13,16 +13,18 @@ import { ApiError } from '../../../core/api/client';
 import Pagination from '../Pagination/Pagination';
 import styles from './FicheEtudiant.module.css';
 
-// Fiche Étudiant (docs/ROLES_ET_PAGES.md §D item 16, GET/POST/PATCH/DELETE /admin/etudiants).
+// Étudiants (docs/ROLES_ET_PAGES.md §D item 16, GET/POST/PATCH/DELETE /admin/etudiants).
 // Page partagée agent_saisie / directeur_pedagogique / responsable_universite —
-// pattern master-detail (liste à gauche, fiche à droite) : c'est le pattern standard
-// pour la gestion de "dossiers" (CRM, SIS) quand chaque enregistrement a beaucoup de
-// champs et qu'on navigue souvent d'un dossier à l'autre.
+// tableau + filtres + tiroir de détail/édition, cohérent avec ListeDocuments/AdminInubil
+// (remplace l'ancien pattern maître-détail, moins adapté une fois qu'on veut filtrer sur
+// plusieurs critères et garder les mêmes colonnes visibles que le reste de l'admin).
 
 const CHAMPS_VIDES = {
   numero_etudiant: '', nom: '', prenom: '', date_naissance: '',
   lieu_naissance: '', nationalite: '', email: '', telephone: '', annee_entree: '', departement_id: '',
 };
+
+const LIMIT = 20;
 
 const PALETTE_AVATAR = ['#2b56cb', '#0f766e', '#9333ea', '#b45309', '#be123c', '#0369a1'];
 
@@ -108,15 +110,19 @@ export default function FicheEtudiant() {
 
   const [rechercheInput, setRechercheInput] = useState(requeteInitiale);
   const [recherche, setRecherche] = useState(requeteInitiale);
+  const [departementFiltre, setDepartementFiltre] = useState('');
+  const [anneeFiltre, setAnneeFiltre] = useState('');
+  const [compteFiltre, setCompteFiltre] = useState('');
+  const [documentsFiltre, setDocumentsFiltre] = useState('');
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const limit = 50;
   const [loadingListe, setLoadingListe] = useState(true);
   const [erreurListe, setErreurListe] = useState(null);
 
+  const [drawerOuvert, setDrawerOuvert] = useState(false);
   const [selectionne, setSelectionne] = useState(null);
-  const [mode, setMode] = useState('vide'); // vide | vue | edition | creation
+  const [mode, setMode] = useState('vue'); // vue | edition | creation
   const [form, setForm] = useState(CHAMPS_VIDES);
   const [enregistrement, setEnregistrement] = useState(false);
   const [erreurForm, setErreurForm] = useState(null);
@@ -142,11 +148,18 @@ export default function FicheEtudiant() {
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
   const [erreurSuppression, setErreurSuppression] = useState(null);
 
+  const filtresPourApi = () => ({
+    departementId: departementFiltre || undefined,
+    anneeEntree: anneeFiltre || undefined,
+    aCompte: compteFiltre === '' ? undefined : compteFiltre === 'true',
+    aDocuments: documentsFiltre === '' ? undefined : documentsFiltre === 'true',
+  });
+
   const [exportEnCours, setExportEnCours] = useState(false);
   const exporterCsv = async () => {
     setExportEnCours(true);
     try {
-      await exporterEtudiantsCsv(recherche || undefined);
+      await exporterEtudiantsCsv(recherche || undefined, filtresPourApi());
     } catch (err) {
       setErreurListe(err instanceof ApiError ? err.message : 'Export impossible.');
     } finally {
@@ -160,9 +173,20 @@ export default function FicheEtudiant() {
     return () => clearTimeout(t);
   }, [rechercheInput]);
 
+  const filtresActifs = Boolean(recherche || departementFiltre || anneeFiltre || compteFiltre || documentsFiltre);
+  const reinitialiserFiltres = () => {
+    setRechercheInput('');
+    setRecherche('');
+    setDepartementFiltre('');
+    setAnneeFiltre('');
+    setCompteFiltre('');
+    setDocumentsFiltre('');
+    setPage(1);
+  };
+
   // Vrai si la fiche en cours (edition ou creation) contient des changements non
   // enregistres — evite d'ecraser silencieusement une saisie en cours quand l'agent
-  // clique sur un autre etudiant ou sur "Nouveau" sans avoir clique "Enregistrer".
+  // ferme le tiroir ou clique sur un autre etudiant sans avoir clique "Enregistrer".
   const formModifie = () => {
     if (mode === 'edition') return JSON.stringify(form) !== JSON.stringify(mapVersForm(selectionne));
     if (mode === 'creation') {
@@ -172,7 +196,7 @@ export default function FicheEtudiant() {
   };
 
   const confirmerAbandon = () => {
-    if (!formModifie()) return true;
+    if (!drawerOuvert || !formModifie()) return true;
     return window.confirm('Des modifications non enregistrées seront perdues. Continuer ?');
   };
 
@@ -183,6 +207,15 @@ export default function FicheEtudiant() {
     setMode('vue');
     setErreurForm(null);
     setMatriculeDoublon(null);
+    setDrawerOuvert(true);
+  };
+
+  const fermerDrawer = () => {
+    if (!confirmerAbandon()) return;
+    setDrawerOuvert(false);
+    setSelectionne(null);
+    setErreurForm(null);
+    setMatriculeDoublon(null);
   };
 
   useEffect(() => {
@@ -191,7 +224,7 @@ export default function FicheEtudiant() {
       setLoadingListe(true);
       setErreurListe(null);
       try {
-        const res = await rechercherEtudiants(recherche || undefined, { page, limit });
+        const res = await rechercherEtudiants(recherche || undefined, { page, limit: LIMIT, ...filtresPourApi() });
         if (annule) return;
         setItems(res.data ?? []);
         setTotal(res.total ?? 0);
@@ -207,9 +240,10 @@ export default function FicheEtudiant() {
       }
     })();
     return () => { annule = true; };
-  }, [recherche, page]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recherche, page, departementFiltre, anneeFiltre, compteFiltre, documentsFiltre]);
 
-  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
   const demarrerCreation = () => {
     if (!confirmerAbandon()) return;
@@ -218,6 +252,7 @@ export default function FicheEtudiant() {
     setErreurForm(null);
     setMatriculeDoublon(null);
     setMode('creation');
+    setDrawerOuvert(true);
   };
 
   const demarrerEdition = () => {
@@ -227,12 +262,12 @@ export default function FicheEtudiant() {
     setMode('edition');
   };
 
-  const annuler = () => {
+  const annulerEdition = () => {
     if (selectionne) {
       setForm(mapVersForm(selectionne));
       setMode('vue');
     } else {
-      setMode('vide');
+      setDrawerOuvert(false);
     }
     setErreurForm(null);
     setMatriculeDoublon(null);
@@ -278,7 +313,7 @@ export default function FicheEtudiant() {
       setItems((prev) => prev.filter((it) => it.id !== selectionne.id));
       setTotal((t) => Math.max(0, t - 1));
       setSelectionne(null);
-      setMode('vide');
+      setDrawerOuvert(false);
       setConfirmSuppression(false);
     } catch (err) {
       setErreurSuppression(err instanceof ApiError ? err.message : 'Suppression impossible.');
@@ -290,6 +325,8 @@ export default function FicheEtudiant() {
   const voirDocuments = () => {
     navigate('/universite/registre', { state: { etudiantFiltre: selectionne } });
   };
+
+  const listeDepartementsFiltre = acteurDepartements.length > 0 ? acteurDepartements : departements;
 
   const formulaire = (
     <form className={styles.form} onSubmit={soumettre}>
@@ -340,7 +377,7 @@ export default function FicheEtudiant() {
           ) : (
             <select value={form.departement_id} onChange={majChamp('departement_id')}>
               <option value="">— Non renseigné —</option>
-              {(acteurDepartements.length > 0 ? acteurDepartements : departements).map((d) => (
+              {listeDepartementsFiltre.map((d) => (
                 <option key={d.id} value={d.id}>{d.nom}</option>
               ))}
             </select>
@@ -348,7 +385,7 @@ export default function FicheEtudiant() {
         </label>
       </div>
       <div className={styles.formActions}>
-        <button type="button" className={styles.cancelBtn} onClick={annuler}>Annuler</button>
+        <button type="button" className={styles.cancelBtn} onClick={annulerEdition}>Annuler</button>
         <button type="submit" className={styles.primaryBtn} disabled={enregistrement}>
           {enregistrement ? <Loader2 size={15} className={styles.spin} /> : <Save size={15} />} Enregistrer
         </button>
@@ -358,10 +395,11 @@ export default function FicheEtudiant() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.masterPanel}>
-        <div className={styles.masterHeader}>
-          <h2 className={styles.title}>Étudiants</h2>
+      <div className={styles.tableCard}>
+        <div className={styles.tableHeader}>
+          <div className={styles.tableTitle}>Étudiants</div>
           <div className={styles.headerActions}>
+            <span className={styles.totalCount}>{total} étudiant{total !== 1 ? 's' : ''}</span>
             <button type="button" className={styles.exportBtn} onClick={exporterCsv} disabled={exportEnCours}>
               <FileDown size={14} /> {exportEnCours ? 'Export…' : 'CSV'}
             </button>
@@ -371,126 +409,205 @@ export default function FicheEtudiant() {
           </div>
         </div>
 
-        <div className={styles.searchWrap}>
-          <Search size={14} className={styles.searchIcon} />
-          <input
-            placeholder="Nom, prénom, matricule..."
-            value={rechercheInput}
-            onChange={(e) => setRechercheInput(e.target.value)}
-          />
+        <div className={styles.filtersBar}>
+          <div className={`${styles.filterGroup} ${styles.filterGroupSearch}`}>
+            <label>Recherche</label>
+            <div className={styles.searchInputWrap}>
+              <Search size={14} className={styles.searchIcon} />
+              <input
+                type="text"
+                placeholder="Nom, prénom, matricule..."
+                value={rechercheInput}
+                onChange={(e) => setRechercheInput(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className={styles.filterGroup}>
+            <label>Département</label>
+            <select value={departementFiltre} onChange={(e) => { setPage(1); setDepartementFiltre(e.target.value); }}>
+              <option value="">Tous</option>
+              {listeDepartementsFiltre.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}
+            </select>
+          </div>
+          <div className={styles.filterGroup}>
+            <label>Année d'entrée</label>
+            <input
+              type="number"
+              placeholder="Toutes"
+              value={anneeFiltre}
+              onChange={(e) => { setPage(1); setAnneeFiltre(e.target.value); }}
+              min={1990}
+              max={2100}
+            />
+          </div>
+          <div className={styles.filterGroup}>
+            <label>Compte</label>
+            <select value={compteFiltre} onChange={(e) => { setPage(1); setCompteFiltre(e.target.value); }}>
+              <option value="">Tous</option>
+              <option value="true">Avec compte</option>
+              <option value="false">Sans compte</option>
+            </select>
+          </div>
+          <div className={styles.filterGroup}>
+            <label>Diplômes</label>
+            <select value={documentsFiltre} onChange={(e) => { setPage(1); setDocumentsFiltre(e.target.value); }}>
+              <option value="">Tous</option>
+              <option value="true">Avec diplômes</option>
+              <option value="false">Aucun diplôme</option>
+            </select>
+          </div>
+          {filtresActifs && (
+            <button type="button" className={styles.resetBtn} onClick={reinitialiserFiltres}>
+              <X size={14} /> Réinitialiser les filtres
+            </button>
+          )}
         </div>
 
         {erreurListe && <p className={styles.errorText}><AlertTriangle size={14} /> {erreurListe}</p>}
 
-        <div className={styles.list}>
-          {loadingListe && (
-            <div className={styles.loadingRow}><Loader2 size={18} className={styles.spin} /> Chargement...</div>
-          )}
-          {!loadingListe && items.length === 0 && (
-            <div className={styles.emptyList}>
-              <UserX size={22} />
-              {recherche ? 'Aucun étudiant ne correspond à cette recherche.' : 'Aucun étudiant enregistré.'}
-            </div>
-          )}
-          {!loadingListe && items.map((e) => (
-            <button
-              key={e.id}
-              type="button"
-              className={`${styles.listItem} ${selectionne?.id === e.id ? styles.listItemActive : ''}`}
-              onClick={() => selectionner(e)}
-            >
-              <span className={styles.avatar} style={{ background: couleurAvatar(e.id) }}>{initiales(e.prenom, e.nom)}</span>
-              <span className={styles.listItemInfo}>
-                <strong>{e.prenom} {e.nom}</strong>
-                <span className={styles.listItemSub}>{e.numero_etudiant}</span>
-              </span>
-              {e.nb_documents > 0 && <span className={styles.docBadge}>{e.nb_documents}</span>}
-            </button>
-          ))}
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Étudiant</th>
+                <th>Département</th>
+                <th>Année d'entrée</th>
+                <th>Compte</th>
+                <th>Diplômes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loadingListe && (
+                <tr><td colSpan={6} className={styles.loadingCell}><Loader2 size={18} className={styles.spinnerIcon} /> Chargement...</td></tr>
+              )}
+              {!loadingListe && items.length === 0 && (
+                <tr>
+                  <td colSpan={6} className={styles.emptyCell}>
+                    <div className={styles.emptyCellInner}>
+                      <UserX size={22} />
+                      {filtresActifs ? 'Aucun étudiant ne correspond à ces filtres.' : 'Aucun étudiant enregistré.'}
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {!loadingListe && items.map((e) => (
+                <tr key={e.id} className={styles.clickableRow} onClick={() => selectionner(e)}>
+                  <td>
+                    <div className={styles.etudiantCell}>
+                      <span className={styles.avatar} style={{ background: couleurAvatar(e.id) }}>{initiales(e.prenom, e.nom)}</span>
+                      <span className={styles.bold}>
+                        {e.prenom} {e.nom}
+                        <span className={styles.subText}>{e.numero_etudiant}</span>
+                      </span>
+                    </div>
+                  </td>
+                  <td>{e.departement_nom ?? '—'}</td>
+                  <td>{e.annee_entree ?? '—'}</td>
+                  <td>
+                    <span className={`${styles.badge} ${e.a_compte ? styles.badgeAvecCompte : styles.badgeSansCompte}`}>
+                      {e.a_compte ? 'Avec compte' : 'Sans compte'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`${styles.badge} ${e.nb_documents > 0 ? styles.badgeDocs : styles.badgeDocsVide}`}>
+                      {e.nb_documents > 0 ? e.nb_documents : 'Aucun'}
+                    </span>
+                  </td>
+                  <td onClick={(ev) => ev.stopPropagation()}>
+                    <div className={styles.actionsCell}>
+                      <button type="button" className={styles.iconBtn} title="Voir la fiche" onClick={() => selectionner(e)}>
+                        <Eye size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         <Pagination page={page} totalPages={totalPages} total={total} onChange={setPage} itemLabel="étudiant" />
       </div>
 
-      <div className={styles.detailPanel}>
-        {mode === 'vide' && (
-          <div className={styles.emptyDetail}>
-            <UserX size={40} />
-            <p>Sélectionnez un étudiant dans la liste, ou créez-en un nouveau.</p>
-          </div>
-        )}
-
-        {mode === 'creation' && (
-          <>
-            <div className={styles.detailHeader}>
-              <span className={styles.avatarLg} style={{ background: '#94a3b8' }}>+</span>
-              <div className={styles.detailHeaderInfo}>
-                <h2>Nouvel étudiant</h2>
-                <span className={styles.mono}>Fiche à compléter</span>
-              </div>
-            </div>
-            <div className={styles.sections}>{formulaire}</div>
-          </>
-        )}
-
-        {(mode === 'vue' || mode === 'edition') && selectionne && (
-          <>
-            <div className={styles.detailHeader}>
-              <span className={styles.avatarLg} style={{ background: couleurAvatar(selectionne.id) }}>
-                {initiales(selectionne.prenom, selectionne.nom)}
-              </span>
-              <div className={styles.detailHeaderInfo}>
-                <h2>{selectionne.prenom} {selectionne.nom}</h2>
-                <span className={styles.mono}>{selectionne.numero_etudiant}</span>
-              </div>
-              {mode === 'vue' && (
-                <div className={styles.detailHeaderActions}>
-                  <button type="button" className={styles.secondaryBtn} onClick={voirDocuments}>
-                    <FileText size={15} /> Ses documents{selectionne.nb_documents > 0 ? ` (${selectionne.nb_documents})` : ''}
-                  </button>
-                  <button type="button" className={styles.iconBtn} title="Modifier" onClick={demarrerEdition}>
-                    <Pencil size={16} />
-                  </button>
-                  <button type="button" className={styles.iconBtnDanger} title="Supprimer" onClick={() => { setErreurSuppression(null); setConfirmSuppression(true); }}>
-                    <Trash2 size={16} />
-                  </button>
+      {drawerOuvert && (
+        <div className={styles.drawerOverlay} onClick={fermerDrawer}>
+          <div className={styles.drawerPanel} onClick={(e) => e.stopPropagation()}>
+            {mode === 'creation' && (
+              <>
+                <div className={styles.detailHeader}>
+                  <span className={styles.avatarLg} style={{ background: '#94a3b8' }}>+</span>
+                  <div className={styles.detailHeaderInfo}>
+                    <h2>Nouvel étudiant</h2>
+                    <span className={styles.mono}>Fiche à compléter</span>
+                  </div>
+                  <button type="button" className={styles.closeBtn} onClick={fermerDrawer}><X size={18} /></button>
                 </div>
-              )}
-            </div>
-
-            {mode === 'vue' && (
-              <div className={styles.sections}>
-                <section>
-                  <h3>Identité</h3>
-                  <div className={styles.champsGrid}>
-                    <Champ icon={<Cake size={15} />} label="Date de naissance" value={fmtDate(selectionne.date_naissance)} />
-                    <Champ icon={<MapPin size={15} />} label="Lieu de naissance" value={selectionne.lieu_naissance} />
-                    <Champ icon={<Flag size={15} />} label="Nationalité" value={selectionne.nationalite} />
-                  </div>
-                </section>
-                <section>
-                  <h3>Contact</h3>
-                  <div className={styles.champsGrid}>
-                    <Champ icon={<Mail size={15} />} label="Email" value={selectionne.email} />
-                    <Champ icon={<Phone size={15} />} label="Téléphone" value={selectionne.telephone} />
-                  </div>
-                </section>
-                <section>
-                  <h3>Scolarité</h3>
-                  <div className={styles.champsGrid}>
-                    <Champ icon={<GraduationCap size={15} />} label="Établissement" value={selectionne.universite_nom} />
-                    <Champ icon={<GraduationCap size={15} />} label="Département" value={selectionne.departement_nom} />
-                    <Champ icon={<GraduationCap size={15} />} label="Année d'entrée" value={selectionne.annee_entree} />
-                    <Champ icon={<FileText size={15} />} label="Documents émis" value={selectionne.nb_documents} />
-                  </div>
-                </section>
-              </div>
+                {formulaire}
+              </>
             )}
 
-            {mode === 'edition' && <div className={styles.sections}>{formulaire}</div>}
-          </>
-        )}
-      </div>
+            {(mode === 'vue' || mode === 'edition') && selectionne && (
+              <>
+                <div className={styles.detailHeader}>
+                  <span className={styles.avatarLg} style={{ background: couleurAvatar(selectionne.id) }}>
+                    {initiales(selectionne.prenom, selectionne.nom)}
+                  </span>
+                  <div className={styles.detailHeaderInfo}>
+                    <h2>{selectionne.prenom} {selectionne.nom}</h2>
+                    <span className={styles.mono}>{selectionne.numero_etudiant}</span>
+                  </div>
+                  {mode === 'vue' && (
+                    <div className={styles.detailHeaderActions}>
+                      <button type="button" className={styles.secondaryBtn} onClick={voirDocuments}>
+                        <FileText size={15} /> Ses documents{selectionne.nb_documents > 0 ? ` (${selectionne.nb_documents})` : ''}
+                      </button>
+                      <button type="button" className={styles.iconBtn} title="Modifier" onClick={demarrerEdition}>
+                        <Pencil size={16} />
+                      </button>
+                      <button type="button" className={styles.iconBtnDanger} title="Supprimer" onClick={() => { setErreurSuppression(null); setConfirmSuppression(true); }}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
+                  <button type="button" className={styles.closeBtn} onClick={fermerDrawer}><X size={18} /></button>
+                </div>
+
+                {mode === 'vue' && (
+                  <div className={styles.sections}>
+                    <section>
+                      <h3>Identité</h3>
+                      <div className={styles.champsGrid}>
+                        <Champ icon={<Cake size={15} />} label="Date de naissance" value={fmtDate(selectionne.date_naissance)} />
+                        <Champ icon={<MapPin size={15} />} label="Lieu de naissance" value={selectionne.lieu_naissance} />
+                        <Champ icon={<Flag size={15} />} label="Nationalité" value={selectionne.nationalite} />
+                      </div>
+                    </section>
+                    <section>
+                      <h3>Contact</h3>
+                      <div className={styles.champsGrid}>
+                        <Champ icon={<Mail size={15} />} label="Email" value={selectionne.email} />
+                        <Champ icon={<Phone size={15} />} label="Téléphone" value={selectionne.telephone} />
+                      </div>
+                    </section>
+                    <section>
+                      <h3>Scolarité</h3>
+                      <div className={styles.champsGrid}>
+                        <Champ icon={<GraduationCap size={15} />} label="Établissement" value={selectionne.universite_nom} />
+                        <Champ icon={<GraduationCap size={15} />} label="Département" value={selectionne.departement_nom} />
+                        <Champ icon={<GraduationCap size={15} />} label="Année d'entrée" value={selectionne.annee_entree} />
+                        <Champ icon={<FileText size={15} />} label="Documents émis" value={selectionne.nb_documents} />
+                      </div>
+                    </section>
+                  </div>
+                )}
+
+                {mode === 'edition' && formulaire}
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {confirmSuppression && selectionne && (
         <div className={styles.modalOverlay} onClick={() => setConfirmSuppression(false)}>
