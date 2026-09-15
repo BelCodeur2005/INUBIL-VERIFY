@@ -105,7 +105,14 @@ export class MailService {
         port,
         secure: false,
         auth: { user, pass },
-      });
+        // Render (et d'autres PaaS) n'ont pas toujours de route IPv6 sortante ;
+        // Gmail resout parfois smtp.gmail.com sur une adresse IPv6, ce qui
+        // echoue alors avec ENETUNREACH — force IPv4 pour eviter ce cas.
+        // (Absent des types @types/nodemailer, mais transmis tel quel a
+        // net.connect / tls.connect par smtp-connection.)
+        family: 4,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
       const from = await this.adresseExpediteur();
       const info = await transporter.sendMail({ from, to, subject, html });
       this.logger.log(`Email envoyé à ${to} — messageId: ${info.messageId}`);
