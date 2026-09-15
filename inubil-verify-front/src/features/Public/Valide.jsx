@@ -90,7 +90,7 @@ export default function Valide({ document: doc, blockchain, verifieLe, onNouvell
             <div className={styles.bannerIconContainer}>
               <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>check_circle</span>
             </div>
-            <div>
+            <div className={styles.bannerText}>
               <div className={styles.bannerTitle}>DOCUMENT AUTHENTIQUE &amp; VALIDE</div>
               <div className={styles.bannerDesc}>
                 Ce document académique a été certifié conforme par l'institution émettrice
