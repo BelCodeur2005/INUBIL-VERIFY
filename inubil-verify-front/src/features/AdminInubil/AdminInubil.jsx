@@ -200,6 +200,8 @@ export default function AdminInubil() {
   const [roles, setRoles] = useState([]);
   const [rolesLoading, setRolesLoading] = useState(true);
   const [rolesError, setRolesError] = useState(null);
+  const [rolesPage, setRolesPage] = useState(1);
+  const ROLES_PAR_PAGE = 10;
 
   useEffect(() => {
     let annule = false;
@@ -292,16 +294,28 @@ export default function AdminInubil() {
   };
 
   // ── Invitations en attente (visibilite + renvoyer/annuler) ─────────────────
-  const [invitationsState, setInvitationsState] = useState({ data: [], total: 0 });
+  const [invitationsState, setInvitationsState] = useState({ data: [], total: 0, page: 1, totalPages: 1 });
   const [invitationsLoading, setInvitationsLoading] = useState(true);
   const [invitationsError, setInvitationsError] = useState(null);
   const [invitationActionEnCours, setInvitationActionEnCours] = useState(null);
+  const [invitationsPage, setInvitationsPage] = useState(1);
+
+  const modeInvitations = activeTab === 'users' && usersFiltreStatut === FILTRE_INVITATIONS;
+  // "Tous les statuts" doit aussi montrer les invitations en attente (pas encore un compte
+  // utilisateur, donc absentes de GET /utilisateurs) — fusionnees en tete de la 1ere page
+  // seulement (apercu borne, non paginable), pour ne pas les repeter sur chaque page de la
+  // pagination des vrais comptes. La vraie liste paginee vit dans le filtre dedie ci-dessous.
+  const afficherInvitationsFusionnees =
+    activeTab === 'users' && usersFiltreStatut === '' && usersPage === 1;
+  const doitChargerInvitations = modeInvitations || afficherInvitationsFusionnees;
 
   const chargerInvitations = async () => {
     setInvitationsLoading(true);
     setInvitationsError(null);
     try {
-      const res = await listerInvitations({ statut: 'en_attente', limit: 50 });
+      const page = modeInvitations ? invitationsPage : 1;
+      const limit = modeInvitations ? 20 : 50;
+      const res = await listerInvitations({ statut: 'en_attente', page, limit });
       setInvitationsState(res);
     } catch (err) {
       setInvitationsError(err instanceof ApiError ? err.message : 'Impossible de charger les invitations.');
@@ -310,19 +324,12 @@ export default function AdminInubil() {
     }
   };
 
-  const modeInvitations = activeTab === 'users' && usersFiltreStatut === FILTRE_INVITATIONS;
-  // "Tous les statuts" doit aussi montrer les invitations en attente (pas encore un compte
-  // utilisateur, donc absentes de GET /utilisateurs) — fusionnees en tete de la 1ere page
-  // seulement, pour ne pas les repeter sur chaque page de la pagination des vrais comptes.
-  const afficherInvitationsFusionnees =
-    activeTab === 'users' && usersFiltreStatut === '' && usersPage === 1;
-  const doitChargerInvitations = modeInvitations || afficherInvitationsFusionnees;
-
   useEffect(() => {
     if (!doitChargerInvitations) return;
     const timeout = setTimeout(() => { chargerInvitations(); }, 0);
     return () => clearTimeout(timeout);
-  }, [doitChargerInvitations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doitChargerInvitations, invitationsPage]);
 
   const renvoyerInvitationAction = async (inv) => {
     setInvitationActionEnCours(inv.id);
@@ -623,7 +630,7 @@ export default function AdminInubil() {
                   <label>Statut</label>
                   <select
                     value={usersFiltreStatut}
-                    onChange={(e) => { setUsersPage(1); setUsersFiltreStatut(e.target.value); }}
+                    onChange={(e) => { setUsersPage(1); setInvitationsPage(1); setUsersFiltreStatut(e.target.value); }}
                     className={styles.filterSelect}
                   >
                     <option value="">Tous les statuts</option>
@@ -699,6 +706,18 @@ export default function AdminInubil() {
                       })}
                     </tbody>
                   </table>
+
+                  {!invitationsLoading && (
+                    <div className={styles.paginationWrap}>
+                      <Pagination
+                        page={invitationsState.page}
+                        totalPages={invitationsState.totalPages}
+                        total={invitationsState.total}
+                        onChange={setInvitationsPage}
+                        itemLabel="invitation"
+                      />
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
@@ -858,7 +877,9 @@ export default function AdminInubil() {
                   {rolesLoading && (
                     <tr><td colSpan={4} className={styles.tableEmptyCell}>Chargement…</td></tr>
                   )}
-                  {!rolesLoading && roles.map((r) => (
+                  {!rolesLoading && roles
+                    .slice((rolesPage - 1) * ROLES_PAR_PAGE, rolesPage * ROLES_PAR_PAGE)
+                    .map((r) => (
                     <tr key={r.id}>
                       <td><span className={styles.roleBadge}>{ROLE_LABELS[r.nom] ?? r.nom}</span></td>
                       <td className={styles.descriptionCell}>{r.description ?? '—'}</td>
@@ -868,6 +889,17 @@ export default function AdminInubil() {
                   ))}
                 </tbody>
               </table>
+              {!rolesLoading && (
+                <div className={styles.paginationWrap}>
+                  <Pagination
+                    page={rolesPage}
+                    totalPages={Math.max(1, Math.ceil(roles.length / ROLES_PAR_PAGE))}
+                    total={roles.length}
+                    onChange={setRolesPage}
+                    itemLabel="rôle"
+                  />
+                </div>
+              )}
             </section>
           )}
 
