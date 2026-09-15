@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { InvitationsService } from '../invitations/invitations.service';
 
 @Injectable()
 export class NotificationEmissionService {
@@ -11,6 +12,7 @@ export class NotificationEmissionService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly notificationsInApp: NotificationsService,
+    private readonly invitations: InvitationsService,
   ) {}
 
   /**
@@ -188,6 +190,20 @@ export class NotificationEmissionService {
           erreur: err.message ?? 'Erreur inconnue',
         },
       });
+    }
+
+    // Etudiant sans compte de connexion : en plus de la notification ci-dessus,
+    // une invitation d'activation lui est envoyee (ou relancee si deja en attente)
+    // pour qu'il puisse acceder a son espace personnel. Ne bloque jamais la
+    // validation en cours.
+    if (!doc.etudiants.utilisateur_id) {
+      this.invitations
+        .creerOuRelancerPourEtudiant(doc.etudiants.id)
+        .catch((err) =>
+          this.logger.error(
+            `Invitation etudiant echouee pour doc ${documentId} (etudiant ${doc.etudiants.id}) : ${err.message}`,
+          ),
+        );
     }
   }
 

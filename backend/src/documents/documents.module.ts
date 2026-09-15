@@ -12,11 +12,34 @@ import { StorageModule } from '../storage/storage.module';
 import { BlockchainModule } from '../blockchain/blockchain.module';
 import { ConfigurationsModule } from '../configurations/configurations.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { InvitationsModule } from '../invitations/invitations.module';
 
 @Module({
-  imports: [AuditModule, MailModule, StorageModule, BlockchainModule, ConfigurationsModule, NotificationsModule],
+  imports: [
+    AuditModule,
+    MailModule,
+    StorageModule,
+    BlockchainModule,
+    ConfigurationsModule,
+    NotificationsModule,
+    InvitationsModule,
+  ],
   controllers: [DocumentsController],
-  providers: [DocumentsService, NotificationEmissionService, HashService, PdfService, QrCodeService, RapportVerificationPdfService],
-  exports: [DocumentsService, NotificationEmissionService, HashService, PdfService, QrCodeService, RapportVerificationPdfService],
+  providers: [
+    DocumentsService,
+    NotificationEmissionService,
+    HashService,
+    PdfService,
+    QrCodeService,
+    RapportVerificationPdfService,
+  ],
+  exports: [
+    DocumentsService,
+    NotificationEmissionService,
+    HashService,
+    PdfService,
+    QrCodeService,
+    RapportVerificationPdfService,
+  ],
 })
 export class DocumentsModule {}

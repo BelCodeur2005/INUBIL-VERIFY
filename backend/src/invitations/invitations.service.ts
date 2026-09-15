@@ -18,6 +18,7 @@ import { ActiverInvitationDto } from './dto/activer-invitation.dto';
 import { CreerInvitationDto } from './dto/creer-invitation.dto';
 import { InvitationQueryDto } from './dto/invitation-query.dto';
 import {
+  InvitationApercuDto,
   InvitationListResponseDto,
   InvitationResponseDto,
 } from './dto/invitation-response.dto';
@@ -252,6 +253,113 @@ export class InvitationsService {
     return this.formater(updated);
   }
 
+  // ─── CRÉER OU RELANCER (étudiant) ──────────────────────────────────────
+  /**
+   * Cree une invitation d'activation pour un etudiant sans compte (ou relance
+   * celle deja en attente s'il y en a une). Appelee automatiquement a la
+   * validation d'un diplome (NotificationEmissionService.notifierEtudiant) et
+   * manuellement depuis EtudiantsAdminService.renvoyerInvitation (bouton
+   * "Renvoyer le lien d'activation" du tiroir Etudiants) — cette methode ne
+   * fait aucune verification de portee (universite/departement de l'acteur),
+   * c'est la responsabilite de l'appelant manuel.
+   */
+  async creerOuRelancerPourEtudiant(
+    etudiantId: string,
+  ): Promise<InvitationResponseDto> {
+    const etudiant = await this.prisma.etudiants.findFirst({
+      where: { id: etudiantId, deleted_at: null },
+    });
+    if (!etudiant) throw new NotFoundException('Étudiant introuvable');
+    if (etudiant.utilisateur_id) {
+      throw new BadRequestException(
+        'Cet étudiant a déjà un compte de connexion actif',
+      );
+    }
+    if (!etudiant.email) {
+      throw new BadRequestException(
+        "Cet étudiant n'a pas d'adresse email enregistrée — l'ajouter avant d'envoyer une invitation",
+      );
+    }
+
+    const email = etudiant.email.toLowerCase();
+    const tokenBrut = randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + INVITATION_TTL_MS);
+
+    const existante = await this.prisma.invitations.findFirst({
+      where: {
+        cible: 'etudiant' as any,
+        etudiant_id: etudiant.id,
+        statut: 'en_attente' as any,
+      },
+    });
+
+    const invitation = existante
+      ? await this.prisma.invitations.update({
+          where: { id: existante.id },
+          data: {
+            token: this.hash(tokenBrut),
+            email,
+            expires_at: expiresAt,
+            nb_relances: { increment: 1 },
+          },
+        })
+      : await this.prisma.invitations.create({
+          data: {
+            token: this.hash(tokenBrut),
+            cible: 'etudiant' as any,
+            email,
+            etudiant_id: etudiant.id,
+            universite_id: etudiant.universite_id,
+            statut: 'en_attente' as any,
+            expires_at: expiresAt,
+            nb_relances: 0,
+          },
+        });
+
+    // Fire & forget — meme principe que creer()/renvoyer() ci-dessus.
+    const prenomNom = `${etudiant.prenom} ${etudiant.nom}`;
+    const activerUrl = `${this.config.get<string>('FRONTEND_URL')}/invitations/activer?token=${tokenBrut}`;
+    this.mail
+      .sendInvitationEtudiant(email, prenomNom, activerUrl)
+      .catch((err) =>
+        this.logger.error(
+          `Envoi email invitation étudiant échoué pour ${email} : ${err.message}`,
+        ),
+      );
+
+    return this.formater(invitation);
+  }
+
+  // ─── APERÇU (public) ───────────────────────────────────────────────────
+  /**
+   * Aperçu public d'une invitation par token, SANS l'activer ni exposer
+   * l'email — sert uniquement à adapter le formulaire d'activation cote
+   * frontend (copie "étudiant" vs "collaborateur", nom/prenom déjà connus
+   * pour un étudiant donc pas la peine de les redemander).
+   */
+  async apercu(token: string): Promise<InvitationApercuDto> {
+    const invitation = await this.prisma.invitations.findFirst({
+      where: {
+        token: this.hash(token),
+        statut: 'en_attente',
+        expires_at: { gt: new Date() },
+      },
+    });
+    if (!invitation) {
+      throw new BadRequestException("Token d'invitation invalide ou expiré");
+    }
+
+    if (invitation.cible === 'etudiant' && invitation.etudiant_id) {
+      const etudiant = await this.prisma.etudiants.findFirst({
+        where: { id: invitation.etudiant_id },
+        select: { prenom: true },
+      });
+      return { cible: 'etudiant', prenom: etudiant?.prenom };
+    }
+
+    return { cible: invitation.cible };
+  }
+
   // ─── ACTIVER ─────────────────────────────────────────────────────────
   async activer(
     dto: ActiverInvitationDto,
@@ -267,6 +375,33 @@ export class InvitationsService {
     });
     if (!invitation) {
       throw new BadRequestException("Token d'invitation invalide ou expiré");
+    }
+
+    const estInvitationEtudiant =
+      invitation.cible === 'etudiant' && invitation.etudiant_id;
+
+    // Pour une invitation etudiant, le nom/prenom viennent de la fiche deja
+    // saisie (pas la peine de les redemander), et le role_id n'est jamais
+    // renseigne sur l'invitation elle-meme (contrairement a un collaborateur) —
+    // on resout le role "etudiant" global ici.
+    let etudiantLie: { id: string; nom: string; prenom: string } | null = null;
+    let roleId = invitation.role_id;
+    if (estInvitationEtudiant) {
+      etudiantLie = await this.prisma.etudiants.findFirst({
+        where: { id: invitation.etudiant_id!, deleted_at: null },
+        select: { id: true, nom: true, prenom: true },
+      });
+      if (!etudiantLie) {
+        throw new BadRequestException(
+          "La fiche étudiant associée à cette invitation n'existe plus",
+        );
+      }
+      if (!roleId) {
+        const roleEtudiant = await this.prisma.roles.findFirst({
+          where: { nom: 'etudiant', universite_id: null },
+        });
+        roleId = roleEtudiant?.id ?? null;
+      }
     }
 
     const existant = await this.prisma.utilisateurs.findFirst({
@@ -294,14 +429,17 @@ export class InvitationsService {
       utilisateur = await this.prisma.utilisateurs.update({
         where: { id: existant.id },
         data: {
-          role_id: invitation.role_id,
+          role_id: roleId,
           universite_id: invitation.universite_id,
           statut: 'actif' as any,
           email_verifie: true,
         },
       });
     } else {
-      if (!dto.nom || !dto.prenom || !dto.mot_de_passe) {
+      const nom = etudiantLie?.nom ?? dto.nom;
+      const prenom = etudiantLie?.prenom ?? dto.prenom;
+
+      if (!nom || !prenom || !dto.mot_de_passe) {
         throw new BadRequestException(
           'nom, prenom et mot_de_passe sont requis pour créer un nouveau compte',
         );
@@ -312,15 +450,22 @@ export class InvitationsService {
 
       utilisateur = await this.prisma.utilisateurs.create({
         data: {
-          nom: dto.nom,
-          prenom: dto.prenom,
+          nom,
+          prenom,
           email: invitation.email,
           mot_de_passe: motDePasseHache,
           statut: 'actif' as any,
           email_verifie: true,
-          role_id: invitation.role_id,
+          role_id: roleId,
           universite_id: invitation.universite_id,
         },
+      });
+    }
+
+    if (etudiantLie) {
+      await this.prisma.etudiants.update({
+        where: { id: etudiantLie.id },
+        data: { utilisateur_id: utilisateur.id },
       });
     }
 

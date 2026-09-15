@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search, Plus, Eye, Pencil, Trash2, X, Loader2, AlertTriangle, UserX,
-  FileText, Save, Cake, MapPin, Flag, Mail, Phone, GraduationCap, FileDown,
+  FileText, Save, Cake, MapPin, Flag, Mail, Phone, GraduationCap, FileDown, Send,
 } from 'lucide-react';
 import {
   rechercherEtudiants, creerEtudiant, modifierEtudiant, supprimerEtudiant, exporterEtudiantsCsv,
+  renvoyerInvitationEtudiant,
 } from '../../../core/etudiants/etudiants.api';
 import { listerDepartements } from '../../../core/departements/departements.api';
 import { useAuth } from '../../../core/auth/useAuth';
@@ -148,6 +149,24 @@ export default function FicheEtudiant() {
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
   const [erreurSuppression, setErreurSuppression] = useState(null);
 
+  const [invitationEnCours, setInvitationEnCours] = useState(false);
+  const [invitationMessage, setInvitationMessage] = useState(null);
+  const envoyerInvitation = async () => {
+    setInvitationEnCours(true);
+    setInvitationMessage(null);
+    try {
+      await renvoyerInvitationEtudiant(selectionne.id);
+      setInvitationMessage({ type: 'succes', texte: "Lien d'activation envoyé." });
+    } catch (err) {
+      setInvitationMessage({
+        type: 'erreur',
+        texte: err instanceof ApiError ? err.message : "Impossible d'envoyer le lien d'activation.",
+      });
+    } finally {
+      setInvitationEnCours(false);
+    }
+  };
+
   const filtresPourApi = () => ({
     departementId: departementFiltre || undefined,
     anneeEntree: anneeFiltre || undefined,
@@ -207,6 +226,7 @@ export default function FicheEtudiant() {
     setMode('vue');
     setErreurForm(null);
     setMatriculeDoublon(null);
+    setInvitationMessage(null);
     setDrawerOuvert(true);
   };
 
@@ -559,6 +579,11 @@ export default function FicheEtudiant() {
                   </div>
                   {mode === 'vue' && (
                     <div className={styles.detailHeaderActions}>
+                      {!selectionne.a_compte && (
+                        <button type="button" className={styles.secondaryBtn} onClick={envoyerInvitation} disabled={invitationEnCours}>
+                          {invitationEnCours ? <Loader2 size={15} className={styles.spin} /> : <Send size={15} />} Renvoyer le lien d'activation
+                        </button>
+                      )}
                       <button type="button" className={styles.secondaryBtn} onClick={voirDocuments}>
                         <FileText size={15} /> Ses documents{selectionne.nb_documents > 0 ? ` (${selectionne.nb_documents})` : ''}
                       </button>
@@ -577,6 +602,11 @@ export default function FicheEtudiant() {
 
                 {mode === 'vue' && (
                   <div className={styles.sections}>
+                    {invitationMessage && (
+                      <p className={invitationMessage.type === 'succes' ? styles.invitationSucces : styles.errorText}>
+                        {invitationMessage.type === 'succes' ? null : <AlertTriangle size={14} />} {invitationMessage.texte}
+                      </p>
+                    )}
                     <section>
                       <h3>Identité</h3>
                       <div className={styles.champsGrid}>

@@ -33,6 +33,7 @@ import { ActiverInvitationDto } from './dto/activer-invitation.dto';
 import { CreerInvitationDto } from './dto/creer-invitation.dto';
 import { InvitationQueryDto } from './dto/invitation-query.dto';
 import {
+  InvitationApercuDto,
   InvitationListResponseDto,
   InvitationResponseDto,
 } from './dto/invitation-response.dto';
@@ -43,11 +44,29 @@ import { InvitationsService } from './invitations.service';
 export class InvitationsController {
   constructor(private readonly service: InvitationsService) {}
 
+  // ─── APERÇU (public, déclaré avant :id pour éviter tout conflit de route) ──
+  @Get('apercu')
+  @ApiOperation({
+    summary:
+      "Aperçu public d'une invitation par token, sans l'activer (permet d'adapter le formulaire cote frontend)",
+  })
+  @ApiOkResponse({ type: InvitationApercuDto })
+  @ApiResponse({ status: 400, description: 'Token invalide ou expiré.' })
+  apercu(@Query('token') token: string): Promise<InvitationApercuDto> {
+    return this.service.apercu(token);
+  }
+
   // ─── ACTIVER (public, déclaré avant :id pour éviter tout conflit de route) ──
   @Post('activer')
-  @ApiOperation({ summary: "Activer un compte via un token d'invitation (public)" })
+  @ApiOperation({
+    summary: "Activer un compte via un token d'invitation (public)",
+  })
   @ApiOkResponse({ type: AuthTokensDto })
-  @ApiResponse({ status: 400, description: 'Token invalide ou expiré, ou champs manquants pour nouveau compte.' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Token invalide ou expiré, ou champs manquants pour nouveau compte.',
+  })
   activer(
     @Body() dto: ActiverInvitationDto,
     @Ip() ip: string,
@@ -63,9 +82,15 @@ export class InvitationsController {
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Créer une invitation collaborateur (TTL 72h)' })
   @ApiCreatedResponse({ type: InvitationResponseDto })
-  @ApiResponse({ status: 400, description: 'Invitation en attente déjà existante.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invitation en attente déjà existante.',
+  })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission user:assign_role requise.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Permission user:assign_role requise.',
+  })
   @ApiResponse({ status: 404, description: 'Université ou rôle introuvable.' })
   creer(
     @Body() dto: CreerInvitationDto,
@@ -81,7 +106,8 @@ export class InvitationsController {
   @RequirePermissions(Permission.USER_READ)
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    summary: 'Liste paginée des invitations collaborateurs (filtres : statut, universite_id)',
+    summary:
+      'Liste paginée des invitations collaborateurs (filtres : statut, universite_id)',
   })
   @ApiOkResponse({ type: InvitationListResponseDto })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
@@ -98,11 +124,17 @@ export class InvitationsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions(Permission.USER_ASSIGN_ROLE)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: "Renvoyer un email d'invitation (nouveau token 72h, nb_relances+1)" })
+  @ApiOperation({
+    summary:
+      "Renvoyer un email d'invitation (nouveau token 72h, nb_relances+1)",
+  })
   @ApiOkResponse({ type: InvitationResponseDto })
   @ApiResponse({ status: 400, description: 'Invitation déjà acceptée.' })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission user:assign_role requise.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Permission user:assign_role requise.',
+  })
   @ApiResponse({ status: 404, description: 'Invitation introuvable.' })
   renvoyer(
     @Param('id', ParseUUIDPipe) id: string,
@@ -118,11 +150,19 @@ export class InvitationsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions(Permission.USER_ASSIGN_ROLE)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Annuler une invitation en attente (suppression définitive)' })
+  @ApiOperation({
+    summary: 'Annuler une invitation en attente (suppression définitive)',
+  })
   @ApiNoContentResponse()
-  @ApiResponse({ status: 400, description: 'Seules les invitations en attente peuvent être annulées.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Seules les invitations en attente peuvent être annulées.',
+  })
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
-  @ApiResponse({ status: 403, description: 'Permission user:assign_role requise.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Permission user:assign_role requise.',
+  })
   @ApiResponse({ status: 404, description: 'Invitation introuvable.' })
   annuler(
     @Param('id', ParseUUIDPipe) id: string,

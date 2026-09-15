@@ -7,6 +7,7 @@ import {
 import { EtudiantsAdminService } from './etudiants-admin.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { InvitationsService } from '../invitations/invitations.service';
 
 const ADMIN_ID = 'admin-000-000-000-000000000001';
 const UNIV_ID = 'univ-000-000-000-000000000001';
@@ -56,6 +57,9 @@ const makePrisma = () => ({
 });
 
 const makeAudit = () => ({ log: jest.fn() });
+const makeInvitations = () => ({
+  creerOuRelancerPourEtudiant: jest.fn().mockResolvedValue({ id: 'inv-1' }),
+});
 
 describe('EtudiantsAdminService', () => {
   let service: EtudiantsAdminService;
@@ -68,6 +72,7 @@ describe('EtudiantsAdminService', () => {
         EtudiantsAdminService,
         { provide: PrismaService, useValue: prisma },
         { provide: AuditService, useValue: makeAudit() },
+        { provide: InvitationsService, useValue: makeInvitations() },
       ],
     }).compile();
     service = module.get(EtudiantsAdminService);
