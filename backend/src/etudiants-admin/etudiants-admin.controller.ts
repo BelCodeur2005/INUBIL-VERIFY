@@ -37,6 +37,7 @@ import {
   EtudiantAdminListeDto,
   EtudiantAdminResponseDto,
 } from './dto/etudiant-admin-response.dto';
+import { InvitationResponseDto } from '../invitations/dto/invitation-response.dto';
 
 @ApiTags('Étudiants (admin)')
 @ApiBearerAuth('access-token')
@@ -173,5 +174,32 @@ export class EtudiantsAdminController {
     @Req() req: Request,
   ): Promise<void> {
     return this.service.supprimer(id, acteurId, req.ip);
+  }
+
+  @Post(':id/invitation')
+  @RequirePermissions(Permission.STUDENT_READ)
+  @ApiOperation({
+    summary:
+      "(Re)envoie le lien d'activation d'espace personnel à un étudiant sans compte (permission student:read)",
+    description:
+      "Crée une nouvelle invitation ou relance celle déjà en attente. Refusé si l'étudiant a déjà un compte de connexion actif.",
+  })
+  @ApiCreatedResponse({ type: InvitationResponseDto })
+  @ApiResponse({ status: 401, description: 'Non authentifié.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Permission student:read requise ou accès refusé.',
+  })
+  @ApiResponse({ status: 404, description: 'Étudiant introuvable.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Étudiant déjà pourvu de compte, ou sans adresse email.',
+  })
+  renvoyerInvitation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') acteurId: string,
+    @Req() req: Request,
+  ): Promise<InvitationResponseDto> {
+    return this.service.renvoyerInvitation(id, acteurId, req.ip);
   }
 }

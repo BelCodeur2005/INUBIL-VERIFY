@@ -3,6 +3,7 @@ import { NotificationEmissionService } from './notification-emission.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { InvitationsService } from '../invitations/invitations.service';
 
 const DOC_ID = 'doc-0000-0000-0000-000000000001';
 const ETU_ID = 'etu-0000-0000-0000-000000000002';
@@ -26,6 +27,7 @@ const makeDoc = (overrides: any = {}) => ({
     prenom: 'Bertrand',
     email: EMAIL,
     departement_id: null,
+    utilisateur_id: null,
     utilisateurs_etudiants_utilisateur_idToutilisateurs: null,
   },
   universites: { nom: 'ISTAMA INUBIL' },
@@ -63,16 +65,22 @@ const makeNotificationsInApp = () => ({
   creer: jest.fn().mockResolvedValue(undefined),
 });
 
+const makeInvitations = () => ({
+  creerOuRelancerPourEtudiant: jest.fn().mockResolvedValue({ id: 'inv-1' }),
+});
+
 describe('NotificationEmissionService', () => {
   let service: NotificationEmissionService;
   let prisma: ReturnType<typeof makePrisma>;
   let mail: ReturnType<typeof makeMail>;
   let notificationsInApp: ReturnType<typeof makeNotificationsInApp>;
+  let invitations: ReturnType<typeof makeInvitations>;
 
   beforeEach(async () => {
     prisma = makePrisma();
     mail = makeMail();
     notificationsInApp = makeNotificationsInApp();
+    invitations = makeInvitations();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -80,6 +88,7 @@ describe('NotificationEmissionService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: MailService, useValue: mail },
         { provide: NotificationsService, useValue: notificationsInApp },
+        { provide: InvitationsService, useValue: invitations },
       ],
     }).compile();
 
@@ -111,6 +120,7 @@ describe('NotificationEmissionService', () => {
       etudiants: {
         ...makeDoc().etudiants,
         email: null,
+        utilisateur_id: 'user-0000-0000-0000-000000000009',
         utilisateurs_etudiants_utilisateur_idToutilisateurs: {
           email: emailCompte,
         },
@@ -127,6 +137,39 @@ describe('NotificationEmissionService', () => {
       emailCompte,
       expect.anything(),
     );
+  });
+
+  it("invite l'étudiant à créer son espace personnel s'il n'a pas de compte", async () => {
+    prisma.documents.findFirst.mockResolvedValue(makeDoc());
+    prisma.emails_log.create.mockResolvedValue({ id: LOG_ID });
+    mail.sendDocumentEmis.mockResolvedValue(undefined);
+    prisma.emails_log.update.mockResolvedValue({});
+
+    await service.notifierEtudiant(DOC_ID);
+
+    expect(invitations.creerOuRelancerPourEtudiant).toHaveBeenCalledWith(
+      ETU_ID,
+    );
+  });
+
+  it("n'invite pas l'étudiant s'il a déjà un compte de connexion actif", async () => {
+    const doc = makeDoc({
+      etudiants: {
+        ...makeDoc().etudiants,
+        utilisateur_id: 'user-0000-0000-0000-000000000009',
+        utilisateurs_etudiants_utilisateur_idToutilisateurs: {
+          email: 'compte@univ.cm',
+        },
+      },
+    });
+    prisma.documents.findFirst.mockResolvedValue(doc);
+    prisma.emails_log.create.mockResolvedValue({ id: LOG_ID });
+    mail.sendDocumentEmis.mockResolvedValue(undefined);
+    prisma.emails_log.update.mockResolvedValue({});
+
+    await service.notifierEtudiant(DOC_ID);
+
+    expect(invitations.creerOuRelancerPourEtudiant).not.toHaveBeenCalled();
   });
 
   it('logue statut "echoue" si MailService lève une erreur', async () => {

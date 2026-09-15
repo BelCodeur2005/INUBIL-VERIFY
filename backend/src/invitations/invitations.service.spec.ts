@@ -24,6 +24,8 @@ const UNIV_ID = 'univ-uuid-1';
 const AUTRE_UNIV_ID = 'univ-uuid-2';
 const USER_ID = 'user-uuid-1';
 const TOKEN_BRUT = 'a'.repeat(64);
+const ETU_ID = 'etu-uuid-1';
+const ROLE_ETUDIANT_ID = 'role-etudiant-uuid-1';
 
 const makeInvitation = (overrides: Partial<Record<string, unknown>> = {}) => ({
   id: INV_ID,
@@ -39,6 +41,17 @@ const makeInvitation = (overrides: Partial<Record<string, unknown>> = {}) => ({
   created_by: ACTEUR_ID,
   created_at: new Date(),
   updated_at: new Date(),
+  ...overrides,
+});
+
+const makeEtudiant = (overrides: Partial<Record<string, unknown>> = {}) => ({
+  id: ETU_ID,
+  nom: 'KAMGA',
+  prenom: 'Bertrand',
+  email: 'bertrand.kamga@istama.cm',
+  universite_id: UNIV_ID,
+  utilisateur_id: null,
+  deleted_at: null,
   ...overrides,
 });
 
@@ -65,9 +78,10 @@ describe('InvitationsService', () => {
     universites: jest.Mocked<any>;
     roles: jest.Mocked<any>;
     utilisateurs: jest.Mocked<any>;
+    etudiants: jest.Mocked<any>;
     $transaction: jest.Mock;
   };
-  let mail: { sendInvitation: jest.Mock };
+  let mail: { sendInvitation: jest.Mock; sendInvitationEtudiant: jest.Mock };
   let audit: { log: jest.Mock };
   let auth: { genererJwtDepuisUtilisateur: jest.Mock };
   let config: { get: jest.Mock };
@@ -89,9 +103,16 @@ describe('InvitationsService', () => {
         create: jest.fn(),
         update: jest.fn(),
       },
+      etudiants: {
+        findFirst: jest.fn(),
+        update: jest.fn(),
+      },
       $transaction: jest.fn(),
     };
-    mail = { sendInvitation: jest.fn().mockResolvedValue(undefined) };
+    mail = {
+      sendInvitation: jest.fn().mockResolvedValue(undefined),
+      sendInvitationEtudiant: jest.fn().mockResolvedValue(undefined),
+    };
     audit = { log: jest.fn().mockResolvedValue(undefined) };
     auth = {
       genererJwtDepuisUtilisateur: jest
@@ -371,6 +392,83 @@ describe('InvitationsService', () => {
     });
   });
 
+  // ─── creerOuRelancerPourEtudiant ────────────────────────────────────────────
+
+  describe('creerOuRelancerPourEtudiant', () => {
+    it('crée une invitation étudiant et envoie l\'email dédié', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.invitations.findFirst.mockResolvedValue(null);
+      prisma.invitations.create.mockResolvedValue(
+        makeInvitation({ cible: 'etudiant', etudiant_id: ETU_ID, role_id: null }),
+      );
+
+      const result = await service.creerOuRelancerPourEtudiant(ETU_ID);
+
+      expect(prisma.invitations.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            cible: 'etudiant',
+            etudiant_id: ETU_ID,
+            email: 'bertrand.kamga@istama.cm',
+          }),
+        }),
+      );
+      expect(mail.sendInvitationEtudiant).toHaveBeenCalledWith(
+        'bertrand.kamga@istama.cm',
+        'Bertrand KAMGA',
+        expect.stringContaining('/invitations/activer?token='),
+      );
+      expect(result).toBeDefined();
+    });
+
+    it('relance l\'invitation déjà en attente au lieu d\'en créer une nouvelle', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.invitations.findFirst.mockResolvedValue(
+        makeInvitation({ id: 'inv-existante', cible: 'etudiant', etudiant_id: ETU_ID }),
+      );
+      prisma.invitations.update.mockResolvedValue(
+        makeInvitation({ id: 'inv-existante', cible: 'etudiant', etudiant_id: ETU_ID, nb_relances: 1 }),
+      );
+
+      await service.creerOuRelancerPourEtudiant(ETU_ID);
+
+      expect(prisma.invitations.create).not.toHaveBeenCalled();
+      expect(prisma.invitations.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'inv-existante' },
+          data: expect.objectContaining({ nb_relances: { increment: 1 } }),
+        }),
+      );
+    });
+
+    it('lève BadRequestException si l\'étudiant a déjà un compte', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(
+        makeEtudiant({ utilisateur_id: USER_ID }),
+      );
+
+      await expect(
+        service.creerOuRelancerPourEtudiant(ETU_ID),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.invitations.create).not.toHaveBeenCalled();
+    });
+
+    it('lève BadRequestException si l\'étudiant n\'a pas d\'email', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant({ email: null }));
+
+      await expect(
+        service.creerOuRelancerPourEtudiant(ETU_ID),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('lève NotFoundException si l\'étudiant est introuvable', async () => {
+      prisma.etudiants.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.creerOuRelancerPourEtudiant(ETU_ID),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
   // ─── activer ─────────────────────────────────────────────────────────────────
 
   describe('activer', () => {
@@ -442,6 +540,42 @@ describe('InvitationsService', () => {
       prisma.utilisateurs.findFirst.mockResolvedValue(makeUser({ statut: 'suspendu' }));
 
       await expect(service.activer({ token: TOKEN_BRUT })).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it("crée le compte à partir du nom/prénom de la fiche étudiant (invitation cible='etudiant'), sans redemander nom/prenom, et relie etudiants.utilisateur_id", async () => {
+      prisma.invitations.findFirst.mockResolvedValue(
+        makeInvitation({ cible: 'etudiant', etudiant_id: ETU_ID, role_id: null }),
+      );
+      prisma.etudiants.findFirst.mockResolvedValue(makeEtudiant());
+      prisma.roles.findFirst.mockResolvedValue({ id: ROLE_ETUDIANT_ID, nom: 'etudiant' });
+      prisma.utilisateurs.findFirst.mockResolvedValue(null); // pas de compte existant
+      prisma.utilisateurs.create.mockResolvedValue(
+        makeUser({ nom: 'KAMGA', prenom: 'Bertrand', role_id: ROLE_ETUDIANT_ID }),
+      );
+      prisma.etudiants.update.mockResolvedValue(makeEtudiant({ utilisateur_id: USER_ID }));
+      prisma.invitations.update.mockResolvedValue(
+        makeInvitation({ cible: 'etudiant', statut: 'acceptee' }),
+      );
+
+      const result = await service.activer({
+        token: TOKEN_BRUT,
+        mot_de_passe: 'Azerty@1234',
+      });
+
+      expect(prisma.utilisateurs.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            nom: 'KAMGA',
+            prenom: 'Bertrand',
+            role_id: ROLE_ETUDIANT_ID,
+          }),
+        }),
+      );
+      expect(prisma.etudiants.update).toHaveBeenCalledWith({
+        where: { id: ETU_ID },
+        data: { utilisateur_id: USER_ID },
+      });
+      expect(result.access_token).toBe('jwt-token');
     });
   });
 });

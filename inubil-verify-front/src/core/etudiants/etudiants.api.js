@@ -91,3 +91,8 @@ export function modifierEtudiant(id, donnees) {
 export function supprimerEtudiant(id) {
   return api.delete(`/admin/etudiants/${id}`);
 }
+
+/** POST /admin/etudiants/:id/invitation — (re)envoie le lien d'activation d'espace personnel. */
+export function renvoyerInvitationEtudiant(id) {
+  return api.post(`/admin/etudiants/${id}/invitation`);
+}

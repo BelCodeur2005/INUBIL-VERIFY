@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { InvitationsService } from '../invitations/invitations.service';
+import { InvitationResponseDto } from '../invitations/dto/invitation-response.dto';
 import { CreerEtudiantAdminDto } from './dto/creer-etudiant-admin.dto';
 import { UpdateEtudiantAdminDto } from './dto/update-etudiant-admin.dto';
 import { EtudiantAdminQueryDto } from './dto/etudiant-admin-query.dto';
@@ -20,6 +22,7 @@ export class EtudiantsAdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly invitations: InvitationsService,
   ) {}
 
   /**
@@ -491,5 +494,54 @@ export class EtudiantsAdminService {
       enregistrementId: id,
       ip,
     });
+  }
+
+  /**
+   * (Re)envoie le lien d'activation d'espace personnel a un etudiant sans
+   * compte — cree une nouvelle invitation ou relance celle deja en attente.
+   * Meme verification de portee (universite/departement) que les autres
+   * actions ; la logique de creation/envoi vit dans InvitationsService pour
+   * etre partagee avec le declenchement automatique a la validation d'un
+   * diplome (cf. NotificationEmissionService.notifierEtudiant).
+   */
+  async renvoyerInvitation(
+    id: string,
+    acteurId: string,
+    ip?: string,
+  ): Promise<InvitationResponseDto> {
+    const acteurUnivId = await this.getActeurUniversiteId(acteurId);
+    const acteurDeptIds = await this.getActeurDepartementIds(acteurId);
+
+    const etudiant = await this.prisma.etudiants.findFirst({
+      where: { id, deleted_at: null },
+    });
+    if (!etudiant) throw new NotFoundException(`Étudiant ${id} introuvable`);
+
+    if (acteurUnivId !== null && etudiant.universite_id !== acteurUnivId) {
+      throw new ForbiddenException(
+        "Accès refusé : étudiant d'une autre université",
+      );
+    }
+    if (
+      acteurDeptIds.length > 0 &&
+      !acteurDeptIds.includes(etudiant.departement_id ?? '')
+    ) {
+      throw new ForbiddenException(
+        "Accès refusé : étudiant d'un autre département",
+      );
+    }
+
+    const invitation = await this.invitations.creerOuRelancerPourEtudiant(id);
+
+    await this.audit.log({
+      utilisateurId: acteurId,
+      action: 'ETUDIANT_INVITATION_ENVOYEE',
+      module: 'etudiants',
+      tableConcernee: 'etudiants',
+      enregistrementId: id,
+      ip,
+    });
+
+    return invitation;
   }
 }

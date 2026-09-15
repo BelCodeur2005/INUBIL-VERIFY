@@ -10,7 +10,10 @@ export class InvitationResponseDto {
   @ApiProperty({ example: 'collaborateur' })
   cible: string;
 
-  @ApiProperty({ example: 'en_attente', enum: ['en_attente', 'acceptee', 'expiree'] })
+  @ApiProperty({
+    example: 'en_attente',
+    enum: ['en_attente', 'acceptee', 'expiree'],
+  })
   statut: string;
 
   @ApiProperty()
@@ -30,6 +33,18 @@ export class InvitationResponseDto {
 
   @ApiProperty()
   created_at: Date;
+}
+
+/** Apercu public (sans authentification) d'une invitation par token — juste de quoi adapter l'UI d'activation. */
+export class InvitationApercuDto {
+  @ApiProperty({ example: 'etudiant', enum: ['etudiant', 'collaborateur'] })
+  cible: string;
+
+  @ApiPropertyOptional({
+    example: 'Bertrand',
+    description: "Prenom de l'etudiant, pour personnaliser l'accueil (cible='etudiant' uniquement)",
+  })
+  prenom?: string;
 }
 
 export class InvitationListResponseDto {

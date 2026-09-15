@@ -349,6 +349,52 @@ export class MailService {
     );
   }
 
+  /** Invitation d'activation pour un etudiant sans compte. Format sobre, sans emoji ni couleurs vives. */
+  async sendInvitationEtudiant(
+    destinataire: string,
+    prenomNom: string,
+    activerUrl: string,
+  ): Promise<void> {
+    const nom = await this.nomApplication();
+    const prenomNomEsc = this.esc(prenomNom);
+    const url = this.safeUrl(activerUrl);
+
+    const html = `
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+  .container { max-width: 600px; margin: 0 auto; background: #fff; border: 1px solid #e2e8f0; }
+  .header { border-top: 4px solid #2b56cb; padding: 24px 32px 16px 32px; }
+  .header .app { font-size: 13px; font-weight: bold; color: #2b56cb; letter-spacing: .3px; margin: 0 0 4px 0; }
+  .header h1 { color: #0b192c; margin: 0; font-size: 18px; font-weight: 600; }
+  .body { padding: 8px 32px 32px 32px; color: #333; line-height: 1.6; font-size: 14px; }
+  .btn { display: inline-block; margin: 20px 0 8px 0; padding: 11px 24px; background: #2b56cb; color: #fff !important; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 14px; }
+  .note { font-size: 12px; color: #64748b; margin-top: 16px; }
+  .footer { padding: 16px 32px; background: #f9fafb; font-size: 11px; color: #94a3b8; border-top: 1px solid #e5e7eb; }
+</style></head><body>
+<div class="container">
+  <div class="header">
+    <p class="app">${nom}</p>
+    <h1>Accédez à votre espace personnel</h1>
+  </div>
+  <div class="body">
+    <p>Bonjour ${prenomNomEsc},</p>
+    <p>Votre établissement a émis un ou plusieurs documents à votre nom sur ${nom}. Vous pouvez créer votre accès personnel pour les consulter, les partager et suivre leur statut à tout moment.</p>
+    <a href="${url}" class="btn">Créer mon accès</a>
+    <p class="note">Ce lien est valable 72 heures. Passé ce délai, contactez votre établissement pour en recevoir un nouveau.</p>
+    <p class="note">Lien direct : <code style="word-break:break-all;">${url}</code></p>
+  </div>
+  <div class="footer">${nom} — Plateforme de certification blockchain des diplômes, Douala, Cameroun</div>
+</div>
+</body></html>`;
+
+    await this.envoyer(
+      destinataire,
+      `Accédez à votre espace personnel sur ${nom}`,
+      html,
+    );
+  }
+
   async sendDocumentEmis(
     destinataire: string,
     data: {

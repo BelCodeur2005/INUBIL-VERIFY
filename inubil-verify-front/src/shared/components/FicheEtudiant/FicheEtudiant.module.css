@@ -169,6 +169,16 @@
   margin: 0 0 12px 0;
 }
 
+.invitationSucces {
+  font-size: 0.8rem;
+  color: #16a34a;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
 /* ── Tableau ── */
 .tableWrap { overflow-x: auto; }
 

@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { activerInvitation } from '../../../core/invitations/invitations.api';
+import { activerInvitation, apercuInvitation } from '../../../core/invitations/invitations.api';
 import { useAuth } from '../../../core/auth/useAuth';
 import { ApiError } from '../../../core/api/client';
 import styles from './ActiverInvitation.module.css';
 
 // Message exact renvoye par le backend (invitations.service.ts) quand aucun compte n'existe
 // encore pour l'email invite — sert a distinguer "il faut creer un compte" d'une vraie erreur
-// (token invalide/expire, compte deja actif...), faute d'endpoint de previsualisation du token.
+// (token invalide/expire, compte deja actif...). Pour un etudiant (cible connue via l'apercu),
+// nom/prenom viennent deja de sa fiche : seul le mot de passe manque reellement, mais le backend
+// renvoie le meme message generique, donc le test reste valable pour les deux cibles.
 const INDICE_NOUVEAU_COMPTE = 'nom, prenom et mot_de_passe sont requis';
 
-/** Page d'activation d'une invitation collaborateur — lien recu par email (?token=...), route publique. */
+/** Page d'activation d'une invitation (collaborateur ou etudiant) — lien recu par email (?token=...), route publique. */
 export default function ActiverInvitation() {
   const navigate = useNavigate();
   const { connecterSession } = useAuth();
@@ -24,6 +26,11 @@ export default function ActiverInvitation() {
   );
   const [erreurFormulaire, setErreurFormulaire] = useState('');
   const [enCours, setEnCours] = useState(false);
+
+  // 'collaborateur' par defaut (comportement historique) tant que l'apercu n'a pas repondu.
+  const [cible, setCible] = useState('collaborateur');
+  const [prenomEtudiant, setPrenomEtudiant] = useState('');
+  const estEtudiant = cible === 'etudiant';
 
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
@@ -39,13 +46,29 @@ export default function ActiverInvitation() {
   const motsDePasseValides = hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar;
   const motsDePasseCorrespondent = motDePasse.length > 0 && motDePasse === confirmMotDePasse;
 
-  // Tentative silencieuse au chargement : couvre le cas "compte deja existant" (aucun champ
-  // requis). Si le backend repond qu'un nouveau compte doit etre cree, on affiche le formulaire.
+  // 1. Apercu public du token (cible etudiant/collaborateur + prenom si etudiant) pour
+  //    adapter la copie et le formulaire, sans encore rien activer.
+  // 2. Tentative silencieuse d'activation : couvre le cas "compte deja existant" (aucun
+  //    champ requis). Si le backend repond qu'un nouveau compte doit etre cree, on affiche
+  //    le formulaire (sans nom/prenom pour un etudiant, deja connus de sa fiche).
   useEffect(() => {
     if (!token) return; // deja gere par l'etat initial ci-dessus
 
     let annule = false;
     (async () => {
+      try {
+        const apercu = await apercuInvitation(token);
+        if (annule) return;
+        setCible(apercu.cible);
+        setPrenomEtudiant(apercu.prenom ?? '');
+      } catch (err) {
+        if (annule) return;
+        const message = err instanceof ApiError ? err.message : "Ce lien d'invitation est invalide ou a expiré.";
+        setPhase('erreur');
+        setErreurFatale(message);
+        return;
+      }
+
       try {
         await activerInvitation({ token });
         if (annule) return;
@@ -71,7 +94,7 @@ export default function ActiverInvitation() {
     e.preventDefault();
     setErreurFormulaire('');
 
-    if (!nom.trim() || !prenom.trim()) {
+    if (!estEtudiant && (!nom.trim() || !prenom.trim())) {
       setErreurFormulaire('Le nom et le prénom sont requis.');
       return;
     }
@@ -88,8 +111,7 @@ export default function ActiverInvitation() {
     try {
       await activerInvitation({
         token,
-        nom: nom.trim(),
-        prenom: prenom.trim(),
+        ...(estEtudiant ? {} : { nom: nom.trim(), prenom: prenom.trim() }),
         mot_de_passe: motDePasse,
       });
       const destination = await connecterSession();
@@ -133,11 +155,14 @@ export default function ActiverInvitation() {
 
         <div className={styles.heroSection}>
           <div className={styles.heroContent}>
-            <span className={styles.heroBadge}>INVITATION COLLABORATEUR</span>
-            <h1 className={styles.heroTitle}>Bienvenue sur INUBIL Verify</h1>
+            <span className={styles.heroBadge}>{estEtudiant ? 'ESPACE PERSONNEL' : 'INVITATION COLLABORATEUR'}</span>
+            <h1 className={styles.heroTitle}>
+              {estEtudiant ? `Bienvenue${prenomEtudiant ? `, ${prenomEtudiant}` : ''}` : 'Bienvenue sur INUBIL Verify'}
+            </h1>
             <p className={styles.heroSubtitle}>
-              Vous avez été invité(e) à rejoindre votre établissement sur la plateforme.
-              Finalisez la création de votre compte pour accéder à votre espace.
+              {estEtudiant
+                ? "Votre établissement a émis un ou plusieurs documents à votre nom. Définissez un mot de passe pour accéder à votre espace personnel et les consulter à tout moment."
+                : "Vous avez été invité(e) à rejoindre votre établissement sur la plateforme. Finalisez la création de votre compte pour accéder à votre espace."}
             </p>
           </div>
           <div className={styles.circleBg1}></div>
@@ -147,39 +172,43 @@ export default function ActiverInvitation() {
 
         <div className={styles.formSection}>
           <div className={styles.textCenter}>
-            <h2 className={styles.authTitle}>Créer votre compte</h2>
-            <p className={styles.authSubtitle}>Renseignez vos informations pour activer votre accès.</p>
+            <h2 className={styles.authTitle}>{estEtudiant ? 'Définir votre mot de passe' : 'Créer votre compte'}</h2>
+            <p className={styles.authSubtitle}>
+              {estEtudiant ? 'Une dernière étape pour activer votre espace personnel.' : 'Renseignez vos informations pour activer votre accès.'}
+            </p>
           </div>
 
           {erreurFormulaire && <div className={styles.alertError}>{erreurFormulaire}</div>}
 
           <form onSubmit={handleSubmit} className={styles.formStack}>
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>PRÉNOM</label>
-                <input
-                  type="text"
-                  value={prenom}
-                  onChange={(e) => setPrenom(e.target.value)}
-                  placeholder="Jean"
-                  className={styles.inputField}
-                  disabled={enCours}
-                  required
-                />
+            {!estEtudiant && (
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>PRÉNOM</label>
+                  <input
+                    type="text"
+                    value={prenom}
+                    onChange={(e) => setPrenom(e.target.value)}
+                    placeholder="Jean"
+                    className={styles.inputField}
+                    disabled={enCours}
+                    required
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>NOM</label>
+                  <input
+                    type="text"
+                    value={nom}
+                    onChange={(e) => setNom(e.target.value)}
+                    placeholder="Dupont"
+                    className={styles.inputField}
+                    disabled={enCours}
+                    required
+                  />
+                </div>
               </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>NOM</label>
-                <input
-                  type="text"
-                  value={nom}
-                  onChange={(e) => setNom(e.target.value)}
-                  placeholder="Dupont"
-                  className={styles.inputField}
-                  disabled={enCours}
-                  required
-                />
-              </div>
-            </div>
+            )}
 
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>MOT DE PASSE</label>

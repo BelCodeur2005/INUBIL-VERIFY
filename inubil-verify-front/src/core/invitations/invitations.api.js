@@ -25,8 +25,13 @@ export function annulerInvitation(id) {
   return api.delete(`/invitations/${id}`);
 }
 
+/** GET /invitations/apercu — apercu public d'une invitation par token, sans l'activer (route publique). */
+export function apercuInvitation(token) {
+  return api.get(`/invitations/apercu?token=${encodeURIComponent(token)}`, { auth: false });
+}
+
 /**
- * POST /invitations/activer — accepte une invitation collaborateur (token recu par email).
+ * POST /invitations/activer — accepte une invitation collaborateur ou etudiant (token recu par email).
  * Cree le compte si besoin (nom/prenom/mot_de_passe requis dans ce cas) ou assigne le role
  * a un compte existant. Pose les jetons retournes, exactement comme un login classique.
  */
