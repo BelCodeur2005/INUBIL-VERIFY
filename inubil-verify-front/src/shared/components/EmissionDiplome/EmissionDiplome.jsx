@@ -132,7 +132,7 @@ export default function EmissionDiplome() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [newStudent, setNewStudent] = useState({ nom: '', prenom: '', numero_etudiant: '', date_naissance: '' });
+  const [newStudent, setNewStudent] = useState({ nom: '', prenom: '', numero_etudiant: '', date_naissance: '', email: '' });
 
   // Verification du matricule au blur (avant de remplir tout le reste du dossier) : le
   // matricule est unique en base (numero_etudiant), donc un doublon echouera de toute
@@ -451,7 +451,7 @@ export default function EmissionDiplome() {
     setSelectedStudent(null);
     setSearchQuery('');
     setSearchResults([]);
-    setNewStudent({ nom: '', prenom: '', numero_etudiant: '', date_naissance: '' });
+    setNewStudent({ nom: '', prenom: '', numero_etudiant: '', date_naissance: '', email: '' });
     setMatriculeDoublon(null);
     setDiplomesEnAttente([]);
     reinitialiserComposeur();
@@ -485,6 +485,7 @@ export default function EmissionDiplome() {
           prenom: newStudent.prenom,
           universite_id: universiteId,
           ...(newStudent.date_naissance ? { date_naissance: newStudent.date_naissance } : {}),
+          ...(newStudent.email.trim() ? { email: newStudent.email.trim() } : {}),
         });
         etudiantId = cree.id;
       }
@@ -820,6 +821,16 @@ export default function EmissionDiplome() {
                 <div className={styles.inputGroup}>
                   <label>Date de naissance</label>
                   <input type="date" value={newStudent.date_naissance} onChange={(e) => setNewStudent({ ...newStudent, date_naissance: e.target.value })} />
+                </div>
+                <div className={styles.inputGroup}>
+                  <label>Email (optionnel)</label>
+                  <input
+                    type="email"
+                    value={newStudent.email}
+                    onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
+                    placeholder="etudiant@exemple.com"
+                  />
+                  <span className={styles.inputHint}>Requis pour que l'étudiant reçoive un email à la validation du diplôme.</span>
                 </div>
               </div>
             )}
