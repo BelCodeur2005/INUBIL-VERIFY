@@ -74,7 +74,8 @@ const PERMISSIONS: Array<{ nom: string; module: string; description: string }> =
   { nom: 'doc:share',    module: 'documents', description: 'Partager un document avec un tiers' },
 
   // ── Étudiants ────────────────────────────────────────────────────────────
-  { nom: 'student:read', module: 'etudiants', description: "Consulter le dossier academique d'un etudiant" },
+  { nom: 'student:read',   module: 'etudiants', description: "Consulter le dossier academique d'un etudiant" },
+  { nom: 'student:delete', module: 'etudiants', description: 'Supprimer un dossier etudiant sans document emis — agent_saisie limite en plus aux fiches sans compte de connexion (cf. etudiants-admin.service.ts)' },
 
   // ── Départements ─────────────────────────────────────────────────────────
   { nom: 'dept:read',   module: 'departements', description: 'Consulter les departements de l\'universite' },
@@ -156,7 +157,7 @@ const ROLES_METIER: Array<{ nom: string; description: string; permissions: strin
       'univ:read', 'univ:edit',
       'user:read', 'user:edit', 'user:assign_role',
       'doc:create', 'doc:validate', 'doc:revoke', 'doc:read',
-      'student:read',
+      'student:read', 'student:delete',
       'dept:read', 'dept:create', 'dept:edit', 'dept:delete',
       'fil:read', 'fil:create', 'fil:edit', 'fil:delete',
       'api:read', 'api:create', 'api:delete',
@@ -168,14 +169,17 @@ const ROLES_METIER: Array<{ nom: string; description: string; permissions: strin
   {
     nom: 'directeur_pedagogique',
     description: 'Validation academique — cumule les droits de saisie de agent_saisie (peut aussi saisir), plus valider/rejeter/revoquer',
-    permissions: ['doc:create', 'doc:validate', 'doc:revoke', 'doc:read', 'student:read', 'dept:read', 'fil:read', 'stats:read'],
+    permissions: ['doc:create', 'doc:validate', 'doc:revoke', 'doc:read', 'student:read', 'student:delete', 'dept:read', 'fil:read', 'stats:read'],
   },
   {
     nom: 'agent_saisie',
-    description: 'Saisie des diplomes et fiches etudiant — pas de droit de validation ni de revocation. ' +
+    description: 'Saisie des diplomes et fiches etudiant — pas de droit de validation ni de revocation. Peut ' +
+      "supprimer une fiche qu'il a commencee (erreur de saisie) UNIQUEMENT si elle n'a ni document emis ni " +
+      'compte de connexion actif ; au-dela, reserve a directeur_pedagogique/responsable_universite ' +
+      '(cf. etudiants-admin.service.ts, supprimer()). ' +
       'Un compte sans departement associe (scolarite) saisit pour tous les departements ; avec un ou plusieurs ' +
       'departements (chef de departement), restreint a ceux-ci (cf. etudiants-admin.service.ts / documents.service.ts).',
-    permissions: ['doc:create', 'doc:read', 'student:read', 'dept:read', 'fil:read'],
+    permissions: ['doc:create', 'doc:read', 'student:read', 'student:delete', 'dept:read', 'fil:read'],
   },
   {
     nom: 'etudiant',

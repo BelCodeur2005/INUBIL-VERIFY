@@ -150,17 +150,17 @@ export class EtudiantsAdminController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @RequirePermissions(Permission.DOC_CREATE)
+  @RequirePermissions(Permission.STUDENT_DELETE)
   @ApiOperation({
     summary:
-      'Supprimer (soft delete) un dossier étudiant (permission doc:create)',
+      'Supprimer (soft delete) un dossier étudiant (permission student:delete)',
     description: "Bloqué si l'étudiant possède des documents émis.",
   })
   @ApiNoContentResponse()
   @ApiResponse({ status: 401, description: 'Non authentifié.' })
   @ApiResponse({
     status: 403,
-    description: 'Permission doc:create requise ou accès refusé.',
+    description: 'Permission student:delete requise ou accès refusé.',
   })
   @ApiResponse({ status: 404, description: 'Étudiant introuvable.' })
   @ApiResponse({
