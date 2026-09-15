@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
+import { promises as dns } from 'dns';
 import { ConfigurationsService } from '../configurations/configurations.service';
 
 const NOM_APPLICATION_DEFAUT = 'INUBIL Verify';
@@ -100,19 +101,33 @@ export class MailService {
       return;
     }
     try {
+      // Render (et d'autres PaaS) n'ont pas de route IPv6 sortante. La
+      // resolution DNS interne de nodemailer (shared.resolveHostname) tire
+      // une adresse AU HASARD parmi les IPv4 et IPv6 trouvees pour l'hote —
+      // une simple option "family" n'existe pas cote nodemailer et n'a donc
+      // aucun effet. On resout nous-memes l'IPv4 et on la passe directement
+      // comme "host" (une IP litterale saute toute la resolution interne),
+      // avec tls.servername pour que la validation du certificat continue
+      // de porter sur le vrai nom d'hote plutot que sur l'IP.
+      let hostConnexion = host;
+      let servername: string | undefined;
+      try {
+        const [ipv4] = await dns.resolve4(host);
+        if (ipv4) {
+          hostConnexion = ipv4;
+          servername = host;
+        }
+      } catch {
+        // Resolution IPv4 impossible (rare) : repli sur le nom d'hote tel quel.
+      }
+
       const transporter: Transporter = nodemailer.createTransport({
-        host,
+        host: hostConnexion,
         port,
         secure: false,
         auth: { user, pass },
-        // Render (et d'autres PaaS) n'ont pas toujours de route IPv6 sortante ;
-        // Gmail resout parfois smtp.gmail.com sur une adresse IPv6, ce qui
-        // echoue alors avec ENETUNREACH — force IPv4 pour eviter ce cas.
-        // (Absent des types @types/nodemailer, mais transmis tel quel a
-        // net.connect / tls.connect par smtp-connection.)
-        family: 4,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any);
+        ...(servername ? { tls: { servername } } : {}),
+      });
       const from = await this.adresseExpediteur();
       const info = await transporter.sendMail({ from, to, subject, html });
       this.logger.log(`Email envoyé à ${to} — messageId: ${info.messageId}`);
