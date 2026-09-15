@@ -376,7 +376,7 @@ export default function FicheEtudiant() {
             <input value={acteurDepartements[0].nom} disabled title="Imposé par votre compte (chef de département)" />
           ) : (
             <select value={form.departement_id} onChange={majChamp('departement_id')}>
-              <option value="">— Non renseigné —</option>
+              <option value="">Non renseigné</option>
               {listeDepartementsFiltre.map((d) => (
                 <option key={d.id} value={d.id}>{d.nom}</option>
               ))}

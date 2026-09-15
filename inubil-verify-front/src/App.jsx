@@ -6,6 +6,7 @@ import AppLayout from './shared/layouts/app-layout/AppLayout';
 import Login from './features/auth/login/Login';
 import ForgotPassword from "./features/auth/forgot-password/ForgotPassword";
 import ResetPassword from './features/auth/reset-password/ResetPassword';
+import ResendVerification from './features/auth/resend-verification/ResendVerification';
 import ActiverInvitation from './features/auth/activer-invitation/ActiverInvitation';
 import DashboardEtablissement from './features/universite/dashboard/DashboardEtablissement'; 
 import Landing from './features/Public/Landing';
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/renvoyer-verification" element={<ResendVerification />} />
           <Route path="/invitations/activer" element={<ActiverInvitation />} />
         </Route>
         
