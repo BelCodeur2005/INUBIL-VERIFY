@@ -125,20 +125,6 @@
   color: #737780;
 }
 
-.select {
-  padding: 10px 12px;
-  border-radius: 4px;
-  border: 1px solid #c2c6d1;
-  font-size: 14px;
-  color: #191c1d;
-  background-color: #ffffff;
-}
-
-.select:disabled {
-  background-color: #f3f4f5;
-  color: #737780;
-}
-
 /* ---------- Toggle (confirmation) ---------- */
 .toggleRow {
   display: flex;

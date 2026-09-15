@@ -25,6 +25,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { useAuth } from '../../../core/auth/useAuth';
+import SearchableSelect from '../SearchableSelect/SearchableSelect';
 import { rechercherEtudiants, creerEtudiant } from '../../../core/etudiants/etudiants.api';
 import { listerTypesDocument } from '../../../core/types-document/types-document.api';
 import { listerMentions } from '../../../core/mentions/mentions.api';
@@ -898,21 +899,20 @@ export default function EmissionDiplome() {
               <div className={styles.formGrid}>
                 <div className={styles.inputGroup}>
                   <label>Type de diplôme</label>
-                  <select
+                  <SearchableSelect
                     value={diplome.type_document_id}
-                    onChange={(e) => {
-                      const nouveauType = typesDocument.find((t) => t.id === e.target.value);
+                    onChange={(id) => {
+                      const nouveauType = typesDocument.find((t) => t.id === id);
                       setDiplome({
                         ...diplome,
-                        type_document_id: e.target.value,
+                        type_document_id: id,
                         mention_id: nouveauType?.categorie === 'diplome' ? diplome.mention_id : '',
                       });
                     }}
+                    options={typesDocument.map((t) => ({ value: t.id, label: t.nom }))}
+                    placeholder={loadingReferentiels ? 'Chargement...' : 'Choisir...'}
                     disabled={loadingReferentiels}
-                  >
-                    <option value="" disabled>{loadingReferentiels ? 'Chargement...' : 'Choisir...'}</option>
-                    {typesDocument.map((t) => <option key={t.id} value={t.id}>{t.nom}</option>)}
-                  </select>
+                  />
                 </div>
                 <div className={`${styles.inputGroup} ${aUneMention ? styles.colSpan2 : styles.colSpan3}`}>
                   <label>Filière</label>

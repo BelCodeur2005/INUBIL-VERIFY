@@ -1,0 +1,85 @@
+.racine {
+  position: relative;
+  width: 100%;
+}
+
+.champWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.champ {
+  width: 100%;
+  padding: 10px 34px 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #0f172a;
+  background-color: #ffffff;
+  outline: none;
+  cursor: text;
+}
+
+.champ:focus {
+  border-color: var(--color-primary, #2b56cb);
+  box-shadow: 0 0 0 3px rgba(43, 86, 203, 0.15);
+}
+
+.champ:disabled {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.champ::placeholder {
+  color: #94a3b8;
+}
+
+.chevron {
+  position: absolute;
+  right: 10px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.liste {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.option {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.86rem;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.optionSurlignee {
+  background-color: #eff4ff;
+}
+
+.optionSelectionnee {
+  font-weight: 600;
+  color: var(--color-primary, #2b56cb);
+}
+
+.vide {
+  padding: 10px;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  text-align: center;
+}

@@ -3,6 +3,7 @@ import { Rows3, Rows4, FileCheck2, ShieldQuestion } from 'lucide-react';
 import { useAuth } from '../../core/auth/useAuth';
 import { listerTypesDocument } from '../../core/types-document/types-document.api';
 import { lirePreferences, ecrirePreferences } from '../../core/preferences/preferences';
+import SearchableSelect from '../../shared/components/SearchableSelect/SearchableSelect';
 import styles from './Parametres_Agent.module.css';
 
 // Preferences locales a cet appareil (localStorage, cf. core/preferences) —
@@ -84,17 +85,16 @@ export default function ParametresAgent() {
 
         <div className={styles.field}>
           <label className={styles.label}>Type de document pré-sélectionné</label>
-          <select
-            className={styles.select}
+          <SearchableSelect
             value={prefs.typeDocumentParDefaut}
-            onChange={(e) => majPref({ typeDocumentParDefaut: e.target.value })}
+            onChange={(val) => majPref({ typeDocumentParDefaut: val })}
+            options={[
+              { value: '', label: 'Aucun (choisir à chaque fois)' },
+              ...typesDocument.map((t) => ({ value: t.nom, label: t.nom })),
+            ]}
+            placeholder="Aucun (choisir à chaque fois)"
             disabled={typesDocument.length === 0}
-          >
-            <option value="">Aucun (choisir à chaque fois)</option>
-            {typesDocument.map((t) => (
-              <option key={t.id} value={t.nom}>{t.nom}</option>
-            ))}
-          </select>
+          />
         </div>
       </div>
 
